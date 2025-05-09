@@ -1,6 +1,6 @@
 import {
-  Button,
   DataTable,
+  Pagination,
   Table,
   TableBody,
   TableCell,
@@ -11,25 +11,23 @@ import {
 } from "@carbon/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { type UserPublic, UsersService } from "../../client";
 import ActionsMenu from "../common/ActionsMenu";
 
-const PER_PAGE = 10;
-
-function getUsersQueryOptions({ page }: { page: number }) {
+const getUsersQueryOptions = (page: number, pageSize: number) => {
   return {
     queryFn: () =>
-      UsersService.readUsers({ skip: (page - 1) * PER_PAGE, limit: PER_PAGE }),
+      UsersService.readUsers({ skip: (page - 1) * pageSize, limit: pageSize }),
     queryKey: ["users", { page }],
   };
-}
+};
 
 export default function UsersTable() {
   const queryClient = useQueryClient();
   const currentUser = queryClient.getQueryData<UserPublic>(["currentUser"]);
-
+  const [pageSize, setPageSize] = useState<number>(10);
   const { page } = useSearch({ from: "/_layout/admin" });
   const navigate = useNavigate();
   const setPage = (page: number) =>
@@ -40,20 +38,16 @@ export default function UsersTable() {
     isPending,
     isPlaceholderData,
   } = useQuery({
-    ...getUsersQueryOptions({ page }),
+    ...getUsersQueryOptions(page, pageSize),
     placeholderData: (prevData) => prevData,
   });
 
-  const totalPages = Math.ceil((users?.count ?? 0) / PER_PAGE);
-
-  const hasNextPage = !isPlaceholderData && users?.data.length === PER_PAGE;
-  const hasPreviousPage = page > 1;
-
   useEffect(() => {
+    const hasNextPage = !isPlaceholderData && users?.data.length === pageSize;
     if (hasNextPage) {
-      queryClient.prefetchQuery(getUsersQueryOptions({ page: page + 1 }));
+      queryClient.prefetchQuery(getUsersQueryOptions(page + 1, pageSize));
     }
-  }, [page, queryClient, hasNextPage]);
+  }, [page, pageSize, queryClient, users, isPlaceholderData]);
 
   const headers = [
     { header: "Full name", key: "full_name" },
@@ -138,25 +132,16 @@ export default function UsersTable() {
           </Table>
         )}
       </DataTable>
-      <div className="mt-4 flex items-center justify-end gap-4">
-        <Button
-          kind="secondary"
-          onClick={() => setPage(page - 1)}
-          disabled={!hasPreviousPage}
-        >
-          Previous
-        </Button>
-        <span>
-          Page {page} of {totalPages}
-        </span>
-        <Button
-          kind="primary"
-          disabled={!hasNextPage}
-          onClick={() => setPage(page + 1)}
-        >
-          Next
-        </Button>
-      </div>
+      <Pagination
+        pageSizes={[10, 25, 50, 100]}
+        page={page}
+        pageSize={pageSize}
+        onChange={(data) => {
+          setPage(data.page);
+          setPageSize(data.pageSize);
+        }}
+        totalItems={users?.count}
+      />
     </>
   );
 }
