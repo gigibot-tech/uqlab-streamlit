@@ -29,9 +29,9 @@ export default function UsersTable() {
   const currentUser = queryClient.getQueryData<UserPublic>(["currentUser"]);
   const [pageSize, setPageSize] = useState<number>(10);
   const { page } = useSearch({ from: "/_layout/admin" });
-  const navigate = useNavigate();
-  const setPage = (page: number) =>
-    navigate({ search: (prev: any) => ({ ...prev, page }) });
+  const navigate = useNavigate({ from: "/admin" });
+  const setPage = (newPage: number) =>
+    navigate({ search: () => ({ page: newPage }) });
 
   const {
     data: users,
