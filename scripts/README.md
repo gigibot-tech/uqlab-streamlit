@@ -54,6 +54,8 @@ The `oc-deploy.sh` script automates the deployment of a full-stack application (
 - GitHub repository with admin access (for deploy keys and webhooks)
 - GitHub Personal Access Token (optional, for automatic webhook creation)
 
+**Note:** This deployment script supports both **IBM GitHub Enterprise** and **Public GitHub**. Configure the `GITHUB_HOST` variable in your `.env.production` file to specify which GitHub instance you're using (default: `github.ibm.com`).
+
 ### Required Files
 - `.env.production` file with all required environment variables
 - Git repository accessible via SSH
@@ -74,7 +76,7 @@ Edit `scripts/.env.production` with your configuration:
 # Required Variables
 APP_NAME=my-app
 PROJECT_NAME=my-project
-GIT_SSH_URL=git@github.com:username/repository.git
+GIT_SSH_URL=git@github.ibm.com:username/repository.git
 FIRST_SUPERUSER=admin@example.com
 FIRST_SUPERUSER_PASSWORD=securepassword123
 API_KEY=your-32-character-api-key-here
@@ -87,7 +89,8 @@ POSTGRES_DB=app
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=securedbpassword
 
-# Optional: GitHub Token for webhook automation
+# Optional: GitHub Configuration
+GITHUB_HOST=github.ibm.com  # or github.com for public GitHub
 GITHUB_TOKEN=ghp_your_github_token_here
 
 # Optional: Frontend environment variables
@@ -147,6 +150,7 @@ These variables MUST be present in your `.env.production` file:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
+| `GITHUB_HOST` | GitHub instance hostname | `github.ibm.com` |
 | `GITHUB_TOKEN` | GitHub Personal Access Token | None (webhooks created manually) |
 | `BACKEND_CORS_ORIGINS` | CORS origins | Auto-generated from frontend URL |
 | `WEBHOOK_BRANCH_FILTER` | Branch filter for webhooks | None (all branches trigger builds) |
@@ -365,14 +369,41 @@ WEBHOOK_BRANCH_FILTER=develop
 
 ### GitHub Integration (Optional)
 
+The script supports both IBM GitHub Enterprise and Public GitHub through the `GITHUB_HOST` variable.
+
 ```bash
-# For automatic webhook creation and deploy key management
+# GitHub Host (default: github.ibm.com)
+GITHUB_HOST=github.ibm.com  # For IBM GitHub Enterprise
+# GITHUB_HOST=github.com    # For Public GitHub
+
+# GitHub Personal Access Token for automatic webhook creation and deploy key management
 GITHUB_TOKEN=ghp_your_personal_access_token_here
 ```
+
+**How to create a GitHub Personal Access Token:**
+
+For **IBM GitHub Enterprise**:
+1. Go to https://github.ibm.com/settings/tokens
+
+For **Public GitHub**:
+1. Go to https://github.com/settings/tokens
+
+Then:
+2. Click "Generate new token (classic)"
+3. Give it a descriptive name (e.g., "OpenShift Deployment")
+4. Select the following scopes:
+   - `repo` - Full control of private repositories
+   - `admin:repo_hook` - Full control of repository hooks
+5. Click "Generate token" and copy the token
 
 **Required GitHub Token Permissions:**
 - `repo` - Full control of private repositories
 - `admin:repo_hook` - Full control of repository hooks
+
+**Supported GitHub Instances:**
+- IBM GitHub Enterprise: `github.ibm.com` (default)
+- Public GitHub: `github.com`
+- Custom GitHub Enterprise: Your custom domain
 
 ### Backend CORS (Optional)
 
@@ -591,13 +622,108 @@ Frontend build fails with missing environment variables.
 
 **Error:**
 ```
-==> Failed to create GitHub webhook for frontend
+==> Failed to create GitHub webhook for frontend (HTTP 401)
+API Response: {"message": "Bad credentials"}
 ```
 
 **Solution:**
-1. Verify `GITHUB_TOKEN` has correct permissions
-2. Check token scopes: `repo`, `admin:repo_hook`
-3. Manually add webhooks if automatic creation fails
+
+The script now provides detailed error messages for webhook failures. Common issues:
+
+**Authentication Failed (HTTP 401):**
+- Verify `GITHUB_TOKEN` is correct and not expired
+- Ensure token has required scopes: `repo`, `admin:repo_hook`
+- For IBM GitHub Enterprise, token must be from https://github.ibm.com/settings/tokens
+- For Public GitHub, token must be from https://github.com/settings/tokens
+
+**Repository Not Found (HTTP 404):**
+- Verify `GIT_SSH_URL` is correct
+- Ensure token has access to the repository
+- Check that `GITHUB_HOST` matches your Git URL (e.g., `github.ibm.com` or `github.com`)
+
+**Validation Failed (HTTP 422):**
+- Webhook URL may be invalid or unreachable
+- Webhook may already exist (check GitHub repository settings)
+
+**Manual Webhook Setup:**
+If automatic creation fails, the script will display webhook URLs. Add them manually:
+1. Go to your GitHub repository
+2. Navigate to Settings → Webhooks → Add webhook
+3. Paste the webhook URL
+4. Set Content type to `application/json`
+5. Select "Just the push event"
+6. Click "Add webhook"
+
+### Verifying Webhook Configuration
+
+After deployment, verify webhooks are properly configured:
+
+#### Check Webhooks on GitHub
+
+**For IBM GitHub Enterprise:**
+```bash
+# Using curl with your GITHUB_TOKEN
+curl -H "Authorization: token $GITHUB_TOKEN" \
+  https://api.github.ibm.com/repos/OWNER/REPO/hooks
+```
+
+**For Public GitHub:**
+```bash
+# Using curl with your GITHUB_TOKEN
+curl -H "Authorization: token $GITHUB_TOKEN" \
+  https://api.github.com/repos/OWNER/REPO/hooks
+```
+
+Or check via web interface:
+1. Go to your repository on GitHub
+2. Navigate to Settings → Webhooks
+3. You should see two webhooks (frontend and backend)
+4. Each webhook should show a green checkmark if successfully delivered
+
+#### Test Webhook Triggers
+
+1. Make a small change to your repository and push:
+   ```bash
+   git commit --allow-empty -m "Test webhook trigger"
+   git push
+   ```
+
+2. Check OpenShift build status:
+   ```bash
+   # Watch builds
+   oc get builds -w
+   
+   # Check specific build logs
+   oc logs -f bc/frontend
+   oc logs -f bc/backend
+   ```
+
+3. Verify webhook delivery on GitHub:
+   - Go to Settings → Webhooks
+   - Click on each webhook
+   - Check "Recent Deliveries" tab
+   - Should show successful deliveries (HTTP 200)
+
+#### Troubleshooting Webhook Issues
+
+**Webhook shows red X on GitHub:**
+- Check OpenShift route is accessible: `curl -I https://your-openshift-route`
+- Verify RoleBinding exists: `oc get rolebinding webhook-access-unauthenticated`
+- Check OpenShift logs for webhook requests
+
+**Builds not triggering on push:**
+- Verify webhook secret matches BuildConfig
+- Check branch filter if `WEBHOOK_BRANCH_FILTER` is set
+- Ensure webhook is active on GitHub
+
+**Get webhook URLs from OpenShift:**
+```bash
+# Frontend webhook
+oc describe bc/frontend | grep "Webhook Generic" -A 1
+
+# Backend webhook
+oc describe bc/backend | grep "Webhook Generic" -A 1
+```
 
 ### Debug Mode
 

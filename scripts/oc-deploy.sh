@@ -19,10 +19,15 @@
 # For detailed documentation, see scripts/README.md
 #
 
-set -euo pipefail
+set -eo pipefail
 
 # Default environment file location
 ENV_FILE="$(dirname "$0")/.env.production"
+
+# Default GitHub host (can be overridden in .env.production)
+# Set to github.ibm.com for IBM GitHub Enterprise
+# Set to github.com for public GitHub
+DEFAULT_GITHUB_HOST="github.ibm.com"
 
 # Flags
 RESET_PROD_DB=false
@@ -55,14 +60,27 @@ declare -a REQUIRED_VARS=(
     "POSTGRES_PASSWORD"
 )
 
-# Variables that need specific validation
-declare -A VALIDATION_MAP=(
-    ["APP_NAME"]="validate_name"
-    ["PROJECT_NAME"]="validate_name"
-    ["GIT_SSH_URL"]="validate_git_url"
-    ["FIRST_SUPERUSER"]="validate_email"
-    ["API_KEY"]="validate_api_key"
-)
+# Function to get validation function for a variable
+get_validation_function() {
+    local var_name=$1
+    case "$var_name" in
+        APP_NAME|PROJECT_NAME)
+            echo "validate_name"
+            ;;
+        GIT_SSH_URL)
+            echo "validate_git_url"
+            ;;
+        FIRST_SUPERUSER)
+            echo "validate_email"
+            ;;
+        API_KEY)
+            echo "validate_api_key"
+            ;;
+        *)
+            echo ""
+            ;;
+    esac
+}
 
 # Variables that need password length validation (min 8 chars)
 declare -a PASSWORD_VARS=(
@@ -313,12 +331,15 @@ validate_required_vars() {
     fi
     
     # Validate specific variables
-    for var_name in "${!VALIDATION_MAP[@]}"; do
-        local validation_func="${VALIDATION_MAP[$var_name]}"
-        local var_value="${!var_name}"
+    local vars_to_validate=("APP_NAME" "PROJECT_NAME" "GIT_SSH_URL" "FIRST_SUPERUSER" "API_KEY")
+    for var_name in "${vars_to_validate[@]}"; do
+        local validation_func=$(get_validation_function "$var_name")
+        local var_value="${!var_name:-}"
         
-        if ! $validation_func "$var_value"; then
-            invalid_vars+=("$var_name")
+        if [[ -n "$validation_func" && -n "$var_value" ]]; then
+            if ! $validation_func "$var_value"; then
+                invalid_vars+=("$var_name")
+            fi
         fi
     done
     
@@ -460,10 +481,11 @@ setup_project() {
 check_github_deploy_key() {
     local repo_url=$1
     local public_key=$2
+    local github_host="${GITHUB_HOST:-$DEFAULT_GITHUB_HOST}"
     
     # Extract owner and repo from SSH URL
-    # Format: git@github.com:owner/repo.git
-    if [[ $repo_url =~ git@github\.com:([^/]+)/(.+)\.git ]]; then
+    # Format: git@github.com:owner/repo.git or git@github.ibm.com:owner/repo.git
+    if [[ $repo_url =~ git@[^:]+:([^/]+)/(.+)\.git ]]; then
         local owner="${BASH_REMATCH[1]}"
         local repo="${BASH_REMATCH[2]}"
         
@@ -475,8 +497,19 @@ check_github_deploy_key() {
         
         # Query GitHub API for deploy keys
         local response
-        response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            "https://api.github.com/repos/$owner/$repo/keys")
+        local http_code
+        response=$(curl -s -w "\n%{http_code}" -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.$github_host/repos/$owner/$repo/keys")
+        
+        http_code=$(echo "$response" | tail -n1)
+        response=$(echo "$response" | sed '$d')
+        
+        # Check for API errors
+        if [[ "$http_code" != "200" ]]; then
+            print_warning "Failed to check deploy keys (HTTP $http_code). API response:"
+            echo "$response" | head -n 5
+            return 1
+        fi
         
         # Check if the public key exists
         if echo "$response" | grep -q "$(echo "$public_key" | awk '{print $2}')"; then
@@ -492,9 +525,10 @@ add_github_deploy_key() {
     local repo_url=$1
     local public_key=$2
     local key_title="OpenShift Deploy Key - $(date +%Y%m%d)"
+    local github_host="${GITHUB_HOST:-$DEFAULT_GITHUB_HOST}"
     
     # Extract owner and repo from SSH URL
-    if [[ $repo_url =~ git@github\.com:([^/]+)/(.+)\.git ]]; then
+    if [[ $repo_url =~ git@[^:]+:([^/]+)/(.+)\.git ]]; then
         local owner="${BASH_REMATCH[1]}"
         local repo="${BASH_REMATCH[2]}"
         
@@ -504,25 +538,42 @@ add_github_deploy_key() {
             return 1
         fi
         
-        print_status "Adding deploy key to GitHub repository..."
+        print_status "Adding deploy key to GitHub repository ($github_host)..."
         
         # Add deploy key via GitHub API
         local response
-        response=$(curl -s -X POST \
-            -H "Authorization: token $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/$owner/$repo/keys" \
+        local http_code
+        response=$(curl -s -w "\n%{http_code}" -X POST \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.$github_host/repos/$owner/$repo/keys" \
             -d "{\"title\":\"$key_title\",\"key\":\"$public_key\",\"read_only\":false}")
         
-        if echo "$response" | grep -q '"id"'; then
+        http_code=$(echo "$response" | tail -n1)
+        response=$(echo "$response" | sed '$d')
+        
+        if [[ "$http_code" == "201" ]] && echo "$response" | grep -q '"id"'; then
             print_success "Deploy key added to GitHub successfully!"
             return 0
         else
-            print_error "Failed to add deploy key to GitHub"
-            echo "$response"
+            print_error "Failed to add deploy key to GitHub (HTTP $http_code)"
+            print_error "API Response:"
+            echo "$response" | jq '.' 2>/dev/null || echo "$response"
+            
+            # Provide helpful error messages
+            if echo "$response" | grep -q "key is already in use"; then
+                print_warning "This SSH key is already registered. You may need to use --regenerate-ssh-key"
+            elif [[ "$http_code" == "401" ]]; then
+                print_error "Authentication failed. Check your GITHUB_TOKEN permissions."
+            elif [[ "$http_code" == "404" ]]; then
+                print_error "Repository not found. Check GIT_SSH_URL and token permissions."
+            fi
             return 1
         fi
     fi
+
+    print_error "Invalid GIT_SSH_URL format. Expected: git@$github_host:owner/repo.git"
     
     return 1
 }
@@ -531,6 +582,7 @@ add_github_deploy_key() {
 delete_ssh_keys() {
     local key_path="$HOME/.ssh/$PROJECT_NAME/ocp-key"
     local pub_key_path="$HOME/.ssh/$PROJECT_NAME/ocp-key.pub"
+    local github_host="${GITHUB_HOST:-$DEFAULT_GITHUB_HOST}"
     
     print_status "Deleting SSH keys..."
     
@@ -547,24 +599,41 @@ delete_ssh_keys() {
         print_status "Deleted local public key"
         
         # Delete from GitHub if GITHUB_TOKEN is available
-        if [[ -n "${GITHUB_TOKEN:-}" && $GIT_SSH_URL =~ git@github\.com:([^/]+)/(.+)\.git ]]; then
+        if [[ -n "${GITHUB_TOKEN:-}" && $GIT_SSH_URL =~ git@[^:]+:([^/]+)/(.+)\.git ]]; then
             local owner="${BASH_REMATCH[1]}"
             local repo="${BASH_REMATCH[2]}"
             
             # Get all deploy keys
             local keys_response
-            keys_response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-                "https://api.github.com/repos/$owner/$repo/keys")
+            local http_code
+            keys_response=$(curl -s -w "\n%{http_code}" -H "Authorization: token $GITHUB_TOKEN" \
+                "https://api.$github_host/repos/$owner/$repo/keys")
             
-            # Find and delete matching key
-            local key_id
-            key_id=$(echo "$keys_response" | jq -r ".[] | select(.key | contains(\"$(echo "$public_key" | awk '{print $2}')\")) | .id")
+            http_code=$(echo "$keys_response" | tail -n1)
+            keys_response=$(echo "$keys_response" | sed '$d')
             
-            if [[ -n "$key_id" ]]; then
-                curl -s -X DELETE \
-                    -H "Authorization: token $GITHUB_TOKEN" \
-                    "https://api.github.com/repos/$owner/$repo/keys/$key_id"
-                print_status "Deleted deploy key from GitHub"
+            if [[ "$http_code" != "200" ]]; then
+                print_warning "Failed to retrieve deploy keys from GitHub (HTTP $http_code)"
+            else
+                # Find and delete matching key
+                local key_id
+                key_id=$(echo "$keys_response" | jq -r ".[] | select(.key | contains(\"$(echo "$public_key" | awk '{print $2}')\")) | .id" 2>/dev/null)
+                
+                if [[ -n "$key_id" ]]; then
+                    local delete_response
+                    delete_response=$(curl -s -w "\n%{http_code}" -X DELETE \
+                        -H "Authorization: token $GITHUB_TOKEN" \
+                        "https://api.$github_host/repos/$owner/$repo/keys/$key_id")
+                    
+                    local delete_code=$(echo "$delete_response" | tail -n1)
+                    if [[ "$delete_code" == "204" ]]; then
+                        print_status "Deleted deploy key from GitHub"
+                    else
+                        print_warning "Failed to delete deploy key from GitHub (HTTP $delete_code)"
+                    fi
+                else
+                    print_status "Deploy key not found on GitHub (may have been already deleted)"
+                fi
             fi
         fi
     fi
@@ -828,6 +897,13 @@ EOF
         print_status "PVC postgresql-data already exists, skipping creation"
     fi
     
+    # Check if PostgreSQL deployment exists
+    local postgres_exists=false
+    if resource_exists "deployment" "postgresql"; then
+        postgres_exists=true
+        print_status "PostgreSQL deployment already exists"
+    fi
+    
     # Deploy PostgreSQL using container image with values from secret
     print_status "Deploying PostgreSQL container using values from $secret_name secret..."
     apply_resource "$(cat << EOF
@@ -903,6 +979,12 @@ EOF
         print_status "Service postgresql already exists, skipping creation"
     fi
     
+    # If PostgreSQL deployment already existed, trigger a rollout restart to pick up new env vars
+    if [[ "$postgres_exists" == "true" ]]; then
+        print_status "Restarting PostgreSQL deployment to apply updated environment variables..."
+        oc rollout restart deployment/postgresql
+    fi
+    
     print_status "Waiting for PostgreSQL to be ready..."
     # Wait for deployment to complete
     sleep 2  # Give OpenShift a moment to create resources
@@ -936,37 +1018,48 @@ configure_buildconfig_branch_filter() {
     local branch_filter="${WEBHOOK_BRANCH_FILTER:-}"
     
     if [[ -n "$branch_filter" ]]; then
-        print_status "Configuring $buildconfig_name to trigger builds only for branch: $branch_filter"
+        print_status "Configuring $buildconfig_name to build only from branch: $branch_filter"
         
-        # Update the GitHub webhook trigger to include branch filter
-        oc patch bc/$buildconfig_name --type=json -p "[
+        # Update the Git source ref to specify the branch
+        if oc patch bc/$buildconfig_name --type=json -p "[
             {
                 \"op\": \"add\",
-                \"path\": \"/spec/triggers/0/github/allowEnv\",
-                \"value\": true
-            },
-            {
-                \"op\": \"add\",
-                \"path\": \"/spec/triggers/0/github/env\",
-                \"value\": [{\"name\": \"GIT_REF\", \"value\": \"refs/heads/$branch_filter\"}]
+                \"path\": \"/spec/source/git/ref\",
+                \"value\": \"$branch_filter\"
             }
-        ]" 2>/dev/null || true
+        ]" 2>&1; then
+            print_success "Branch filter configured for $buildconfig_name (ref: $branch_filter)"
+        else
+            print_warning "Failed to configure branch filter for $buildconfig_name"
+        fi
         
-        # Also update generic webhook trigger
-        oc patch bc/$buildconfig_name --type=json -p "[
-            {
-                \"op\": \"add\",
-                \"path\": \"/spec/triggers/1/generic/allowEnv\",
-                \"value\": true
-            },
-            {
-                \"op\": \"add\",
-                \"path\": \"/spec/triggers/1/generic/env\",
-                \"value\": [{\"name\": \"GIT_REF\", \"value\": \"refs/heads/$branch_filter\"}]
-            }
-        ]" 2>/dev/null || true
+        # Add branch filter to webhook triggers using allowEnv
+        # This ensures webhooks only trigger builds for the specified branch
+        local trigger_count
+        trigger_count=$(oc get bc/$buildconfig_name -o json | jq '.spec.triggers | length')
         
-        print_success "Branch filter configured for $buildconfig_name"
+        for ((i=1; i<trigger_count; i++)); do
+            local trigger_type
+            trigger_type=$(oc get bc/$buildconfig_name -o json | jq -r ".spec.triggers[$i].type")
+            
+            if [[ "$trigger_type" == "GitHub" ]] || [[ "$trigger_type" == "Generic" ]]; then
+                local trigger_key=$(echo "$trigger_type" | tr '[:upper:]' '[:lower:]')
+                
+                # Add allowEnv and env filter for the trigger
+                oc patch bc/$buildconfig_name --type=json -p "[
+                    {
+                        \"op\": \"add\",
+                        \"path\": \"/spec/triggers/$i/$trigger_key/allowEnv\",
+                        \"value\": true
+                    },
+                    {
+                        \"op\": \"add\",
+                        \"path\": \"/spec/triggers/$i/$trigger_key/env\",
+                        \"value\": [{\"name\": \"GIT_REF\", \"value\": \"refs/heads/$branch_filter\"}]
+                    }
+                ]" 2>/dev/null || print_warning "Could not add env filter to $trigger_type trigger at index $i"
+            fi
+        done
     fi
 }
 
@@ -976,9 +1069,17 @@ deploy_frontend() {
     
     # Check if frontend app already exists
     if resource_exists "buildconfig" "frontend"; then
-        print_status "Frontend buildconfig already exists, updating..."
-        oc start-build frontend --from-dir=. --follow
+        print_status "Frontend buildconfig already exists, triggering rollout restart..."
+        # Just restart the deployment to pick up new environment variables
+        # Don't rebuild unless explicitly requested
+        if resource_exists "deployment" "frontend"; then
+            oc rollout restart deployment/frontend
+            oc rollout status deployment/frontend --timeout=300s
+        else
+            print_warning "Frontend deployment not found, skipping restart"
+        fi
     else
+        print_status "Creating new frontend application..."
         oc new-app --name=frontend --strategy=docker --context-dir=frontend --source-secret=git-secret "$GIT_SSH_URL"
     fi
     
@@ -1002,9 +1103,17 @@ deploy_backend() {
     
     # Check if backend app already exists
     if resource_exists "buildconfig" "backend"; then
-        print_status "Backend buildconfig already exists, updating..."
-        oc start-build backend --from-dir=. --follow
+        print_status "Backend buildconfig already exists, triggering rollout restart..."
+        # Just restart the deployment to pick up new environment variables
+        # Don't rebuild unless explicitly requested
+        if resource_exists "deployment" "backend"; then
+            oc rollout restart deployment/backend
+            oc rollout status deployment/backend --timeout=300s
+        else
+            print_warning "Backend deployment not found, skipping restart"
+        fi
     else
+        print_status "Creating new backend application..."
         oc new-app --name=backend --strategy=docker --context-dir=backend --source-secret=git-secret "$GIT_SSH_URL"
     fi
     
@@ -1089,23 +1198,42 @@ create_github_webhook() {
     local repo_url=$1
     local webhook_url=$2
     local webhook_type=$3  # "frontend" or "backend"
+    local github_host="${GITHUB_HOST:-$DEFAULT_GITHUB_HOST}"
     
     # Extract owner and repo from SSH URL
-    if [[ $repo_url =~ git@github\.com:([^/]+)/(.+)\.git ]]; then
+    if [[ $repo_url =~ git@[^:]+:([^/]+)/(.+)\.git ]]; then
         local owner="${BASH_REMATCH[1]}"
         local repo="${BASH_REMATCH[2]}"
         
         # Check if GITHUB_TOKEN is available
         if [[ -z "${GITHUB_TOKEN:-}" ]]; then
+            print_warning "GITHUB_TOKEN not set. Cannot create webhook automatically."
             return 1
         fi
         
-        print_status "Creating GitHub webhook for $webhook_type..."
+        print_status "Creating GitHub webhook for $webhook_type on $github_host..."
         
         # Check if webhook already exists
         local existing_webhooks
-        existing_webhooks=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            "https://api.github.com/repos/$owner/$repo/hooks")
+        local http_code
+        existing_webhooks=$(curl -s -w "\n%{http_code}" -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.$github_host/repos/$owner/$repo/hooks")
+        
+        http_code=$(echo "$existing_webhooks" | tail -n1)
+        existing_webhooks=$(echo "$existing_webhooks" | sed '$d')
+        
+        if [[ "$http_code" != "200" ]]; then
+            print_error "Failed to check existing webhooks (HTTP $http_code)"
+            print_error "API Response:"
+            echo "$existing_webhooks" | jq '.' 2>/dev/null || echo "$existing_webhooks"
+            
+            if [[ "$http_code" == "401" ]]; then
+                print_error "Authentication failed. Check your GITHUB_TOKEN."
+            elif [[ "$http_code" == "404" ]]; then
+                print_error "Repository not found. Check GIT_SSH_URL and token permissions."
+            fi
+            return 1
+        fi
         
         if echo "$existing_webhooks" | grep -q "$webhook_url"; then
             print_status "Webhook for $webhook_type already exists"
@@ -1114,30 +1242,47 @@ create_github_webhook() {
         
         # Create webhook
         local response
-        response=$(curl -s -X POST \
-            -H "Authorization: token $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/$owner/$repo/hooks" \
-            -d "{
-                \"name\": \"web\",
-                \"active\": true,
-                \"events\": [\"push\"],
-                \"config\": {
-                    \"url\": \"$webhook_url\",
-                    \"content_type\": \"json\",
-                    \"insecure_ssl\": \"0\"
-                }
-            }")
+        local json_payload
+
+        json_payload="{\"name\":\"web\",\"active\":true,\"events\":[\"push\"],\"config\":{\"url\":\"$webhook_url\",\"content_type\":\"json\",\"insecure_ssl\":\"0\"}}"
+
+        response=$(curl -s -w "\n%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.$github_host/repos/$owner/$repo/hooks" \
+            -d $json_payload
+        )
+
+        http_code=$(echo "$response" | tail -n1)
+        response=$(echo "$response" | sed '$d')
         
-        if echo "$response" | grep -q '"id"'; then
+        if [[ "$http_code" == "201" ]] && echo "$response" | grep -q '"id"'; then
             print_success "GitHub webhook for $webhook_type created successfully!"
             return 0
         else
-            print_warning "Failed to create GitHub webhook for $webhook_type"
+            print_error "Failed to create GitHub webhook for $webhook_type (HTTP $http_code)"
+            print_error "API Response:"
+            echo "$response" | jq '.' 2>/dev/null || echo "$response"
+            
+            # Provide helpful error messages
+            if [[ "$http_code" == "422" ]]; then
+                if echo "$response" | grep -q "Hook already exists"; then
+                    print_warning "Webhook already exists but wasn't detected in the check."
+                else
+                    print_error "Validation failed. Check webhook URL format."
+                fi
+            elif [[ "$http_code" == "401" ]]; then
+                print_error "Authentication failed. Check your GITHUB_TOKEN permissions."
+            elif [[ "$http_code" == "404" ]]; then
+                print_error "Repository not found. Check GIT_SSH_URL and token permissions."
+            fi
             return 1
         fi
     fi
     
+    print_error "Invalid GIT_SSH_URL format. Expected: git@$github_host:owner/repo.git"
     return 1
 }
 
@@ -1179,11 +1324,11 @@ EOF
     local backend_secret
     local backend_webhook
     
-    frontend_base_url=$(oc describe bc/frontend | grep "Webhook Generic" -A 1 | tail -n 1 | tr -d ' ')
+    frontend_base_url=$(oc describe bc/frontend | grep "Webhook Generic" -A 1 | tail -n 1 | sed 's/.*\(https:\/\/[^ ]*\).*/\1/')
     frontend_secret=$(oc get bc frontend -o jsonpath='{.spec.triggers[*].generic.secret}')
     frontend_webhook=${frontend_base_url/<secret>/$frontend_secret}
     
-    backend_base_url=$(oc describe bc/backend | grep "Webhook Generic" -A 1 | tail -n 1 | tr -d ' ')
+    backend_base_url=$(oc describe bc/backend | grep "Webhook Generic" -A 1 | tail -n 1 | sed 's/.*\(https:\/\/[^ ]*\).*/\1/')
     backend_secret=$(oc get bc backend -o jsonpath='{.spec.triggers[*].generic.secret}')
     backend_webhook=${backend_base_url/<secret>/$backend_secret}
     
