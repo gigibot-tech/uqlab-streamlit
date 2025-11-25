@@ -112,7 +112,7 @@ print_warning() {
 
 # Function to show help
 show_help() {
-    cat << EOF
+    echo -e "
 ${TEAL}OpenShift Deployment Script${NC}
 
 ${GREEN}DESCRIPTION:${NC}
@@ -173,8 +173,7 @@ ${GREEN}PREREQUISITES:${NC}
 
 ${GREEN}DOCUMENTATION:${NC}
     For detailed documentation, see scripts/README.md
-
-EOF
+"
 }
 
 #############################################
