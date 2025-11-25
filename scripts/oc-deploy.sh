@@ -16,7 +16,7 @@
 set -euo pipefail
 
 # Default environment file location
-ENV_FILE="$(dirname "$0")/production.env"
+ENV_FILE="$(dirname "$0")/.env.production"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
