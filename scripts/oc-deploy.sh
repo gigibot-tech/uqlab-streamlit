@@ -4,13 +4,19 @@
 #
 # This script deploys an application to OpenShift with the following features:
 # - Idempotent operations (can be run multiple times without side effects)
-# - Variables loaded from production.env file
-# - Interactive prompts only for variables not found in the env file
+# - Variables loaded dynamically from .env.production file
+# - Comprehensive validation for all required variables
 # - Best practices for bash scripting
 # - Sensitive values are masked in output
-# - Single environment secret for all components
+# - Dynamic secret creation from environment variables
+# - Automatic VITE_ prefix injection for frontend
+# - SSH key management with GitHub deploy key verification
+# - Database reset functionality
+# - GitHub webhook automation
 #
-# Usage: ./oc-deploy-optimized.sh [--env-file path/to/env/file]
+# Usage: ./oc-deploy.sh [OPTIONS]
+#
+# For detailed documentation, see scripts/README.md
 #
 
 set -euo pipefail
@@ -18,20 +24,10 @@ set -euo pipefail
 # Default environment file location
 ENV_FILE="$(dirname "$0")/.env.production"
 
-# Parse command line arguments
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    --env-file)
-      ENV_FILE="$2"
-      shift 2
-      ;;
-    *)
-      echo "Unknown option: $1"
-      echo "Usage: $0 [--env-file path/to/env/file]"
-      exit 1
-      ;;
-  esac
-done
+# Flags
+RESET_PROD_DB=false
+REGENERATE_SSH_KEY=false
+SHOW_HELP=false
 
 # Color codes for pretty output
 readonly GREEN='\033[0;32m'
@@ -40,6 +36,44 @@ readonly RED='\033[0;31m'
 readonly TEAL='\033[0;36m'
 readonly YELLOW='\033[1;33m'
 readonly NC='\033[0m' # No Color
+
+# Required main environment variables
+declare -a REQUIRED_VARS=(
+    "APP_NAME"
+    "PROJECT_NAME"
+    "GIT_SSH_URL"
+    "FIRST_SUPERUSER"
+    "FIRST_SUPERUSER_PASSWORD"
+    "SIGNUP_ACCESS_PASSWORD"
+    "API_KEY"
+    "ENVIRONMENT"
+    "SECRET_KEY"
+    "POSTGRES_SERVER"
+    "POSTGRES_PORT"
+    "POSTGRES_DB"
+    "POSTGRES_USER"
+    "POSTGRES_PASSWORD"
+)
+
+# Variables that need specific validation
+declare -A VALIDATION_MAP=(
+    ["APP_NAME"]="validate_name"
+    ["PROJECT_NAME"]="validate_name"
+    ["GIT_SSH_URL"]="validate_git_url"
+    ["FIRST_SUPERUSER"]="validate_email"
+    ["API_KEY"]="validate_api_key"
+)
+
+# Variables that need password length validation (min 8 chars)
+declare -a PASSWORD_VARS=(
+    "FIRST_SUPERUSER_PASSWORD"
+    "POSTGRES_PASSWORD"
+    "SECRET_KEY"
+)
+
+#############################################
+# Helper Functions
+#############################################
 
 # Function to print colored status messages
 print_status() {
@@ -58,10 +92,82 @@ print_warning() {
     echo -e "${YELLOW}==>${NC} $1"
 }
 
-# Function to validate project name
+# Function to show help
+show_help() {
+    cat << EOF
+${TEAL}OpenShift Deployment Script${NC}
+
+${GREEN}DESCRIPTION:${NC}
+    Deploys a full-stack application (Frontend, Backend, PostgreSQL) to OpenShift.
+    All configuration is loaded from the .env.production file.
+
+${GREEN}USAGE:${NC}
+    $0 [OPTIONS]
+
+${GREEN}OPTIONS:${NC}
+    -h, --help              Show this help message and exit
+    --env-file PATH         Specify custom environment file (default: scripts/.env.production)
+    --reset-prod-db         Reset production database (deletes and recreates PostgreSQL storage)
+    --regenerate-ssh-key    Delete and regenerate SSH keys for GitHub access
+
+${GREEN}REQUIRED ENVIRONMENT VARIABLES:${NC}
+    Main Variables:
+        APP_NAME                    Application name (lowercase, alphanumeric, hyphens)
+        PROJECT_NAME                OpenShift project name (lowercase, alphanumeric, hyphens)
+        GIT_SSH_URL                 Git repository SSH URL (e.g., git@github.com:user/repo.git)
+        FIRST_SUPERUSER             Admin email address
+        FIRST_SUPERUSER_PASSWORD    Admin password (min 8 characters)
+        SIGNUP_ACCESS_PASSWORD      Signup password (min 8 characters, can be empty)
+        API_KEY                     Backend API key (16, 32, or 64 characters)
+        ENVIRONMENT                 Environment name (e.g., production)
+        SECRET_KEY                  Backend secret key (min 8 characters)
+        
+    Database Variables:
+        POSTGRES_SERVER             PostgreSQL server hostname
+        POSTGRES_PORT               PostgreSQL port
+        POSTGRES_DB                 Database name
+        POSTGRES_USER               Database user
+        POSTGRES_PASSWORD           Database password (min 8 characters)
+
+${GREEN}OPTIONAL ENVIRONMENT VARIABLES:${NC}
+    GITHUB_TOKEN                GitHub Personal Access Token (for webhook automation)
+    BACKEND_CORS_ORIGINS        CORS origins (auto-generated if not provided)
+    VITE_*                      Any variable prefixed with VITE_ is injected into frontend
+
+${GREEN}EXAMPLES:${NC}
+    # Normal deployment
+    $0
+
+    # Use custom env file
+    $0 --env-file /path/to/.env.custom
+
+    # Reset database and deploy
+    $0 --reset-prod-db
+
+    # Regenerate SSH keys
+    $0 --regenerate-ssh-key
+
+${GREEN}PREREQUISITES:${NC}
+    - OpenShift CLI (oc) version 4.14 or higher
+    - Logged into OpenShift cluster (oc login)
+    - .env.production file with all required variables
+    - GitHub deploy key configured (or will be prompted)
+
+${GREEN}DOCUMENTATION:${NC}
+    For detailed documentation, see scripts/README.md
+
+EOF
+}
+
+#############################################
+# Validation Functions
+#############################################
+
+# Function to validate project/app name
 validate_name() {
     local name=$1
     if [[ ! $name =~ ^[a-z0-9-]+$ ]]; then
+        print_error "Invalid name: '$name'. Must contain only lowercase letters, numbers, and hyphens."
         return 1
     fi
     return 0
@@ -71,6 +177,7 @@ validate_name() {
 validate_email() {
     local email=$1
     if [[ ! $email =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]; then
+        print_error "Invalid email: '$email'"
         return 1
     fi
     return 0
@@ -81,8 +188,41 @@ validate_git_url() {
     local url=$1
     # Check if URL starts with git@ or ssh:// and ends with .git
     if [[ ! $url =~ ^(git@|ssh://).+\.git$ ]]; then
+        print_error "Invalid Git SSH URL: '$url'. Must start with 'git@' or 'ssh://' and end with '.git'"
         return 1
     fi
+    return 0
+}
+
+# Function to validate API key (min length 16, must be power of 2: 16, 32, 64)
+validate_api_key() {
+    local key=$1
+    local length=${#key}
+    
+    if [[ $length -lt 16 ]]; then
+        print_error "API key must be at least 16 characters long (current: $length)"
+        return 1
+    fi
+    
+    # Check if length is a power of 2 (16, 32, 64, 128, etc.)
+    if [[ $length -ne 16 && $length -ne 32 && $length -ne 64 && $length -ne 128 && $length -ne 256 ]]; then
+        print_error "API key length must be a power of 2 (16, 32, 64, 128, 256). Current length: $length"
+        return 1
+    fi
+    
+    return 0
+}
+
+# Function to validate password length (min 8 characters)
+validate_password_length() {
+    local password=$1
+    local var_name=$2
+    
+    if [[ ${#password} -lt 8 ]]; then
+        print_error "$var_name must be at least 8 characters long (current: ${#password})"
+        return 1
+    fi
+    
     return 0
 }
 
@@ -100,19 +240,24 @@ is_sensitive_var() {
     return 1
 }
 
+#############################################
+# Environment Loading Functions
+#############################################
+
 # Function to load environment variables from file
 load_env_file() {
     local env_file=$1
     
     if [[ ! -f "$env_file" ]]; then
-        print_warning "Environment file $env_file not found. Will prompt for all values."
+        print_error "Environment file $env_file not found!"
+        print_error "Please create $env_file with all required variables."
+        print_error "See scripts/.env.production.example for reference."
         return 1
     fi
     
     print_status "Loading environment variables from $env_file"
     
     # Load variables from env file without executing any code
-    # This is safer than using source
     while IFS= read -r line || [[ -n "$line" ]]; do
         # Skip comments and empty lines
         [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
@@ -130,79 +275,83 @@ load_env_file() {
             
             # Export the variable
             export "$var_name"="$var_value"
-            print_status "Loaded $var_name from environment file"
+            
+            # Mask sensitive values in output
+            if is_sensitive_var "$var_name"; then
+                print_status "Loaded $var_name [value masked]"
+            else
+                print_status "Loaded $var_name=$var_value"
+            fi
         fi
     done < "$env_file"
     
     return 0
 }
 
-# Function to prompt for a variable if not already set
-prompt_var() {
-    local var_name=$1
-    local prompt_text=$2
-    local validation_func=${3:-""}
-    local default_value=${4:-""}
-    local is_optional=${5:-false}
-    local is_sensitive=false
+# Function to validate all required variables
+validate_required_vars() {
+    local missing_vars=()
+    local invalid_vars=()
     
-    # Check if variable is already set
-    if [[ -n "${!var_name:-}" ]]; then
-        # Check if variable is sensitive
-        if is_sensitive_var "$var_name"; then
-            print_status "$var_name is already set [value masked]"
-        else
-            print_status "$var_name is already set to '${!var_name}'"
-        fi
-        return 0
-    fi
+    print_status "Validating required environment variables..."
     
-    # Add default value to prompt if provided
-    local prompt_with_default="$prompt_text"
-    if [[ -n "${default_value:-}" ]]; then
-        prompt_with_default="$prompt_text (default: $default_value)"
-    fi
-    
-    # Check if variable is sensitive
-    if is_sensitive_var "$var_name"; then
-        is_sensitive=true
-    fi
-    
-    while true; do
-        # Use -s flag for read command if variable is sensitive
-        if [[ "$is_sensitive" == "true" ]]; then
-            read -s -p "$prompt_with_default: " input_value
-            echo # Add a newline after the hidden input
-        else
-            read -p "$prompt_with_default: " input_value
-        fi
-        
-        # Use default if input is empty
-        if [[ -z "$input_value" && -n "${default_value:-}" ]]; then
-            input_value="$default_value"
-        fi
-        
-        # Skip validation if the field is optional and input is empty
-        if [[ "$is_optional" == "true" && -z "$input_value" ]]; then
-            export "$var_name"=""
-            return 0
-        fi
-        
-        # Skip validation if no validation function is provided
-        if [[ -z "$validation_func" ]]; then
-            export "$var_name"="$input_value"
-            return 0
-        fi
-        
-        # Validate input
-        if "$validation_func" "$input_value"; then
-            export "$var_name"="$input_value"
-            return 0
-        else
-            print_error "Invalid input. Please try again."
+    # Check if all required variables are set
+    for var_name in "${REQUIRED_VARS[@]}"; do
+        if [[ -z "${!var_name:-}" ]]; then
+            missing_vars+=("$var_name")
         fi
     done
+    
+    # Report missing variables
+    if [[ ${#missing_vars[@]} -gt 0 ]]; then
+        print_error "The following required environment variables are missing:"
+        for var_name in "${missing_vars[@]}"; do
+            echo "  - $var_name"
+        done
+        print_error "Please add these variables to your environment file: $ENV_FILE"
+        return 1
+    fi
+    
+    # Validate specific variables
+    for var_name in "${!VALIDATION_MAP[@]}"; do
+        local validation_func="${VALIDATION_MAP[$var_name]}"
+        local var_value="${!var_name}"
+        
+        if ! $validation_func "$var_value"; then
+            invalid_vars+=("$var_name")
+        fi
+    done
+    
+    # Validate password lengths
+    for var_name in "${PASSWORD_VARS[@]}"; do
+        local var_value="${!var_name:-}"
+        
+        # Skip empty optional passwords
+        if [[ "$var_name" == "SIGNUP_ACCESS_PASSWORD" && -z "$var_value" ]]; then
+            continue
+        fi
+        
+        if [[ -n "$var_value" ]] && ! validate_password_length "$var_value" "$var_name"; then
+            invalid_vars+=("$var_name")
+        fi
+    done
+    
+    # Report invalid variables
+    if [[ ${#invalid_vars[@]} -gt 0 ]]; then
+        print_error "The following environment variables have invalid values:"
+        for var_name in "${invalid_vars[@]}"; do
+            echo "  - $var_name"
+        done
+        return 1
+    fi
+    
+    print_success "All required environment variables are valid!"
+    return 0
 }
+
+#############################################
+# OpenShift Helper Functions
+#############################################
 
 # Function to check if a resource exists
 resource_exists() {
@@ -245,6 +394,7 @@ check_oc_version() {
         return 1
     fi
     
+    print_success "OpenShift client version is compatible"
     return 0
 }
 
@@ -271,11 +421,12 @@ check_oc_login() {
     return 0
 }
 
+#############################################
+# Project Setup Functions
+#############################################
+
 # Function to handle project creation or selection
 setup_project() {
-    # Project name with validation
-    prompt_var "PROJECT_NAME" "Choose an OpenShift project name (lowercase letters, numbers and hyphens only)" validate_name
-    
     # Check if project exists
     if resource_exists "project" "$PROJECT_NAME"; then
         print_status "Project '$PROJECT_NAME' already exists."
@@ -291,13 +442,140 @@ setup_project() {
         fi
     else
         # Create new project
-        print_status "Creating new project..."
+        print_status "Creating new project '$PROJECT_NAME'..."
         oc new-project "$PROJECT_NAME" || {
             print_error "Failed to create project"
             return 1
         }
     fi
     
+    return 0
+}
+
+#############################################
+# SSH Key Management Functions
+#############################################
+
+# Function to check if deploy key exists on GitHub
+check_github_deploy_key() {
+    local repo_url=$1
+    local public_key=$2
+    
+    # Extract owner and repo from SSH URL
+    # Format: git@github.com:owner/repo.git
+    if [[ $repo_url =~ git@github\.com:([^/]+)/(.+)\.git ]]; then
+        local owner="${BASH_REMATCH[1]}"
+        local repo="${BASH_REMATCH[2]}"
+        
+        # Check if GITHUB_TOKEN is available
+        if [[ -z "${GITHUB_TOKEN:-}" ]]; then
+            print_warning "GITHUB_TOKEN not set. Cannot verify deploy key automatically."
+            return 1
+        fi
+        
+        # Query GitHub API for deploy keys
+        local response
+        response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/$owner/$repo/keys")
+        
+        # Check if the public key exists
+        if echo "$response" | grep -q "$(echo "$public_key" | awk '{print $2}')"; then
+            return 0
+        fi
+    fi
+    
+    return 1
+}
+
+# Function to add deploy key to GitHub
+add_github_deploy_key() {
+    local repo_url=$1
+    local public_key=$2
+    local key_title="OpenShift Deploy Key - $(date +%Y%m%d)"
+    
+    # Extract owner and repo from SSH URL
+    if [[ $repo_url =~ git@github\.com:([^/]+)/(.+)\.git ]]; then
+        local owner="${BASH_REMATCH[1]}"
+        local repo="${BASH_REMATCH[2]}"
+        
+        # Check if GITHUB_TOKEN is available
+        if [[ -z "${GITHUB_TOKEN:-}" ]]; then
+            print_warning "GITHUB_TOKEN not set. Cannot add deploy key automatically."
+            return 1
+        fi
+        
+        print_status "Adding deploy key to GitHub repository..."
+        
+        # Add deploy key via GitHub API
+        local response
+        response=$(curl -s -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/$owner/$repo/keys" \
+            -d "{\"title\":\"$key_title\",\"key\":\"$public_key\",\"read_only\":false}")
+        
+        if echo "$response" | grep -q '"id"'; then
+            print_success "Deploy key added to GitHub successfully!"
+            return 0
+        else
+            print_error "Failed to add deploy key to GitHub"
+            echo "$response"
+            return 1
+        fi
+    fi
+    
+    return 1
+}
+
+# Function to delete SSH keys
+delete_ssh_keys() {
+    local key_path="$HOME/.ssh/$PROJECT_NAME/ocp-key"
+    local pub_key_path="$HOME/.ssh/$PROJECT_NAME/ocp-key.pub"
+    
+    print_status "Deleting SSH keys..."
+    
+    # Delete local keys
+    if [[ -f "$key_path" ]]; then
+        rm -f "$key_path"
+        print_status "Deleted local private key"
+    fi
+    
+    if [[ -f "$pub_key_path" ]]; then
+        local public_key
+        public_key=$(cat "$pub_key_path")
+        rm -f "$pub_key_path"
+        print_status "Deleted local public key"
+        
+        # Delete from GitHub if GITHUB_TOKEN is available
+        if [[ -n "${GITHUB_TOKEN:-}" && $GIT_SSH_URL =~ git@github\.com:([^/]+)/(.+)\.git ]]; then
+            local owner="${BASH_REMATCH[1]}"
+            local repo="${BASH_REMATCH[2]}"
+            
+            # Get all deploy keys
+            local keys_response
+            keys_response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+                "https://api.github.com/repos/$owner/$repo/keys")
+            
+            # Find and delete matching key
+            local key_id
+            key_id=$(echo "$keys_response" | jq -r ".[] | select(.key | contains(\"$(echo "$public_key" | awk '{print $2}')\")) | .id")
+            
+            if [[ -n "$key_id" ]]; then
+                curl -s -X DELETE \
+                    -H "Authorization: token $GITHUB_TOKEN" \
+                    "https://api.github.com/repos/$owner/$repo/keys/$key_id"
+                print_status "Deleted deploy key from GitHub"
+            fi
+        fi
+    fi
+    
+    # Delete from OpenShift
+    if resource_exists "secret" "git-secret"; then
+        oc delete secret git-secret
+        print_status "Deleted git-secret from OpenShift"
+    fi
+    
+    print_success "SSH keys deleted successfully"
     return 0
 }
 
@@ -308,26 +586,43 @@ setup_ssh_keys() {
     local pub_key_path="$HOME/.ssh/$PROJECT_NAME/ocp-key.pub"
     local need_user_input=false
     
-    # Check if both private and public keys already exist and if the env OC_DEPLOY_KEY is set
-    if [[ -f "$key_path" && -f "$pub_key_path" && -n "${OC_DEPLOY_KEY:-}" ]]; then
+    # Check if keys exist and are valid
+    if [[ -f "$key_path" && -f "$pub_key_path" ]]; then
         print_status "SSH key pair already exists in ~/.ssh/$PROJECT_NAME/"
         
-    else
-            # Generate new keys
-            print_status "Generating new SSH key pair"
-            ssh-keygen -N '' -f "$key_path" -C "openshift-deploy-key" -q <<< y > /dev/null
-            print_success "SSH key pair generated"
+        # Check if deploy key exists on GitHub
+        local public_key
+        public_key=$(cat "$pub_key_path")
+        
+        if check_github_deploy_key "$GIT_SSH_URL" "$public_key"; then
+            print_success "Deploy key is already configured on GitHub"
+        else
+            print_warning "Deploy key not found on GitHub"
             need_user_input=true
+        fi
+    else
+        # Generate new keys
+        print_status "Generating new SSH key pair..."
+        ssh-keygen -N '' -f "$key_path" -C "openshift-deploy-key" -q <<< y > /dev/null
+        print_success "SSH key pair generated"
+        need_user_input=true
     fi
     
     # Display the public key
+    local public_key
+    public_key=$(cat "$pub_key_path")
     print_status "Public SSH key for repository access:"
-    echo -e "${TEAL}$(cat "$pub_key_path")${NC}"
+    echo -e "${TEAL}$public_key${NC}"
     
-    # Only prompt for user input if we generated a new key and didn't use OC_DEPLOY_KEY
+    # Try to add deploy key automatically
     if [[ "$need_user_input" == "true" ]]; then
-        print_status "${GREEN}Please add this public key to your GitLab/GitHub repository as a deploy key${NC}"
-        read -p "Press enter once you've added the deploy key..."
+        if add_github_deploy_key "$GIT_SSH_URL" "$public_key"; then
+            print_success "Deploy key configured automatically"
+        else
+            print_warning "Could not add deploy key automatically"
+            print_status "${GREEN}Please add this public key to your GitHub repository as a deploy key${NC}"
+            read -p "Press enter once you've added the deploy key..."
+        fi
     fi
     
     # Create or update OpenShift secret
@@ -344,14 +639,60 @@ setup_ssh_keys() {
     return 0
 }
 
-# Function to create initial application environment secret without frontend/backend URLs
+#############################################
+# Secret Management Functions
+#############################################
+
+# Function to build dynamic secret creation command
+build_secret_literals() {
+    local secret_literals=""
+    
+    # Read all variables from env file
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        # Skip comments and empty lines
+        [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
+        
+        # Extract variable name and value
+        if [[ "$line" =~ ^([A-Za-z0-9_]+)=(.*)$ ]]; then
+            local var_name="${BASH_REMATCH[1]}"
+            local var_value="${!var_name:-}"
+            
+            # Add to secret literals
+            secret_literals+=" --from-literal=$var_name=\"$var_value\""
+        fi
+    done < "$ENV_FILE"
+    
+    echo "$secret_literals"
+}
+
+# Function to get all VITE_ prefixed variables
+get_vite_variables() {
+    local vite_vars=""
+    
+    # Get all exported variables
+    while IFS='=' read -r name value; do
+        if [[ $name == VITE_* ]]; then
+            vite_vars+=" --from-literal=$name=\"$value\""
+        fi
+    done < <(env)
+    
+    echo "$vite_vars"
+}
+
+# Function to create initial application environment secret
 create_initial_app_env_secret() {
     local secret_name="$APP_NAME-env"
+    local secret_key_generated=false
     
-    # Generate a secure random secret key if not provided
-    if [[ -z "${SECRET_KEY:-}" ]]; then
+    # Generate a secure random secret key if not provided or too short
+    if [[ -z "${SECRET_KEY:-}" ]] || [[ ${#SECRET_KEY} -lt 8 ]]; then
         SECRET_KEY=$(openssl rand -hex 32)
+        export SECRET_KEY
+        secret_key_generated=true
         print_success "Generated secure secret key for backend"
+        echo -e "${YELLOW}IMPORTANT: Save this SECRET_KEY for future reference:${NC}"
+        echo -e "${GREEN}SECRET_KEY=$SECRET_KEY${NC}"
+        echo
     fi
     
     # Create or update application environment secret
@@ -360,37 +701,14 @@ create_initial_app_env_secret() {
         oc delete secret "$secret_name"
     fi
     
-    print_status "Creating initial application environment secret $secret_name (without frontend/backend URLs)..."
-    oc create secret generic "$secret_name" \
-        --from-literal=ENVIRONMENT=production \
-        --from-literal=PROJECT_NAME="$PROJECT_NAME" \
-        --from-literal=SECRET_KEY="$SECRET_KEY" \
-        --from-literal=FIRST_SUPERUSER="$FIRST_SUPERUSER" \
-        --from-literal=FIRST_SUPERUSER_PASSWORD="$FIRST_SUPERUSER_PASSWORD" \
-        --from-literal=SIGNUP_ACCESS_PASSWORD="$SIGNUP_ACCESS_PASSWORD" \
-        --from-literal=POSTGRES_SERVER=postgresql \
-        --from-literal=POSTGRES_PORT=5432 \
-        --from-literal=POSTGRES_DB=app \
-        --from-literal=POSTGRES_USER="$POSTGRES_USER" \
-        --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
-        --from-literal=API_KEY="$API_KEY" \
-        --from-literal=TWILIO_ACCOUNT_SID="$TWILIO_ACCOUNT_SID" \
-        --from-literal=TWILIO_AUTH_TOKEN="$TWILIO_AUTH_TOKEN" \
-        --from-literal=TWILIO_PHONE_NUMBER="$TWILIO_PHONE_NUMBER" \
-        --from-literal=ASSISTANT_NUMBER_GERMAN="$ASSISTANT_NUMBER_GERMAN" \
-        --from-literal=ASSISTANT_NUMBER_ENGLISH="${ASSISTANT_NUMBER_ENGLISH:-}" \
-        --from-literal=SIP_TRUNK="$SIP_TRUNK" \
-        --from-literal=WATSONX_URL="$WATSONX_URL" \
-        --from-literal=WATSONX_API_KEY="$WATSONX_API_KEY" \
-        --from-literal=WATSONX_PROJECT_ID="$WATSONX_PROJECT_ID" \
-        --from-literal=DEFAULT_MODEL_ID="$DEFAULT_MODEL_ID" \
-        --from-literal=CHAT_CONTACT_SALUTATION="${CHAT_CONTACT_SALUTATION:-}" \
-        --from-literal=CHAT_CONTACT_NAME="${CHAT_CONTACT_NAME:-}" \
-        --from-literal=CHAT_CONTACT_FAMILY_NAME="${CHAT_CONTACT_FAMILY_NAME:-}" \
-        --from-literal=CHAT_CONTACT_PHONE_NUMBER="${CHAT_CONTACT_PHONE_NUMBER:-}" \
-        --from-literal=CHAT_CONTACT_EMAIL="${CHAT_CONTACT_EMAIL:-}" \
-        --from-literal=CHAT_CONTACT_RESEARCHER_SALUTATION="${CHAT_CONTACT_RESEARCHER_SALUTATION:-}" \
-        --from-literal=CHAT_CONTACT_RESEARCHER_NAME="${CHAT_CONTACT_RESEARCHER_NAME:-}"
+    print_status "Creating initial application environment secret $secret_name..."
+    
+    # Build dynamic secret creation command
+    local secret_cmd="oc create secret generic $secret_name"
+    secret_cmd+=$(build_secret_literals)
+    
+    # Execute the command
+    eval "$secret_cmd"
     
     return 0
 }
@@ -412,45 +730,76 @@ update_app_env_secret_with_urls() {
     
     print_status "Updating $secret_name secret with frontend and backend URLs..."
     
+    # Set BACKEND_CORS_ORIGINS if not already set
+    if [[ -z "${BACKEND_CORS_ORIGINS:-}" ]]; then
+        export BACKEND_CORS_ORIGINS="https://$frontend_url"
+    fi
+    
+    # Set DOMAIN for backend
+    export DOMAIN="$backend_url"
+    
     # Delete the existing secret
     oc delete secret "$secret_name"
     
     # Recreate the secret with all values including URLs
     print_status "Recreating application environment secret with URLs..."
-    oc create secret generic "$secret_name" \
-        --from-literal=ENVIRONMENT=production \
-        --from-literal=PROJECT_NAME="$PROJECT_NAME" \
-        --from-literal=BACKEND_CORS_ORIGINS="https://$frontend_url" \
-        --from-literal=SECRET_KEY="$SECRET_KEY" \
-        --from-literal=FIRST_SUPERUSER="$FIRST_SUPERUSER" \
-        --from-literal=FIRST_SUPERUSER_PASSWORD="$FIRST_SUPERUSER_PASSWORD" \
-        --from-literal=SIGNUP_ACCESS_PASSWORD="$SIGNUP_ACCESS_PASSWORD" \
-        --from-literal=POSTGRES_SERVER=postgresql \
-        --from-literal=POSTGRES_PORT=5432 \
-        --from-literal=POSTGRES_DB=app \
-        --from-literal=POSTGRES_USER="$POSTGRES_USER" \
-        --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
-        --from-literal=API_KEY="$API_KEY" \
-        --from-literal=TWILIO_ACCOUNT_SID="$TWILIO_ACCOUNT_SID" \
-        --from-literal=TWILIO_AUTH_TOKEN="$TWILIO_AUTH_TOKEN" \
-        --from-literal=TWILIO_PHONE_NUMBER="$TWILIO_PHONE_NUMBER" \
-        --from-literal=ASSISTANT_NUMBER_GERMAN="$ASSISTANT_NUMBER_GERMAN" \
-        --from-literal=ASSISTANT_NUMBER_ENGLISH="${ASSISTANT_NUMBER_ENGLISH:-}" \
-        --from-literal=SIP_TRUNK="$SIP_TRUNK" \
-        --from-literal=WATSONX_URL="$WATSONX_URL" \
-        --from-literal=WATSONX_API_KEY="$WATSONX_API_KEY" \
-        --from-literal=WATSONX_PROJECT_ID="$WATSONX_PROJECT_ID" \
-        --from-literal=DEFAULT_MODEL_ID="$DEFAULT_MODEL_ID" \
-        --from-literal=DOMAIN="$backend_url" \
-        --from-literal=CHAT_CONTACT_SALUTATION="${CHAT_CONTACT_SALUTATION:-}" \
-        --from-literal=CHAT_CONTACT_NAME="${CHAT_CONTACT_NAME:-}" \
-        --from-literal=CHAT_CONTACT_FAMILY_NAME="${CHAT_CONTACT_FAMILY_NAME:-}" \
-        --from-literal=CHAT_CONTACT_PHONE_NUMBER="${CHAT_CONTACT_PHONE_NUMBER:-}" \
-        --from-literal=CHAT_CONTACT_EMAIL="${CHAT_CONTACT_EMAIL:-}" \
-        --from-literal=CHAT_CONTACT_RESEARCHER_SALUTATION="${CHAT_CONTACT_RESEARCHER_SALUTATION:-}" \
-        --from-literal=CHAT_CONTACT_RESEARCHER_NAME="${CHAT_CONTACT_RESEARCHER_NAME:-}"
+    local secret_cmd="oc create secret generic $secret_name"
+    secret_cmd+=$(build_secret_literals)
+    
+    # Execute the command
+    eval "$secret_cmd"
     
     print_success "Updated environment secret with frontend URL: https://$frontend_url and backend URL: https://$backend_url"
+    return 0
+}
+
+#############################################
+# Database Management Functions
+#############################################
+
+# Function to reset production database
+reset_production_database() {
+    print_warning "Resetting production database..."
+    print_warning "This will DELETE all data in the PostgreSQL database!"
+    read -p "Are you sure you want to continue? (yes/no): " CONFIRM
+    
+    if [[ "$CONFIRM" != "yes" ]]; then
+        print_error "Database reset cancelled"
+        return 1
+    fi
+    
+    # Delete PostgreSQL deployment
+    if resource_exists "deployment" "postgresql"; then
+        print_status "Deleting PostgreSQL deployment..."
+        oc delete deployment postgresql
+    fi
+    
+    # Delete PostgreSQL service
+    if resource_exists "service" "postgresql"; then
+        print_status "Deleting PostgreSQL service..."
+        oc delete service postgresql
+    fi
+    
+    # Delete PVC
+    if resource_exists "pvc" "postgresql-data"; then
+        print_status "Deleting PostgreSQL PVC..."
+        oc delete pvc postgresql-data
+    fi
+    
+    print_success "Database storage deleted successfully"
+    
+    # Recreate database
+    print_status "Recreating database..."
+    deploy_database || return 1
+    
+    # Restart backend to apply migrations
+    if resource_exists "deployment" "backend"; then
+        print_status "Restarting backend to apply migrations..."
+        oc rollout restart deployment/backend
+        oc rollout status deployment/backend --timeout=300s
+    fi
+    
+    print_success "Database reset completed successfully!"
     return 0
 }
 
@@ -577,6 +926,10 @@ EOF
     return 0
 }
 
+#############################################
+# Application Deployment Functions
+#############################################
+
 # Function to deploy frontend
 deploy_frontend() {
     print_status "Deploying frontend..."
@@ -586,7 +939,7 @@ deploy_frontend() {
         print_status "Frontend buildconfig already exists, updating..."
         oc start-build frontend --from-dir=. --follow
     else
-        oc new-app --name=frontend --strategy=docker --context-dir=frontend --source-secret=git-secret "$GIT_URL"
+        oc new-app --name=frontend --strategy=docker --context-dir=frontend --source-secret=git-secret "$GIT_SSH_URL"
     fi
     
     # Check if route exists
@@ -609,7 +962,7 @@ deploy_backend() {
         print_status "Backend buildconfig already exists, updating..."
         oc start-build backend --from-dir=. --follow
     else
-        oc new-app --name=backend --strategy=docker --context-dir=backend --source-secret=git-secret "$GIT_URL"
+        oc new-app --name=backend --strategy=docker --context-dir=backend --source-secret=git-secret "$GIT_SSH_URL"
     fi
     
     # Check if route exists
@@ -631,9 +984,30 @@ configure_frontend() {
     frontend_url=$(oc get route frontend -o jsonpath='{.spec.host}')
     backend_url=$(oc get route backend -o jsonpath='{.spec.host}')
     
-    # Configure frontend build with VITE_API_URL and Assistant variables
-    print_status "Configuring frontend build with VITE_API_URL=https://$backend_url and Assistant variables..."
-    oc patch bc/frontend --type=merge -p "{\"spec\":{\"strategy\":{\"dockerStrategy\":{\"env\":[{\"name\":\"VITE_API_URL\",\"value\":\"https://$backend_url\"},{\"name\":\"VITE_ASSISTANT_INTEGRATION_ID\",\"value\":\"$VITE_ASSISTANT_INTEGRATION_ID\"},{\"name\":\"VITE_ASSISTANT_SERVICE_INSTANCE_ID\",\"value\":\"$VITE_ASSISTANT_SERVICE_INSTANCE_ID\"},{\"name\":\"VITE_ASSISTANT_REGION\",\"value\":\"$VITE_ASSISTANT_REGION\"}]}}}}"
+    # Build VITE_ environment variables JSON array
+    local vite_env_json="["
+    local first=true
+    
+    # Add VITE_API_URL
+    vite_env_json+="{\"name\":\"VITE_API_URL\",\"value\":\"https://$backend_url\"}"
+    first=false
+    
+    # Add all VITE_ prefixed variables from environment
+    while IFS='=' read -r name value; do
+        if [[ $name == VITE_* ]]; then
+            if [[ "$first" == "false" ]]; then
+                vite_env_json+=","
+            fi
+            vite_env_json+="{\"name\":\"$name\",\"value\":\"$value\"}"
+            first=false
+        fi
+    done < <(env)
+    
+    vite_env_json+="]"
+    
+    # Configure frontend build with all VITE_ variables
+    print_status "Configuring frontend build with VITE_ environment variables..."
+    oc patch bc/frontend --type=merge -p "{\"spec\":{\"strategy\":{\"dockerStrategy\":{\"env\":$vite_env_json}}}}"
     
     print_status "Restarting frontend build to apply build args..."
     oc cancel-build bc/frontend --state=new --state=pending --state=running 2>/dev/null || true
@@ -658,6 +1032,67 @@ group_resources() {
     oc label deployment/frontend deployment/backend deployment/postgresql app.kubernetes.io/part-of="$APP_NAME" --overwrite
     
     return 0
+}
+
+#############################################
+# Webhook Management Functions
+#############################################
+
+# Function to create GitHub webhook
+create_github_webhook() {
+    local repo_url=$1
+    local webhook_url=$2
+    local webhook_type=$3  # "frontend" or "backend"
+    
+    # Extract owner and repo from SSH URL
+    if [[ $repo_url =~ git@github\.com:([^/]+)/(.+)\.git ]]; then
+        local owner="${BASH_REMATCH[1]}"
+        local repo="${BASH_REMATCH[2]}"
+        
+        # Check if GITHUB_TOKEN is available
+        if [[ -z "${GITHUB_TOKEN:-}" ]]; then
+            return 1
+        fi
+        
+        print_status "Creating GitHub webhook for $webhook_type..."
+        
+        # Check if webhook already exists
+        local existing_webhooks
+        existing_webhooks=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/$owner/$repo/hooks")
+        
+        if echo "$existing_webhooks" | grep -q "$webhook_url"; then
+            print_status "Webhook for $webhook_type already exists"
+            return 0
+        fi
+        
+        # Create webhook
+        local response
+        response=$(curl -s -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/$owner/$repo/hooks" \
+            -d "{
+                \"name\": \"web\",
+                \"active\": true,
+                \"events\": [\"push\"],
+                \"config\": {
+                    \"url\": \"$webhook_url\",
+                    \"content_type\": \"json\",
+                    \"insecure_ssl\": \"0\"
+                }
+            }")
+        
+        if echo "$response" | grep -q '"id"'; then
+            print_success "GitHub webhook for $webhook_type created successfully!"
+            return 0
+        else
+            print_warning "Failed to create GitHub webhook for $webhook_type"
+            return 1
+        fi
+    fi
+    
+    return 1
 }
 
 # Function to setup CI/CD webhooks
@@ -710,85 +1145,96 @@ EOF
     FRONTEND_WEBHOOK="$frontend_webhook"
     BACKEND_WEBHOOK="$backend_webhook"
     
+    # Try to create GitHub webhooks automatically
+    if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+        print_status "Attempting to create GitHub webhooks automatically..."
+        create_github_webhook "$GIT_SSH_URL" "$frontend_webhook" "frontend"
+        create_github_webhook "$GIT_SSH_URL" "$backend_webhook" "backend"
+    else
+        print_warning "GITHUB_TOKEN not set. Webhooks must be added manually to GitHub."
+    fi
+    
     return 0
+}
+
+#############################################
+# Main Execution Functions
+#############################################
+
+# Parse command line arguments
+parse_arguments() {
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -h|--help)
+                SHOW_HELP=true
+                shift
+                ;;
+            --env-file)
+                ENV_FILE="$2"
+                shift 2
+                ;;
+            --reset-prod-db)
+                RESET_PROD_DB=true
+                shift
+                ;;
+            --regenerate-ssh-key)
+                REGENERATE_SSH_KEY=true
+                shift
+                ;;
+            *)
+                print_error "Unknown option: $1"
+                echo "Use --help for usage information"
+                exit 1
+                ;;
+        esac
+    done
 }
 
 # Main function
 main() {
+    # Parse arguments
+    parse_arguments "$@"
+    
+    # Show help if requested
+    if [[ "$SHOW_HELP" == "true" ]]; then
+        show_help
+        exit 0
+    fi
+    
     echo
     echo -e "${TEAL}Welcome to the OpenShift Deployment Script!${NC}"
     echo -e "${GREEN}========================================${NC}"
     echo
     
     # Load environment variables from file
-    load_env_file "$ENV_FILE"
+    load_env_file "$ENV_FILE" || exit 1
+    
+    # Validate all required variables
+    validate_required_vars || exit 1
     
     # Check OpenShift client and login
     check_oc_version || exit 1
     check_oc_login || exit 1
     
-    # Collect required inputs that are not in the env file
-    echo
-    echo -e "${TEAL}Please provide any missing information:${NC}"
-    echo -e "${GREEN}----------------------------------------${NC}"
-    echo
-    
-    # App name
-    prompt_var "APP_NAME" "Choose an application name (lowercase letters, numbers and hyphens only)" validate_name
-    
-    # Git URL
-    prompt_var "GIT_URL" "Your Git Repository URL (ssh format, e.g. git@github.com:user/repo.git)" validate_git_url
-    
-    # Postgres configuration
-    prompt_var "POSTGRES_USER" "Choose a Postgres username"
-    prompt_var "POSTGRES_PASSWORD" "Choose a Postgres password"
-    
-    # Superuser configuration
-    prompt_var "FIRST_SUPERUSER" "Choose a First superuser email" validate_email
-    prompt_var "FIRST_SUPERUSER_PASSWORD" "Choose a First superuser password (minimum 8 characters)"
-    prompt_var "SIGNUP_ACCESS_PASSWORD" "Choose a Signup access password (leave empty if users should not be able to signup themselves)" "" "" true
-    
-    # API Key
-    prompt_var "API_KEY" "Enter API key for backend security"
-    
-    # Twilio configuration
-    prompt_var "TWILIO_ACCOUNT_SID" "Enter your Twilio Account SID"
-    prompt_var "TWILIO_AUTH_TOKEN" "Enter your Twilio Auth Token"
-    prompt_var "TWILIO_PHONE_NUMBER" "Enter your Twilio Phone Number (e.g. +1234567890)"
-    
-    # Watson Assistant configuration
-    prompt_var "ASSISTANT_NUMBER_GERMAN" "Enter Assistant Number for German"
-    prompt_var "ASSISTANT_NUMBER_ENGLISH" "Enter Assistant Number for English (optional)" "" "" true
-    prompt_var "SIP_TRUNK" "Enter SIP Trunk" "public.voip.eu-de.assistant.watson.cloud.ibm.com"
-    
-    # Watson Assistant Frontend Integration configuration
-    prompt_var "VITE_ASSISTANT_INTEGRATION_ID" "Enter Assistant Integration ID (for frontend web chat)"
-    prompt_var "VITE_ASSISTANT_SERVICE_INSTANCE_ID" "Enter Assistant Service Instance ID (for frontend web chat)"
-    prompt_var "VITE_ASSISTANT_REGION" "Enter Assistant Region" "eu-de"
-    
-    
-    # WatsonX.AI configuration
-    prompt_var "WATSONX_URL" "Enter WatsonX URL" "https://eu-de.ml.cloud.ibm.com"
-    prompt_var "WATSONX_API_KEY" "Enter WatsonX API Key"
-    prompt_var "WATSONX_PROJECT_ID" "Enter WatsonX Project ID"
-    prompt_var "DEFAULT_MODEL_ID" "Enter Default Model ID" "meta-llama/llama-4-maverick-17b-128e-instruct-fp8"
-    
-    # Chat Contact configuration
-    prompt_var "CHAT_CONTACT_SALUTATION" "Enter Chat Contact Salutation (e.g. HERR, FRAU)" "HERR"
-    prompt_var "CHAT_CONTACT_NAME" "Enter Chat Contact First Name" "Max"
-    prompt_var "CHAT_CONTACT_FAMILY_NAME" "Enter Chat Contact Family Name" "Mustermann"
-    prompt_var "CHAT_CONTACT_PHONE_NUMBER" "Enter Chat Contact Phone Number" "+491234567890"
-    prompt_var "CHAT_CONTACT_EMAIL" "Enter Chat Contact Email" "max.mustermann@example.com" validate_email
-    prompt_var "CHAT_CONTACT_RESEARCHER_SALUTATION" "Enter Chat Contact Researcher Salutation (e.g. HERR, FRAU)" "FRAU"
-    prompt_var "CHAT_CONTACT_RESEARCHER_NAME" "Enter Chat Contact Researcher Name" "Martha Sample"
-    
     # Setup project
     setup_project || exit 1
     
+    # Handle SSH key regeneration flag
+    if [[ "$REGENERATE_SSH_KEY" == "true" ]]; then
+        delete_ssh_keys || exit 1
+    fi
+    
     # Setup SSH keys
     setup_ssh_keys || exit 1
-
-    # Create the initial app environment secret without frontend/backend URLs
+    
+    # Handle database reset flag
+    if [[ "$RESET_PROD_DB" == "true" ]]; then
+        reset_production_database || exit 1
+        print_success "Database reset completed. Exiting."
+        exit 0
+    fi
+    
+    # Create the initial app environment secret
     create_initial_app_env_secret || exit 1
     
     # Deploy database
@@ -814,12 +1260,18 @@ main() {
     # Print success message
     print_success "Deployment completed successfully!"
     echo
-    echo "Frontend Webhook URL:"
-    echo "$FRONTEND_WEBHOOK"
-    echo
-    echo "Backend Webhook URL:"
-    echo "$BACKEND_WEBHOOK"
-    echo
+    
+    if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+        print_success "GitHub webhooks have been configured automatically!"
+    else
+        echo "Frontend Webhook URL:"
+        echo "$FRONTEND_WEBHOOK"
+        echo
+        echo "Backend Webhook URL:"
+        echo "$BACKEND_WEBHOOK"
+        echo
+        print_status "Please add these webhook URLs to your GitHub repository"
+    fi
     
     # Get URLs
     local frontend_url
@@ -827,18 +1279,16 @@ main() {
     frontend_url=$(oc get route frontend -o jsonpath='{.spec.host}')
     backend_url=$(oc get route backend -o jsonpath='{.spec.host}')
     
-    echo "Once Builds are completed (this can take a few minutes), you can access the application at:"
-    echo "https://$frontend_url"
-    echo "https://$backend_url"
     echo
-    print_status "Please add these webhook URLs to your GitLab/GitHub repository"
-    print_status "Put the backend url in your openapi-for-assistant.json file"
+    echo "Once builds are completed (this can take a few minutes), you can access the application at:"
+    echo "Frontend: https://$frontend_url"
+    echo "Backend:  https://$backend_url"
     echo
     
     return 0
 }
 
-# Execute main function
-main
+# Execute main function with all arguments
+main "$@"
 
 # Made with Bob
