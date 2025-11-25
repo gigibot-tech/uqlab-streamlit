@@ -930,6 +930,46 @@ EOF
 # Application Deployment Functions
 #############################################
 
+# Function to configure buildconfig webhook branch filter
+configure_buildconfig_branch_filter() {
+    local buildconfig_name=$1
+    local branch_filter="${WEBHOOK_BRANCH_FILTER:-}"
+    
+    if [[ -n "$branch_filter" ]]; then
+        print_status "Configuring $buildconfig_name to trigger builds only for branch: $branch_filter"
+        
+        # Update the GitHub webhook trigger to include branch filter
+        oc patch bc/$buildconfig_name --type=json -p "[
+            {
+                \"op\": \"add\",
+                \"path\": \"/spec/triggers/0/github/allowEnv\",
+                \"value\": true
+            },
+            {
+                \"op\": \"add\",
+                \"path\": \"/spec/triggers/0/github/env\",
+                \"value\": [{\"name\": \"GIT_REF\", \"value\": \"refs/heads/$branch_filter\"}]
+            }
+        ]" 2>/dev/null || true
+        
+        # Also update generic webhook trigger
+        oc patch bc/$buildconfig_name --type=json -p "[
+            {
+                \"op\": \"add\",
+                \"path\": \"/spec/triggers/1/generic/allowEnv\",
+                \"value\": true
+            },
+            {
+                \"op\": \"add\",
+                \"path\": \"/spec/triggers/1/generic/env\",
+                \"value\": [{\"name\": \"GIT_REF\", \"value\": \"refs/heads/$branch_filter\"}]
+            }
+        ]" 2>/dev/null || true
+        
+        print_success "Branch filter configured for $buildconfig_name"
+    fi
+}
+
 # Function to deploy frontend
 deploy_frontend() {
     print_status "Deploying frontend..."
@@ -941,6 +981,9 @@ deploy_frontend() {
     else
         oc new-app --name=frontend --strategy=docker --context-dir=frontend --source-secret=git-secret "$GIT_SSH_URL"
     fi
+    
+    # Configure branch filter if specified
+    configure_buildconfig_branch_filter "frontend"
     
     # Check if route exists
     if ! resource_exists "route" "frontend"; then
@@ -964,6 +1007,9 @@ deploy_backend() {
     else
         oc new-app --name=backend --strategy=docker --context-dir=backend --source-secret=git-secret "$GIT_SSH_URL"
     fi
+    
+    # Configure branch filter if specified
+    configure_buildconfig_branch_filter "backend"
     
     # Check if route exists
     if ! resource_exists "route" "backend"; then

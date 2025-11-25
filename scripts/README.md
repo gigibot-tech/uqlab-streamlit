@@ -149,6 +149,7 @@ These variables MUST be present in your `.env.production` file:
 |----------|-------------|---------|
 | `GITHUB_TOKEN` | GitHub Personal Access Token | None (webhooks created manually) |
 | `BACKEND_CORS_ORIGINS` | CORS origins | Auto-generated from frontend URL |
+| `WEBHOOK_BRANCH_FILTER` | Branch filter for webhooks | None (all branches trigger builds) |
 | `VITE_*` | Frontend environment variables | Automatically injected |
 
 #### 3. Dynamic Variables
@@ -328,6 +329,38 @@ VITE_API_URL=https://backend-route-url
 VITE_CUSTOM_FEATURE=enabled
 VITE_ANALYTICS_ID=UA-123456-1
 VITE_APP_VERSION=1.0.0
+```
+
+### Webhook Branch Filter (Optional)
+
+Control which Git branches trigger OpenShift builds:
+
+```bash
+# Only trigger builds when main branch is updated
+WEBHOOK_BRANCH_FILTER=main
+```
+
+**How it works:**
+- Configures OpenShift BuildConfig webhook triggers with branch filters
+- GitHub webhooks receive all push events, but OpenShift only builds specified branch
+- Useful for production environments to prevent builds from feature branches
+- Leave empty or unset to trigger builds on all branches (default)
+
+**Common use cases:**
+- **Production**: `WEBHOOK_BRANCH_FILTER=main` or `master`
+- **Staging**: `WEBHOOK_BRANCH_FILTER=develop` or `staging`
+- **Feature testing**: Leave empty to build all branches
+
+**Example scenarios:**
+```bash
+# Production environment - only build from main
+WEBHOOK_BRANCH_FILTER=main
+
+# Staging environment - only build from develop
+WEBHOOK_BRANCH_FILTER=develop
+
+# Development environment - build all branches
+# WEBHOOK_BRANCH_FILTER=
 ```
 
 ### GitHub Integration (Optional)
