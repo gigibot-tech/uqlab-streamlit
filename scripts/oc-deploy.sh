@@ -803,9 +803,9 @@ update_app_env_secret_with_urls() {
         export BACKEND_CORS_ORIGINS="https://$frontend_url"
     else
         # Add backend URL to existing BACKEND_CORS_ORIGINS if not already present
-        if [[ ! "$BACKEND_CORS_ORIGINS" =~ "https://$backend_url" ]]; then
-            export BACKEND_CORS_ORIGINS="$BACKEND_CORS_ORIGINS,https://$backend_url"
-            print_status "Added backend URL to existing BACKEND_CORS_ORIGINS"
+        if [[ ! "$BACKEND_CORS_ORIGINS" =~ "https://$frontend_url" ]]; then
+            export BACKEND_CORS_ORIGINS="$BACKEND_CORS_ORIGINS,https://$frontend_url"
+            print_status "Added frontend URL to existing BACKEND_CORS_ORIGINS"
         fi
     fi
     
