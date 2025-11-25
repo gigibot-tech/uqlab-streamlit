@@ -798,13 +798,22 @@ update_app_env_secret_with_urls() {
     
     print_status "Updating $secret_name secret with frontend and backend URLs..."
     
-    # Set BACKEND_CORS_ORIGINS if not already set
+    # Set BACKEND_CORS_ORIGINS if not already set, or append backend URL if it exists
     if [[ -z "${BACKEND_CORS_ORIGINS:-}" ]]; then
         export BACKEND_CORS_ORIGINS="https://$frontend_url"
+    else
+        # Add backend URL to existing BACKEND_CORS_ORIGINS if not already present
+        if [[ ! "$BACKEND_CORS_ORIGINS" =~ "https://$backend_url" ]]; then
+            export BACKEND_CORS_ORIGINS="$BACKEND_CORS_ORIGINS,https://$backend_url"
+            print_status "Added backend URL to existing BACKEND_CORS_ORIGINS"
+        fi
     fi
     
     # Set DOMAIN for backend
     export DOMAIN="$backend_url"
+    
+    # Set VITE_API_URL for frontend (also needed by backend if it serves frontend assets)
+    export VITE_API_URL="https://$backend_url"
     
     # Delete the existing secret
     oc delete secret "$secret_name"
@@ -1138,30 +1147,50 @@ configure_frontend() {
     frontend_url=$(oc get route frontend -o jsonpath='{.spec.host}')
     backend_url=$(oc get route backend -o jsonpath='{.spec.host}')
     
-    # Build VITE_ environment variables JSON array
-    local vite_env_json="["
+    # Build VITE_ build arguments JSON array
+    # Note: Vite embeds these at BUILD time, so they must be build args, not runtime env vars
+    local vite_buildargs_json="["
     local first=true
     
     # Add VITE_API_URL
-    vite_env_json+="{\"name\":\"VITE_API_URL\",\"value\":\"https://$backend_url\"}"
+    vite_buildargs_json+="{\"name\":\"VITE_API_URL\",\"value\":\"https://$backend_url\"}"
     first=false
     
-    # Add all VITE_ prefixed variables from environment
-    while IFS='=' read -r name value; do
-        if [[ $name == VITE_* ]]; then
-            if [[ "$first" == "false" ]]; then
-                vite_env_json+=","
+    # Add all VITE_ prefixed variables from .env.production file
+    if [[ -f "$ENV_FILE" ]]; then
+        while IFS= read -r line || [[ -n "$line" ]]; do
+            # Skip comments and empty lines
+            [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
+            
+            # Extract variable name and value
+            if [[ "$line" =~ ^(VITE_[A-Za-z0-9_]+)=(.*)$ ]]; then
+                local var_name="${BASH_REMATCH[1]}"
+                local var_value="${BASH_REMATCH[2]}"
+                
+                # Remove quotes if present
+                var_value="${var_value#\"}"
+                var_value="${var_value%\"}"
+                var_value="${var_value#\'}"
+                var_value="${var_value%\'}"
+                
+                # Skip VITE_API_URL as we already added it
+                if [[ "$var_name" != "VITE_API_URL" ]]; then
+                    if [[ "$first" == "false" ]]; then
+                        vite_buildargs_json+=","
+                    fi
+                    vite_buildargs_json+="{\"name\":\"$var_name\",\"value\":\"$var_value\"}"
+                    first=false
+                    print_status "Found $var_name in .env.production"
+                fi
             fi
-            vite_env_json+="{\"name\":\"$name\",\"value\":\"$value\"}"
-            first=false
-        fi
-    done < <(env)
+        done < "$ENV_FILE"
+    fi
     
-    vite_env_json+="]"
+    vite_buildargs_json+="]"
     
-    # Configure frontend build with all VITE_ variables
-    print_status "Configuring frontend build with VITE_ environment variables..."
-    oc patch bc/frontend --type=merge -p "{\"spec\":{\"strategy\":{\"dockerStrategy\":{\"env\":$vite_env_json}}}}"
+    # Configure frontend build with all VITE_ variables as BUILD ARGS
+    print_status "Configuring frontend build with VITE_ build arguments..."
+    oc patch bc/frontend --type=merge -p "{\"spec\":{\"strategy\":{\"dockerStrategy\":{\"buildArgs\":$vite_buildargs_json}}}}"
     
     print_status "Restarting frontend build to apply build args..."
     oc cancel-build bc/frontend --state=new --state=pending --state=running 2>/dev/null || true
