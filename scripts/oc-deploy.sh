@@ -103,8 +103,12 @@ main() {
     
     echo
     echo -e "${TEAL}Welcome to the OpenShift Deployment Script!${NC}"
-    echo -e "${GREEN}========================================${NC}"
     echo
+    
+    # ============================================================
+    # PHASE 1: INITIALIZATION
+    # ============================================================
+    print_section_header "PHASE 1: INITIALIZATION"
     
     # Load environment variables from file
     load_env_file "$ENV_FILE" "$SHOW_ENV_VALUES" || exit 1
@@ -112,9 +116,19 @@ main() {
     # Validate all required variables
     validate_required_vars || exit 1
     
+    # ============================================================
+    # PHASE 2: PREREQUISITES CHECK
+    # ============================================================
+    print_section_header "PHASE 2: PREREQUISITES CHECK"
+    
     # Check OpenShift client and login
     check_oc_version || exit 1
     check_oc_login || exit 1
+    
+    # ============================================================
+    # PHASE 3: PROJECT SETUP
+    # ============================================================
+    print_section_header "PHASE 3: PROJECT SETUP"
     
     # Setup project
     setup_project || exit 1
@@ -134,11 +148,21 @@ main() {
         exit 0
     fi
     
+    # ============================================================
+    # PHASE 4: DATABASE DEPLOYMENT
+    # ============================================================
+    print_section_header "PHASE 4: DATABASE DEPLOYMENT"
+    
     # Create the initial app environment secret
     create_initial_app_env_secret || exit 1
     
     # Deploy database
     deploy_database || exit 1
+    
+    # ============================================================
+    # PHASE 5: APPLICATION DEPLOYMENT
+    # ============================================================
+    print_section_header "PHASE 5: APPLICATION DEPLOYMENT"
     
     # Deploy frontend and backend
     deploy_frontend || exit 1
@@ -147,17 +171,22 @@ main() {
     # Update the app environment secret with frontend/backend URLs
     update_app_env_secret_with_urls || exit 1
     
-    # Deploy OAuth2 Proxy (optional - uncomment to enable)
+    # Deploy OAuth2 Proxy (optional)
     # Requires all OAuth2 Proxy environment variables to be configured in .env.production
     # See scripts/.env.production.example for required variables
-    # if is_oauth_enabled; then
-    #     print_status "OAuth2 Proxy is enabled, deploying..."
-    #     create_oauth_proxy_secret || exit 1
-    #     deploy_oauth_proxy || exit 1
-    #     create_oauth_proxy_service || exit 1
-    #     create_oauth_proxy_route || exit 1
-    #     update_backend_with_oauth_url || exit 1
-    # fi
+    if is_oauth_enabled; then
+        print_status "OAuth2 Proxy is enabled, deploying..."
+        create_oauth_proxy_secret || exit 1
+        deploy_oauth_proxy || exit 1
+        create_oauth_proxy_service || exit 1
+        create_oauth_proxy_route || exit 1
+        update_backend_with_oauth_url || exit 1
+    fi
+    
+    # ============================================================
+    # PHASE 6: CONFIGURATION
+    # ============================================================
+    print_section_header "PHASE 6: CONFIGURATION"
     
     # Configure frontend and backend
     configure_frontend || exit 1
@@ -165,6 +194,11 @@ main() {
     
     # Group resources
     group_resources || exit 1
+    
+    # ============================================================
+    # PHASE 7: POST-DEPLOYMENT
+    # ============================================================
+    print_section_header "PHASE 7: POST-DEPLOYMENT"
     
     # Setup webhooks
     setup_webhooks || exit 1

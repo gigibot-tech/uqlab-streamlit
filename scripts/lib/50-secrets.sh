@@ -8,7 +8,6 @@
 # - Initial application environment secret creation
 # - Secret updates with URLs
 #
-
 #############################################
 # Secret Management Functions
 #############################################
@@ -59,7 +58,7 @@ create_initial_app_env_secret() {
         SECRET_KEY=$(openssl rand -hex 32)
         export SECRET_KEY
         secret_key_generated=true
-        print_success "Generated secure secret key for backend"
+        print_success "Generated secure secret key for backend" "secrets"
         
         # Store in output collector
         add_deployment_output "secret_key_generated" "$SECRET_KEY"
@@ -67,11 +66,11 @@ create_initial_app_env_secret() {
     
     # Create or update application environment secret
     if resource_exists "secret" "$secret_name"; then
-        print_status "Updating $secret_name secret..."
+        print_status "Updating $secret_name secret..." "secrets"
         oc delete secret "$secret_name"
     fi
     
-    print_status "Creating initial application environment secret $secret_name..."
+    print_status "Creating initial application environment secret $secret_name..." "secrets"
     
     # Build dynamic secret creation command
     local secret_cmd="oc create secret generic $secret_name"
@@ -94,11 +93,11 @@ update_app_env_secret_with_urls() {
     backend_url=$(oc get route backend -o jsonpath='{.spec.host}' 2>/dev/null || echo "")
     
     if [[ -z "$frontend_url" || -z "$backend_url" ]]; then
-        print_error "Could not get frontend or backend URLs. Make sure the routes are created."
+        print_error "Could not get frontend or backend URLs. Make sure the routes are created." "secrets"
         return 1
     fi
     
-    print_status "Updating $secret_name secret with frontend and backend URLs..."
+    print_status "Updating $secret_name secret with frontend and backend URLs..." "secrets"
     
     # Set BACKEND_CORS_ORIGINS if not already set, or append backend URL if it exists
     if [[ -z "${BACKEND_CORS_ORIGINS:-}" ]]; then
@@ -107,7 +106,7 @@ update_app_env_secret_with_urls() {
         # Add backend URL to existing BACKEND_CORS_ORIGINS if not already present
         if [[ ! "$BACKEND_CORS_ORIGINS" =~ "https://$frontend_url" ]]; then
             export BACKEND_CORS_ORIGINS="$BACKEND_CORS_ORIGINS,https://$frontend_url"
-            print_status "Added frontend URL to existing BACKEND_CORS_ORIGINS"
+            print_status "Added frontend URL to existing BACKEND_CORS_ORIGINS" "secrets"
         fi
     fi
     
@@ -128,14 +127,14 @@ update_app_env_secret_with_urls() {
     oc delete secret "$secret_name"
     
     # Recreate the secret with all values including URLs
-    print_status "Recreating application environment secret with URLs..."
+    print_status "Recreating application environment secret with URLs..." "secrets"
     local secret_cmd="oc create secret generic $secret_name"
     secret_cmd+=$(build_secret_literals)
     
     # Execute the command
     eval "$secret_cmd"
     
-    print_success "Updated environment secret with frontend URL: https://$frontend_url and backend URL: https://$backend_url"
+    print_success "Updated environment secret with frontend URL: https://$frontend_url and backend URL: https://$backend_url" "secrets"
     return 0
 }
 

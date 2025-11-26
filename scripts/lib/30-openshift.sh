@@ -9,7 +9,6 @@
 # - Login status verification
 # - Project setup
 #
-
 #############################################
 # OpenShift Helper Functions
 #############################################
@@ -34,37 +33,37 @@ apply_resource() {
     resource_name=$(echo "$resource_content" | grep -E "^  name:" | head -1 | awk '{print $2}')
     
     if [[ -z "$resource_type" || -z "$resource_name" ]]; then
-        print_error "Could not determine resource type or name"
+        print_error "Could not determine resource type or name" "openshift"
         return 1
     fi
     
-    print_status "Applying $resource_type/$resource_name..."
+    print_status "Applying $resource_type/$resource_name..." "openshift"
     echo "$resource_content" | oc apply -f -
     return $?
 }
 
 # Check OpenShift client version
 check_oc_version() {
-    print_status "Checking OpenShift client version..."
+    print_status "Checking OpenShift client version..." "openshift"
     local oc_version
     oc_version=$(oc version 2>/dev/null | grep "Client Version:" | awk '{print $3}' | cut -d'.' -f2)
     
     if [ -z "$oc_version" ] || [ "$oc_version" -lt "14" ]; then
-        print_error "OpenShift client version 4.14 or higher is required"
-        print_error "Current version: $(oc version 2>/dev/null | grep "Client Version:")"
+        print_error "OpenShift client version 4.14 or higher is required" "openshift"
+        print_error "Current version: $(oc version 2>/dev/null | grep "Client Version:")" "openshift"
         return 1
     fi
     
-    print_success "OpenShift client version is compatible"
+    print_success "OpenShift client version is compatible" "openshift"
     return 0
 }
 
 # Check OpenShift login status
 check_oc_login() {
-    print_status "Checking OpenShift instance and login status..."
+    print_status "Checking OpenShift instance and login status..." "openshift"
     
     if ! oc whoami --show-server &>/dev/null || ! oc whoami &>/dev/null; then
-        print_error "Not logged into OpenShift. Please login first using:"
+        print_error "Not logged into OpenShift. Please login first using:" "openshift"
         echo "oc login --token=<token> --server=<server-url>"
         return 1
     fi
@@ -75,7 +74,7 @@ check_oc_login() {
     read -p "Do you want to continue? (y/n): " CONTINUE
     
     if [[ ! $CONTINUE =~ ^[Yy]$ ]]; then
-        print_error "Deployment cancelled"
+        print_error "Deployment cancelled" "openshift"
         return 1
     fi
     
@@ -90,22 +89,22 @@ check_oc_login() {
 setup_project() {
     # Check if project exists
     if resource_exists "project" "$PROJECT_NAME"; then
-        print_status "Project '$PROJECT_NAME' already exists."
+        print_status "Project '$PROJECT_NAME' already exists." "openshift"
         read -p "Do you want to switch to this project and continue deployment? (y/n): " USE_EXISTING
         if [[ $USE_EXISTING =~ ^[Yy]$ ]]; then
             oc project "$PROJECT_NAME" || {
-                print_error "Failed to switch to project"
+                print_error "Failed to switch to project" "openshift"
                 return 1
             }
         else
-            print_error "Deployment cancelled"
+            print_error "Deployment cancelled" "openshift"
             return 1
         fi
     else
         # Create new project
-        print_status "Creating new project '$PROJECT_NAME'..."
+        print_status "Creating new project '$PROJECT_NAME'..." "openshift"
         oc new-project "$PROJECT_NAME" || {
-            print_error "Failed to create project"
+            print_error "Failed to create project" "openshift"
             return 1
         }
     fi

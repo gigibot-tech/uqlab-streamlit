@@ -7,7 +7,6 @@
 # - Required variable validation
 # - Password validation
 #
-
 # Required main environment variables
 declare -a REQUIRED_VARS=(
     "APP_NAME"
@@ -53,13 +52,13 @@ load_env_file() {
     local show_values=${2:-false}
     
     if [[ ! -f "$env_file" ]]; then
-        print_error "Environment file $env_file not found!"
-        print_error "Please create $env_file with all required variables."
-        print_error "See scripts/.env.production.example for reference."
+        print_error "Environment file $env_file not found!" "environment"
+        print_error "Please create $env_file with all required variables." "environment"
+        print_error "See scripts/.env.production.example for reference." "environment"
         return 1
     fi
     
-    print_status "Loading environment variables from $env_file"
+    print_status "Loading environment variables from $env_file" "environment"
     
     # Load variables from env file without executing any code
     while IFS= read -r line || [[ -n "$line" ]]; do
@@ -82,7 +81,7 @@ load_env_file() {
             
             # Display variable only if show_values flag is true
             if [[ "$show_values" == "true" ]]; then
-                print_status "Loaded $var_name=$var_value"
+                print_status "Loaded $var_name=$var_value" "environment"
             fi
         fi
     done < "$env_file"
@@ -106,14 +105,14 @@ validate_oauth_vars() {
     
     # If no OAuth vars set, OAuth is disabled - OK
     if [[ ${#oauth_vars_set[@]} -eq 0 ]]; then
-        print_status "OAuth2 Proxy is disabled (no OAuth variables configured)"
+        print_status "OAuth2 Proxy is disabled (no OAuth variables configured)" "environment"
         return 0
     fi
     
     # If some but not all OAuth vars set - ERROR
     if [[ ${#oauth_vars_missing[@]} -gt 0 ]]; then
-        print_error "OAuth2 Proxy is partially configured. All OAuth variables must be set or all must be empty."
-        print_error "Missing OAuth variables:"
+        print_error "OAuth2 Proxy is partially configured. All OAuth variables must be set or all must be empty." "environment"
+        print_error "Missing OAuth variables:" "environment"
         for var_name in "${oauth_vars_missing[@]}"; do
             echo "  - $var_name"
         done
@@ -122,11 +121,11 @@ validate_oauth_vars() {
     
     # All OAuth vars are set - validate COOKIE_SECRET length (min 16 chars)
     if [[ ${#OAUTH2_PROXY_COOKIE_SECRET} -lt 16 ]]; then
-        print_error "OAUTH2_PROXY_COOKIE_SECRET must be at least 16 characters (current: ${#OAUTH2_PROXY_COOKIE_SECRET})"
+        print_error "OAUTH2_PROXY_COOKIE_SECRET must be at least 16 characters (current: ${#OAUTH2_PROXY_COOKIE_SECRET})" "environment"
         return 1
     fi
     
-    print_success "OAuth2 Proxy configuration is valid!"
+    print_success "OAuth2 Proxy configuration is valid!" "environment"
     return 0
 }
 
@@ -135,7 +134,7 @@ validate_required_vars() {
     local missing_vars=()
     local invalid_vars=()
     
-    print_status "Validating required environment variables..."
+    print_status "Validating required environment variables..." "environment"
     
     # Check if all required variables are set
     for var_name in "${REQUIRED_VARS[@]}"; do
@@ -146,11 +145,11 @@ validate_required_vars() {
     
     # Report missing variables
     if [[ ${#missing_vars[@]} -gt 0 ]]; then
-        print_error "The following required environment variables are missing:"
+        print_error "The following required environment variables are missing:" "environment"
         for var_name in "${missing_vars[@]}"; do
             echo "  - $var_name"
         done
-        print_error "Please add these variables to your environment file: $ENV_FILE"
+        print_error "Please add these variables to your environment file: $ENV_FILE" "environment"
         return 1
     fi
     
@@ -183,7 +182,7 @@ validate_required_vars() {
     
     # Report invalid variables
     if [[ ${#invalid_vars[@]} -gt 0 ]]; then
-        print_error "The following environment variables have invalid values:"
+        print_error "The following environment variables have invalid values:" "environment"
         for var_name in "${invalid_vars[@]}"; do
             echo "  - $var_name"
         done
@@ -195,7 +194,7 @@ validate_required_vars() {
         return 1
     fi
     
-    print_success "All required environment variables are valid!"
+    print_success "All required environment variables are valid!" "environment"
     return 0
 }
 

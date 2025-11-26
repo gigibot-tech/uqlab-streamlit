@@ -8,7 +8,6 @@
 # - Build configuration
 # - Application grouping
 #
-
 #############################################
 # Application Deployment Functions
 #############################################
@@ -19,7 +18,7 @@ configure_buildconfig_branch_filter() {
     local branch_filter="${WEBHOOK_BRANCH_FILTER:-}"
     
     if [[ -n "$branch_filter" ]]; then
-        print_status "Configuring $buildconfig_name to build only from branch: $branch_filter"
+        print_status "Configuring $buildconfig_name to build only from branch: $branch_filter" "deployment"
         
         # Update the Git source ref to specify the branch
         if oc patch bc/$buildconfig_name --type=json -p "[
@@ -29,9 +28,9 @@ configure_buildconfig_branch_filter() {
                 \"value\": \"$branch_filter\"
             }
         ]" 2>&1; then
-            print_success "Branch filter configured for $buildconfig_name (ref: $branch_filter)"
+            print_success "Branch filter configured for $buildconfig_name (ref: $branch_filter)" "deployment"
         else
-            print_warning "Failed to configure branch filter for $buildconfig_name"
+            print_warning "Failed to configure branch filter for $buildconfig_name" "deployment"
         fi
         
         # Add branch filter to webhook triggers using allowEnv
@@ -58,7 +57,7 @@ configure_buildconfig_branch_filter() {
                         \"path\": \"/spec/triggers/$i/$trigger_key/env\",
                         \"value\": [{\"name\": \"GIT_REF\", \"value\": \"refs/heads/$branch_filter\"}]
                     }
-                ]" 2>/dev/null || print_warning "Could not add env filter to $trigger_type trigger at index $i"
+                ]" 2>/dev/null || print_warning "Could not add env filter to $trigger_type trigger at index $i" "deployment"
             fi
         done
     fi
@@ -66,21 +65,21 @@ configure_buildconfig_branch_filter() {
 
 # Function to deploy frontend
 deploy_frontend() {
-    print_status "Deploying frontend..."
+    print_status "Deploying frontend..." "deployment"
     
     # Check if frontend app already exists
     if resource_exists "buildconfig" "frontend"; then
-        print_status "Frontend buildconfig already exists, triggering rollout restart..."
+        print_status "Frontend buildconfig already exists, triggering rollout restart..." "deployment"
         # Just restart the deployment to pick up new environment variables
         # Don't rebuild unless explicitly requested
         if resource_exists "deployment" "frontend"; then
             oc rollout restart deployment/frontend
             oc rollout status deployment/frontend --timeout=300s
         else
-            print_warning "Frontend deployment not found, skipping restart"
+            print_warning "Frontend deployment not found, skipping restart" "deployment"
         fi
     else
-        print_status "Creating new frontend application..."
+        print_status "Creating new frontend application..." "deployment"
         oc new-app --name=frontend --strategy=docker --context-dir=frontend --source-secret=git-secret "$GIT_SSH_URL"
     fi
     
@@ -89,10 +88,10 @@ deploy_frontend() {
     
     # Check if route exists
     if ! resource_exists "route" "frontend"; then
-        print_status "Exposing frontend service..."
+        print_status "Exposing frontend service..." "deployment"
         oc create route edge frontend --service=frontend --port=8080
     else
-        print_status "Frontend route already exists, skipping creation"
+        print_status "Frontend route already exists, skipping creation" "deployment"
     fi
     
     return 0
@@ -100,21 +99,21 @@ deploy_frontend() {
 
 # Function to deploy backend
 deploy_backend() {
-    print_status "Deploying backend..."
+    print_status "Deploying backend..." "deployment"
     
     # Check if backend app already exists
     if resource_exists "buildconfig" "backend"; then
-        print_status "Backend buildconfig already exists, triggering rollout restart..."
+        print_status "Backend buildconfig already exists, triggering rollout restart..." "deployment"
         # Just restart the deployment to pick up new environment variables
         # Don't rebuild unless explicitly requested
         if resource_exists "deployment" "backend"; then
             oc rollout restart deployment/backend
             oc rollout status deployment/backend --timeout=300s
         else
-            print_warning "Backend deployment not found, skipping restart"
+            print_warning "Backend deployment not found, skipping restart" "deployment"
         fi
     else
-        print_status "Creating new backend application..."
+        print_status "Creating new backend application..." "deployment"
         oc new-app --name=backend --strategy=docker --context-dir=backend --source-secret=git-secret "$GIT_SSH_URL"
     fi
     
@@ -123,10 +122,10 @@ deploy_backend() {
     
     # Check if route exists
     if ! resource_exists "route" "backend"; then
-        print_status "Exposing backend service..."
+        print_status "Exposing backend service..." "deployment"
         oc create route edge backend --service=backend --port=8000
     else
-        print_status "Backend route already exists, skipping creation"
+        print_status "Backend route already exists, skipping creation" "deployment"
     fi
     
     return 0
@@ -173,7 +172,7 @@ configure_frontend() {
                     fi
                     vite_buildargs_json+="{\"name\":\"$var_name\",\"value\":\"$var_value\"}"
                     first=false
-                    print_status "Found $var_name in .env.production"
+                    print_status "Found $var_name in .env.production" "deployment"
                 fi
             fi
         done < "$ENV_FILE"
@@ -182,10 +181,10 @@ configure_frontend() {
     vite_buildargs_json+="]"
     
     # Configure frontend build with all VITE_ variables as BUILD ARGS
-    print_status "Configuring frontend build with VITE_ build arguments..."
+    print_status "Configuring frontend build with VITE_ build arguments..." "deployment"
     oc patch bc/frontend --type=merge -p "{\"spec\":{\"strategy\":{\"dockerStrategy\":{\"buildArgs\":$vite_buildargs_json}}}}"
     
-    print_status "Restarting frontend build to apply build args..."
+    print_status "Restarting frontend build to apply build args..." "deployment"
     oc cancel-build bc/frontend --state=new --state=pending --state=running 2>/dev/null || true
     oc start-build bc/frontend
     
@@ -196,7 +195,7 @@ configure_frontend() {
 configure_backend() {
     local secret_name="$APP_NAME-env"
     
-    print_status "Applying backend environment from $secret_name secret..."
+    print_status "Applying backend environment from $secret_name secret..." "deployment"
     oc patch deployment backend --patch "{\"spec\":{\"template\":{\"spec\":{\"containers\":[{\"name\":\"backend\",\"envFrom\":[{\"secretRef\":{\"name\":\"$secret_name\"}}]}]}}}}"
     
     return 0
@@ -204,7 +203,7 @@ configure_backend() {
 
 # Function to group resources as one application
 group_resources() {
-    print_status "Grouping resources as one application..."
+    print_status "Grouping resources as one application..." "deployment"
     
     # Label core deployments
     oc label deployment/frontend deployment/backend deployment/postgresql app.kubernetes.io/part-of="$APP_NAME" --overwrite
@@ -212,7 +211,7 @@ group_resources() {
     # Label OAuth proxy if it exists
     if resource_exists "deployment" "oauth-proxy"; then
         oc label deployment/oauth-proxy app.kubernetes.io/part-of="$APP_NAME" --overwrite
-        print_status "OAuth2 Proxy included in application group"
+        print_status "OAuth2 Proxy included in application group" "deployment"
     fi
     
     return 0

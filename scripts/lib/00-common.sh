@@ -36,21 +36,59 @@ declare -A DEPLOYMENT_OUTPUT=(
 # Print Functions
 #############################################
 
-# Function to print colored status messages
+# Function to print colored status messages with library prefix
+# Usage: print_status "message" ["library-name"]
 print_status() {
-    echo -e "${TEAL}==>${NC} $1"
+    local message=$1
+    local library=${2:-}
+    
+    if [[ -n "$library" ]]; then
+        echo -e "${BLUE}[$library]${NC} ${TEAL}==>${NC} $message"
+    else
+        echo -e "${TEAL}==>${NC} $message"
+    fi
 }
 
 print_success() {
-    echo -e "${GREEN}==>${NC} $1"
+    local message=$1
+    local library=${2:-}
+    
+    if [[ -n "$library" ]]; then
+        echo -e "${BLUE}[$library]${NC} ${GREEN}==>${NC} $message"
+    else
+        echo -e "${GREEN}==>${NC} $message"
+    fi
 }
 
 print_error() {
-    echo -e "${RED}==>${NC} $1" >&2
+    local message=$1
+    local library=${2:-}
+    
+    if [[ -n "$library" ]]; then
+        echo -e "${BLUE}[$library]${NC} ${RED}==>${NC} $message" >&2
+    else
+        echo -e "${RED}==>${NC} $message" >&2
+    fi
 }
 
 print_warning() {
-    echo -e "${YELLOW}==>${NC} $1"
+    local message=$1
+    local library=${2:-}
+    
+    if [[ -n "$library" ]]; then
+        echo -e "${BLUE}[$library]${NC} ${YELLOW}==>${NC} $message"
+    else
+        echo -e "${YELLOW}==>${NC} $message"
+    fi
+}
+
+# Function to print section headers with box-drawing characters
+print_section_header() {
+    local title=$1
+    echo
+    echo -e "${BLUE}╔═══════════════════════════════════════════════════════════╗${NC}"
+    printf "${BLUE}║${NC}  %-57s${BLUE}║${NC}\n" "$title"
+    echo -e "${BLUE}╚═══════════════════════════════════════════════════════════╝${NC}"
 }
 
 #############################################

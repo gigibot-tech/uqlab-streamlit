@@ -7,7 +7,6 @@
 # - Webhook setup and configuration
 # - RoleBinding for webhook access
 #
-
 #############################################
 # Webhook Management Functions
 #############################################
@@ -26,11 +25,11 @@ create_github_webhook() {
         
         # Check if GITHUB_TOKEN is available
         if [[ -z "${GITHUB_TOKEN:-}" ]]; then
-            print_warning "GITHUB_TOKEN not set. Cannot create webhook automatically."
+            print_warning "GITHUB_TOKEN not set. Cannot create webhook automatically." "webhooks"
             return 1
         fi
         
-        print_status "Creating GitHub webhook for $webhook_type on $github_host..."
+        print_status "Creating GitHub webhook for $webhook_type on $github_host..." "webhooks"
         
         # Check if webhook already exists
         local existing_webhooks
@@ -42,20 +41,20 @@ create_github_webhook() {
         existing_webhooks=$(echo "$existing_webhooks" | sed '$d')
         
         if [[ "$http_code" != "200" ]]; then
-            print_error "Failed to check existing webhooks (HTTP $http_code)"
-            print_error "API Response:"
+            print_error "Failed to check existing webhooks (HTTP $http_code)" "webhooks"
+            print_error "API Response:" "webhooks"
             echo "$existing_webhooks" | jq '.' 2>/dev/null || echo "$existing_webhooks"
             
             if [[ "$http_code" == "401" ]]; then
-                print_error "Authentication failed. Check your GITHUB_TOKEN."
+                print_error "Authentication failed. Check your GITHUB_TOKEN." "webhooks"
             elif [[ "$http_code" == "404" ]]; then
-                print_error "Repository not found. Check GIT_SSH_URL and token permissions."
+                print_error "Repository not found. Check GIT_SSH_URL and token permissions." "webhooks"
             fi
             return 1
         fi
         
         if echo "$existing_webhooks" | grep -q "$webhook_url"; then
-            print_status "Webhook for $webhook_type already exists"
+            print_status "Webhook for $webhook_type already exists" "webhooks"
             return 0
         fi
         
@@ -78,40 +77,40 @@ create_github_webhook() {
         response=$(echo "$response" | sed '$d')
         
         if [[ "$http_code" == "201" ]] && echo "$response" | grep -q '"id"'; then
-            print_success "GitHub webhook for $webhook_type created successfully!"
+            print_success "GitHub webhook for $webhook_type created successfully!" "webhooks"
             return 0
         else
-            print_error "Failed to create GitHub webhook for $webhook_type (HTTP $http_code)"
-            print_error "API Response:"
+            print_error "Failed to create GitHub webhook for $webhook_type (HTTP $http_code)" "webhooks"
+            print_error "API Response:" "webhooks"
             echo "$response" | jq '.' 2>/dev/null || echo "$response"
             
             # Provide helpful error messages
             if [[ "$http_code" == "422" ]]; then
                 if echo "$response" | grep -q "Hook already exists"; then
-                    print_warning "Webhook already exists but wasn't detected in the check."
+                    print_warning "Webhook already exists but wasn't detected in the check." "webhooks"
                 else
-                    print_error "Validation failed. Check webhook URL format."
+                    print_error "Validation failed. Check webhook URL format." "webhooks"
                 fi
             elif [[ "$http_code" == "401" ]]; then
-                print_error "Authentication failed. Check your GITHUB_TOKEN permissions."
+                print_error "Authentication failed. Check your GITHUB_TOKEN permissions." "webhooks"
             elif [[ "$http_code" == "404" ]]; then
-                print_error "Repository not found. Check GIT_SSH_URL and token permissions."
+                print_error "Repository not found. Check GIT_SSH_URL and token permissions." "webhooks"
             fi
             return 1
         fi
     fi
     
-    print_error "Invalid GIT_SSH_URL format. Expected: git@$github_host:owner/repo.git"
+    print_error "Invalid GIT_SSH_URL format. Expected: git@$github_host:owner/repo.git" "webhooks"
     return 1
 }
 
 # Function to setup CI/CD webhooks
 setup_webhooks() {
-    print_status "Setting up webhooks..."
+    print_status "Setting up webhooks..." "webhooks"
     
     # Create RoleBinding for webhook access if it doesn't exist
     if ! resource_exists "rolebinding" "webhook-access-unauthenticated"; then
-        print_status "Creating RoleBinding for webhook access..."
+        print_status "Creating RoleBinding for webhook access..." "webhooks"
         apply_resource "$(cat << EOF
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -131,11 +130,11 @@ subjects:
 EOF
 )"
     else
-        print_status "RoleBinding webhook-access-unauthenticated already exists, skipping creation"
+        print_status "RoleBinding webhook-access-unauthenticated already exists, skipping creation" "webhooks"
     fi
     
     # Get webhook URLs
-    print_status "Getting webhook URLs..."
+    print_status "Getting webhook URLs..." "webhooks"
     local frontend_base_url
     local frontend_secret
     local frontend_webhook
@@ -157,7 +156,7 @@ EOF
     
     # Try to create GitHub webhooks automatically
     if [[ -n "${GITHUB_TOKEN:-}" ]]; then
-        print_status "Attempting to create GitHub webhooks automatically..."
+        print_status "Attempting to create GitHub webhooks automatically..." "webhooks"
         local frontend_webhook_created=false
         local backend_webhook_created=false
         
@@ -174,7 +173,7 @@ EOF
             add_deployment_output "github_webhooks_configured" "true"
         fi
     else
-        print_warning "GITHUB_TOKEN not set. Webhooks must be added manually to GitHub."
+        print_warning "GITHUB_TOKEN not set. Webhooks must be added manually to GitHub." "webhooks"
         add_deployment_output "github_webhooks_configured" "false"
     fi
     
