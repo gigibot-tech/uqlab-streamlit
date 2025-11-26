@@ -142,6 +142,18 @@ main() {
     # Update the app environment secret with frontend/backend URLs
     update_app_env_secret_with_urls || exit 1
     
+    # Deploy OAuth2 Proxy (optional - uncomment to enable)
+    # Requires all OAuth2 Proxy environment variables to be configured in .env.production
+    # See scripts/.env.production.example for required variables
+    # if is_oauth_enabled; then
+    #     print_status "OAuth2 Proxy is enabled, deploying..."
+    #     create_oauth_proxy_secret || exit 1
+    #     deploy_oauth_proxy || exit 1
+    #     create_oauth_proxy_service || exit 1
+    #     create_oauth_proxy_route || exit 1
+    #     update_backend_with_oauth_url || exit 1
+    # fi
+    
     # Configure frontend and backend
     configure_frontend || exit 1
     configure_backend || exit 1

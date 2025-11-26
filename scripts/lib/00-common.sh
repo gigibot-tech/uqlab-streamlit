@@ -22,6 +22,7 @@ readonly NC='\033[0m' # No Color
 declare -A DEPLOYMENT_OUTPUT=(
     [frontend_url]=""
     [backend_url]=""
+    [oauth_proxy_url]=""
     [frontend_webhook]=""
     [backend_webhook]=""
     [secret_key_generated]=""
@@ -74,6 +75,12 @@ print_deployment_summary() {
     echo
     
     # Application URLs
+    if [[ -n "${DEPLOYMENT_OUTPUT[oauth_proxy_url]}" ]]; then
+        echo -e "${GREEN}OAuth2 Proxy URL (Main Entry Point):${NC}"
+        echo "  https://${DEPLOYMENT_OUTPUT[oauth_proxy_url]}"
+        echo
+    fi
+    
     if [[ -n "${DEPLOYMENT_OUTPUT[frontend_url]}" ]]; then
         echo -e "${GREEN}Frontend URL:${NC}"
         echo "  https://${DEPLOYMENT_OUTPUT[frontend_url]}"

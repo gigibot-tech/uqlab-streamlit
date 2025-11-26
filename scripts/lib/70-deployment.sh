@@ -205,7 +205,15 @@ configure_backend() {
 # Function to group resources as one application
 group_resources() {
     print_status "Grouping resources as one application..."
+    
+    # Label core deployments
     oc label deployment/frontend deployment/backend deployment/postgresql app.kubernetes.io/part-of="$APP_NAME" --overwrite
+    
+    # Label OAuth proxy if it exists
+    if resource_exists "deployment" "oauth-proxy"; then
+        oc label deployment/oauth-proxy app.kubernetes.io/part-of="$APP_NAME" --overwrite
+        print_status "OAuth2 Proxy included in application group"
+    fi
     
     return 0
 }

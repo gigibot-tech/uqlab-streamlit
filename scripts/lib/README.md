@@ -8,15 +8,16 @@ This directory contains modular libraries for the OpenShift deployment script.
 |------|---------|-------|
 | `00-common.sh` | Core utilities, print functions, output collection | 223 |
 | `10-validation.sh` | Input validation functions | 99 |
-| `20-environment.sh` | Environment variable management | 153 |
+| `20-environment.sh` | Environment variable management | 195 |
 | `30-openshift.sh` | OpenShift CLI operations | 122 |
 | `40-ssh.sh` | SSH key and GitHub deploy key management | 260 |
 | `50-secrets.sh` | Kubernetes secret management | 145 |
 | `60-database.sh` | PostgreSQL deployment and operations | 203 |
 | `70-deployment.sh` | Frontend/backend deployment | 211 |
+| `75-oauth.sh` | OAuth2 Proxy deployment (optional) | 283 |
 | `80-webhooks.sh` | GitHub webhook automation | 181 |
 
-**Total**: ~1,597 lines (modular) vs 1,514 lines (monolithic)
+**Total**: ~1,922 lines (modular) vs 1,514 lines (monolithic)
 
 ## Usage
 

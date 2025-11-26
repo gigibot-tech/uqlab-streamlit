@@ -26,6 +26,16 @@ declare -a REQUIRED_VARS=(
     "POSTGRES_PASSWORD"
 )
 
+# OAuth2 Proxy variables (conditionally required - all or nothing)
+declare -a OAUTH_VARS=(
+    "OAUTH2_PROXY_COOKIE_DOMAIN"
+    "OAUTH2_PROXY_COOKIE_SECRET"
+    "OAUTH2_PROXY_CLIENT_ID"
+    "OAUTH2_PROXY_CLIENT_SECRET"
+    "OAUTH2_PROXY_OIDC_ISSUER_URL"
+    "OAUTH2_PROXY_REDIRECT_URL"
+)
+
 # Variables that need password length validation (min 8 chars)
 declare -a PASSWORD_VARS=(
     "FIRST_SUPERUSER_PASSWORD"
@@ -78,6 +88,46 @@ load_env_file() {
         fi
     done < "$env_file"
     
+    return 0
+}
+
+# Function to validate OAuth variables (all-or-nothing)
+validate_oauth_vars() {
+    local oauth_vars_set=()
+    local oauth_vars_missing=()
+    
+    # Check which OAuth vars are set
+    for var_name in "${OAUTH_VARS[@]}"; do
+        if [[ -n "${!var_name:-}" ]]; then
+            oauth_vars_set+=("$var_name")
+        else
+            oauth_vars_missing+=("$var_name")
+        fi
+    done
+    
+    # If no OAuth vars set, OAuth is disabled - OK
+    if [[ ${#oauth_vars_set[@]} -eq 0 ]]; then
+        print_status "OAuth2 Proxy is disabled (no OAuth variables configured)"
+        return 0
+    fi
+    
+    # If some but not all OAuth vars set - ERROR
+    if [[ ${#oauth_vars_missing[@]} -gt 0 ]]; then
+        print_error "OAuth2 Proxy is partially configured. All OAuth variables must be set or all must be empty."
+        print_error "Missing OAuth variables:"
+        for var_name in "${oauth_vars_missing[@]}"; do
+            echo "  - $var_name"
+        done
+        return 1
+    fi
+    
+    # All OAuth vars are set - validate COOKIE_SECRET length (min 16 chars)
+    if [[ ${#OAUTH2_PROXY_COOKIE_SECRET} -lt 16 ]]; then
+        print_error "OAUTH2_PROXY_COOKIE_SECRET must be at least 16 characters (current: ${#OAUTH2_PROXY_COOKIE_SECRET})"
+        return 1
+    fi
+    
+    print_success "OAuth2 Proxy configuration is valid!"
     return 0
 }
 
@@ -138,6 +188,11 @@ validate_required_vars() {
         for var_name in "${invalid_vars[@]}"; do
             echo "  - $var_name"
         done
+        return 1
+    fi
+    
+    # Validate OAuth variables (conditional)
+    if ! validate_oauth_vars; then
         return 1
     fi
     
