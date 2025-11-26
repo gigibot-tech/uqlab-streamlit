@@ -169,6 +169,7 @@ ${GREEN}OPTIONS:${NC}
     --env-file PATH         Specify custom environment file (default: scripts/.env.production)
     --reset-prod-db         Reset production database (deletes and recreates PostgreSQL storage)
     --regenerate-ssh-key    Delete and regenerate SSH keys for GitHub access
+    --show-env-values       Display environment variable names and values during loading (default: silent)
 
 ${GREEN}REQUIRED ENVIRONMENT VARIABLES:${NC}
     Main Variables:
@@ -206,6 +207,9 @@ ${GREEN}EXAMPLES:${NC}
 
     # Regenerate SSH keys
     $0 --regenerate-ssh-key
+
+    # Show environment variable values (for debugging)
+    $0 --show-env-values
 
 ${GREEN}PREREQUISITES:${NC}
     - OpenShift CLI (oc) version 4.14 or higher

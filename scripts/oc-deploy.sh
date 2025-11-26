@@ -47,6 +47,7 @@ DEFAULT_GITHUB_HOST="github.ibm.com"
 RESET_PROD_DB=false
 REGENERATE_SSH_KEY=false
 SHOW_HELP=false
+SHOW_ENV_VALUES=false
 
 #############################################
 # Argument Parsing
@@ -70,6 +71,10 @@ parse_arguments() {
                 ;;
             --regenerate-ssh-key)
                 REGENERATE_SSH_KEY=true
+                shift
+                ;;
+            --show-env-values)
+                SHOW_ENV_VALUES=true
                 shift
                 ;;
             *)
@@ -102,7 +107,7 @@ main() {
     echo
     
     # Load environment variables from file
-    load_env_file "$ENV_FILE" || exit 1
+    load_env_file "$ENV_FILE" "$SHOW_ENV_VALUES" || exit 1
     
     # Validate all required variables
     validate_required_vars || exit 1

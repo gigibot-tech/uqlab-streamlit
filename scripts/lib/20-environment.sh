@@ -50,6 +50,7 @@ declare -a PASSWORD_VARS=(
 # Function to load environment variables from file
 load_env_file() {
     local env_file=$1
+    local show_values=${2:-false}
     
     if [[ ! -f "$env_file" ]]; then
         print_error "Environment file $env_file not found!"
@@ -79,10 +80,8 @@ load_env_file() {
             # Export the variable
             export "$var_name"="$var_value"
             
-            # Mask sensitive values in output
-            if is_sensitive_var "$var_name"; then
-                print_status "Loaded $var_name [value masked]"
-            else
+            # Display variable only if show_values flag is true
+            if [[ "$show_values" == "true" ]]; then
                 print_status "Loaded $var_name=$var_value"
             fi
         fi
