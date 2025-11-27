@@ -1,929 +1,512 @@
-# OpenShift Deployment Script Documentation
+# OpenShift Deployment Script
 
-## Overview
-
-The `oc-deploy.sh` script automates the deployment of a full-stack application (Frontend, Backend, PostgreSQL) to OpenShift. It provides a robust, idempotent deployment process with comprehensive validation, dynamic configuration, and advanced features like automatic webhook creation and database management.
+Automated deployment script for deploying full-stack applications to OpenShift with PostgreSQL database, OAuth2 authentication, and GitHub webhook integration.
 
 ## Table of Contents
 
-- [Features](#features)
-- [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
+- [Prerequisites](#prerequisites)
 - [Configuration](#configuration)
 - [Usage](#usage)
-- [Command-Line Options](#command-line-options)
-- [Environment Variables](#environment-variables)
-- [Advanced Features](#advanced-features)
+- [Features](#features)
+- [Deployment Phases](#deployment-phases)
 - [Troubleshooting](#troubleshooting)
-- [Best Practices](#best-practices)
+- [Advanced Usage](#advanced-usage)
+- [Architecture](#architecture)
 
-## Features
+## Quick Start
 
-### Core Features
-- ✅ **Idempotent Operations**: Safe to run multiple times without side effects
-- ✅ **Dynamic Configuration**: All settings loaded from `.env.production` file
-- ✅ **Comprehensive Validation**: Validates all required variables with specific rules
-- ✅ **Automatic Secret Management**: Dynamically creates OpenShift secrets from env file
-- ✅ **VITE_ Variable Injection**: Automatically injects all VITE_ prefixed variables to frontend
-- ✅ **SSH Key Management**: Intelligent SSH key handling with GitHub integration
-- ✅ **Database Management**: Built-in database reset functionality
-- ✅ **Webhook Automation**: Automatic GitHub webhook creation (when token provided)
-- ✅ **Colored Output**: Clear, color-coded status messages
-- ✅ **Error Handling**: Robust error handling with meaningful messages
+1. **Copy the environment template:**
 
-### Security Features
-- 🔒 Sensitive values masked in output
-- 🔒 Secure secret key generation
-- 🔒 Password length validation (minimum 8 characters)
-- 🔒 API key validation (16, 32, or 64 characters)
-- 🔒 SSH key-based Git authentication
+   ```bash
+   cp scripts/.env.production.example scripts/.env.production
+   ```
+
+2. **Configure required variables** in `scripts/.env.production`:
+
+   ```bash
+   APP_NAME=my-app
+   PROJECT_NAME=my-openshift-project
+   GIT_SSH_URL=git@github.com:username/repository.git
+   FIRST_SUPERUSER=admin@example.com
+   FIRST_SUPERUSER_PASSWORD=your-secure-password
+   SECRET_KEY=your-secret-key
+   POSTGRES_PASSWORD=your-db-password
+   ```
+
+3. **Login to OpenShift:**
+
+   ```bash
+   oc login --server=https://your-openshift-cluster:6443
+   ```
+
+4. **Run the deployment:**
+   ```bash
+   ./scripts/oc-deploy.sh
+   ```
 
 ## Prerequisites
 
 ### Required Tools
-- **OpenShift CLI (oc)**: Version 4.14 or higher
+
+- **OpenShift CLI (`oc`)** - Version 4.x or higher
+
   ```bash
+  # Check version
   oc version
   ```
-- **curl**: For GitHub API interactions
-- **jq**: For JSON parsing (optional, for GitHub webhook management)
-- **ssh-keygen**: For SSH key generation
 
-### Required Access
-- OpenShift cluster access with login credentials
-- GitHub repository with admin access (for deploy keys and webhooks)
-- GitHub Personal Access Token (optional, for automatic webhook creation)
+- **Git** - For repository access
+  ```bash
+  git --version
+  ```
 
-**Note:** This deployment script supports both **IBM GitHub Enterprise** and **Public GitHub**. Configure the `GITHUB_HOST` variable in your `.env.production` file to specify which GitHub instance you're using (default: `github.ibm.com`).
+### OpenShift Access
 
-### Required Files
-- `.env.production` file with all required environment variables
-- Git repository accessible via SSH
+- Active OpenShift cluster login
+- Permissions to create projects, deployments, services, routes, and secrets
+- Sufficient resource quotas for your application
 
-## Quick Start
+### GitHub Access (Optional but Recommended)
 
-### 1. Create Environment File
-
-Copy the example file and fill in your values:
-
-```bash
-cp scripts/.env.production.example scripts/.env.production
-```
-
-Edit `scripts/.env.production` with your configuration:
-
-```bash
-# Required Variables
-APP_NAME=my-app
-PROJECT_NAME=my-project
-GIT_SSH_URL=git@github.ibm.com:username/repository.git
-FIRST_SUPERUSER=admin@example.com
-FIRST_SUPERUSER_PASSWORD=securepassword123
-API_KEY=your-32-character-api-key-here
-ENVIRONMENT=production
-
-# Database Configuration
-POSTGRES_SERVER=postgresql
-POSTGRES_PORT=5432
-POSTGRES_DB=app
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=securedbpassword
-
-# Optional: GitHub Configuration
-GITHUB_HOST=github.ibm.com  # or github.com for public GitHub
-GITHUB_TOKEN=ghp_your_github_token_here
-
-# Optional: Frontend environment variables
-VITE_API_URL=auto-generated
-VITE_CUSTOM_VAR=your-value
-```
-
-### 2. Login to OpenShift
-
-```bash
-oc login --token=<your-token> --server=<server-url>
-```
-
-### 3. Run Deployment
-
-```bash
-cd scripts
-./oc-deploy.sh
-```
+- **GitHub Personal Access Token** with `repo` and `admin:repo_hook` permissions
+- Required for automatic deploy key and webhook setup
+- Without token: Manual setup required (see [Manual GitHub Setup](#manual-github-setup))
 
 ## Configuration
 
 ### Environment File Structure
 
-The script loads all variables from `.env.production`. The file format is:
+The deployment script uses `scripts/.env.production` for all configuration. See [`scripts/.env.production.example`](scripts/.env.production.example) for a complete template with detailed comments.
+
+### Required Variables
+
+| Variable                   | Description            | Validation                             |
+| -------------------------- | ---------------------- | -------------------------------------- |
+| `APP_NAME`                 | Application name       | Lowercase, alphanumeric, hyphens only  |
+| `PROJECT_NAME`             | OpenShift project name | Lowercase, alphanumeric, hyphens only  |
+| `GIT_SSH_URL`              | Git repository SSH URL | Format: `git@github.com:user/repo.git` |
+| `FIRST_SUPERUSER`          | Admin email            | Valid email format                     |
+| `FIRST_SUPERUSER_PASSWORD` | Admin password         | Minimum 8 characters                   |
+| `API_KEY`                  | API security key       | 16, 32, or 64 characters               |
+| `SECRET_KEY`               | Backend secret key     | Minimum 8 characters                   |
+| `POSTGRES_PASSWORD`        | Database password      | Minimum 8 characters                   |
+
+### Optional Variables
+
+#### GitHub Integration
 
 ```bash
-# Comments are supported
-VARIABLE_NAME=value
-ANOTHER_VAR="value with spaces"
+# GitHub host (default: github.ibm.com)
+GITHUB_HOST=github.ibm.com  # or github.com for public GitHub
+
+# Personal Access Token for automation
+GITHUB_TOKEN=ghp_your_token_here
 ```
 
-### Variable Types
+**Creating a GitHub Token:**
 
-#### 1. Required Main Variables
+1. Go to GitHub Settings → Developer settings → Personal access tokens
+2. Generate new token (classic)
+3. Select scopes: `repo`, `admin:repo_hook`
+4. Copy and paste into `.env.production`
 
-These variables MUST be present in your `.env.production` file:
+#### OAuth2 Proxy (Optional)
 
-| Variable | Description | Validation |
-|----------|-------------|------------|
-| `APP_NAME` | Application name | Lowercase, alphanumeric, hyphens only |
-| `PROJECT_NAME` | OpenShift project name | Lowercase, alphanumeric, hyphens only |
-| `GIT_SSH_URL` | Git repository SSH URL | Must start with `git@` or `ssh://` and end with `.git` |
-| `FIRST_SUPERUSER` | Admin email address | Valid email format |
-| `FIRST_SUPERUSER_PASSWORD` | Admin password | Minimum 8 characters |
-| `SIGNUP_ACCESS_PASSWORD` | Signup password | Minimum 8 characters (can be empty) |
-| `API_KEY` | Backend API key | 16, 32, or 64 characters |
-| `ENVIRONMENT` | Environment name | Any string (e.g., production) |
-| `SECRET_KEY` | Backend secret key | Minimum 8 characters (auto-generated if missing) |
-| `POSTGRES_SERVER` | PostgreSQL hostname | Any string |
-| `POSTGRES_PORT` | PostgreSQL port | Any string |
-| `POSTGRES_DB` | Database name | Any string |
-| `POSTGRES_USER` | Database user | Any string |
-| `POSTGRES_PASSWORD` | Database password | Minimum 8 characters |
+Enable OAuth2 authentication by configuring all OAuth variables:
 
-#### 2. Optional Variables
+```bash
+OAUTH2_PROXY_COOKIE_DOMAIN=your-app.example.com
+OAUTH2_PROXY_COOKIE_SECRET=32-char-random-string
+OAUTH2_PROXY_CLIENT_ID=your-client-id
+OAUTH2_PROXY_CLIENT_SECRET=your-client-secret
+OAUTH2_PROXY_OIDC_ISSUER_URL=https://your-oidc-provider.com
+OAUTH2_PROXY_REDIRECT_URL=https://your-app.example.com/oauth2/callback
+```
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `GITHUB_HOST` | GitHub instance hostname | `github.ibm.com` |
-| `GITHUB_TOKEN` | GitHub Personal Access Token | None (webhooks created manually) |
-| `BACKEND_CORS_ORIGINS` | CORS origins | Auto-generated from frontend URL |
-| `WEBHOOK_BRANCH_FILTER` | Branch filter for webhooks | None (all branches trigger builds) |
-| `VITE_*` | Frontend environment variables | Automatically injected |
+#### Frontend Environment Variables
 
-#### 3. Dynamic Variables
+All variables prefixed with `VITE_` are automatically injected into the frontend build:
 
-These are automatically set by the script:
+```bash
+VITE_CUSTOM_FEATURE=enabled
+VITE_ANALYTICS_ID=UA-123456-1
+VITE_APP_VERSION=1.0.0
+```
 
-- `DOMAIN`: Backend URL (set after route creation)
-- `BACKEND_CORS_ORIGINS`: Frontend URL (if not provided)
+#### Webhook Branch Filter
 
-### Validation Rules
+Trigger builds only for specific branches:
 
-#### Name Validation (APP_NAME, PROJECT_NAME)
-- Must contain only lowercase letters, numbers, and hyphens
-- No spaces or special characters
-- Examples:
-  - ✅ `my-app`
-  - ✅ `app123`
-  - ❌ `My-App` (uppercase)
-  - ❌ `my_app` (underscore)
-
-#### Email Validation (FIRST_SUPERUSER)
-- Must be a valid email format
-- Examples:
-  - ✅ `admin@example.com`
-  - ✅ `user.name+tag@domain.co.uk`
-  - ❌ `invalid-email`
-  - ❌ `@example.com`
-
-#### Git URL Validation (GIT_SSH_URL)
-- Must start with `git@` or `ssh://`
-- Must end with `.git`
-- Examples:
-  - ✅ `git@github.com:user/repo.git`
-  - ✅ `ssh://git@gitlab.com/user/repo.git`
-  - ❌ `https://github.com/user/repo.git`
-  - ❌ `git@github.com:user/repo`
-
-#### API Key Validation (API_KEY)
-- Minimum length: 16 characters
-- Length must be a power of 2: 16, 32, 64, 128, or 256
-- Examples:
-  - ✅ `1234567890123456` (16 chars)
-  - ✅ `12345678901234567890123456789012` (32 chars)
-  - ❌ `123456789012345` (15 chars - too short)
-  - ❌ `12345678901234567890` (20 chars - not power of 2)
-
-#### Password Validation
-- All variables containing "PASSWORD" in the name
-- Minimum length: 8 characters
-- Applies to:
-  - `FIRST_SUPERUSER_PASSWORD`
-  - `POSTGRES_PASSWORD`
-  - `SECRET_KEY`
-  - Any other `*PASSWORD*` variables
+```bash
+WEBHOOK_BRANCH_FILTER=main  # Only build on main branch updates
+```
 
 ## Usage
 
 ### Basic Deployment
 
 ```bash
-./oc-deploy.sh
+./scripts/oc-deploy.sh
 ```
 
-This will:
-1. Load variables from `.env.production`
-2. Validate all required variables
-3. Check OpenShift login status
-4. Create/select OpenShift project
-5. Setup SSH keys for Git access
-6. Deploy PostgreSQL database
-7. Deploy frontend and backend applications
-8. Configure environment variables
-9. Setup webhooks (automatically if `GITHUB_TOKEN` is set)
-
-### Custom Environment File
+### Command-Line Options
 
 ```bash
-./oc-deploy.sh --env-file /path/to/custom.env
+# Use custom environment file
+./scripts/oc-deploy.sh --env-file /path/to/.env
+
+# Reset production database (WARNING: Deletes all data)
+./scripts/oc-deploy.sh --reset-prod-db
+
+# Regenerate SSH keys
+./scripts/oc-deploy.sh --regenerate-ssh-key
+
+# Show environment values during deployment (for debugging)
+./scripts/oc-deploy.sh --show-env-values
+
+# Display help
+./scripts/oc-deploy.sh --help
 ```
 
-### Show Help
+### Combining Options
 
 ```bash
-./oc-deploy.sh --help
+# Reset database and regenerate SSH keys
+./scripts/oc-deploy.sh --reset-prod-db --regenerate-ssh-key
 ```
 
-### Reset Production Database
+## Features
 
-⚠️ **WARNING**: This will delete all data in the database!
+### ✅ Idempotent Operations
 
-```bash
-./oc-deploy.sh --reset-prod-db
-```
+- Safe to run multiple times
+- Updates existing resources instead of failing
+- No side effects from repeated executions
 
-This will:
-1. Prompt for confirmation
-2. Delete PostgreSQL deployment, service, and PVC
-3. Recreate the database from scratch
-4. Restart backend to apply migrations
+### ✅ Comprehensive Validation
 
-### Regenerate SSH Keys
+- All required variables validated before deployment
+- Format validation (emails, URLs, names)
+- Clear error messages for invalid configurations
 
-```bash
-./oc-deploy.sh --regenerate-ssh-key
-```
+### ✅ Automatic Secret Management
 
-This will:
-1. Delete local SSH keys
-2. Delete deploy key from GitHub (if `GITHUB_TOKEN` is set)
-3. Delete git-secret from OpenShift
-4. Generate new SSH keys
-5. Add new deploy key to GitHub (if `GITHUB_TOKEN` is set)
+- Dynamic secret creation from environment variables
+- Automatic injection of generated URLs
+- Sensitive values masked in output
 
-### Combine Options
+### ✅ SSH Key Management
 
-```bash
-./oc-deploy.sh --env-file production.env --reset-prod-db
-```
+- Automatic SSH key pair generation
+- GitHub deploy key verification and creation
+- Key regeneration on demand
 
-## Command-Line Options
+### ✅ Database Management
 
-| Option | Description |
-|--------|-------------|
-| `-h, --help` | Show help message and exit |
-| `--env-file PATH` | Specify custom environment file (default: `scripts/.env.production`) |
-| `--reset-prod-db` | Reset production database (deletes and recreates storage) |
-| `--regenerate-ssh-key` | Delete and regenerate SSH keys for GitHub access |
+- PostgreSQL deployment with persistent storage
+- Database reset functionality
+- Automatic connection configuration
 
-## Environment Variables
+### ✅ GitHub Webhook Automation
 
-### Core Application Variables
+- Automatic webhook creation for frontend and backend
+- Branch filtering support
+- Manual fallback instructions if token not provided
 
-```bash
-# Application Identity
-APP_NAME=my-app                    # Used for resource naming
-PROJECT_NAME=my-openshift-project  # OpenShift project/namespace name
-ENVIRONMENT=production             # Environment identifier
+### ✅ OAuth2 Proxy Support
 
-# Git Configuration
-GIT_SSH_URL=git@github.com:user/repo.git  # SSH URL for repository
-```
+- Optional OAuth2 authentication layer
+- Automatic configuration and deployment
+- Seamless integration with backend
 
-### Authentication & Security
+### ✅ Clean Output
 
-```bash
-# Admin User
-FIRST_SUPERUSER=admin@example.com
-FIRST_SUPERUSER_PASSWORD=secure_password_min_8_chars
+- Color-coded status messages
+- Library context prefixes for clarity
+- Deployment summary at completion
 
-# API Security
-API_KEY=your_32_character_api_key_here  # 16, 32, or 64 chars
-SECRET_KEY=your_secret_key_min_8_chars  # Auto-generated if missing
+## Deployment Phases
 
-# User Signup (optional)
-SIGNUP_ACCESS_PASSWORD=signup_password  # Can be empty to disable signup
-```
+The script executes in 7 distinct phases:
 
-### Database Configuration
+### Phase 1: Initialization
 
-```bash
-POSTGRES_SERVER=postgresql  # Service name in OpenShift
-POSTGRES_PORT=5432
-POSTGRES_DB=app
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=secure_db_password_min_8_chars
-```
+- Load environment variables from `.env.production`
+- Validate all required variables
+- Check variable formats and constraints
 
-### Frontend Variables (VITE_)
+### Phase 2: Prerequisites Check
 
-All variables prefixed with `VITE_` are automatically injected into the frontend build:
+- Verify OpenShift CLI version
+- Confirm OpenShift login status
+- Check cluster connectivity
 
-```bash
-# Automatically set by script
-VITE_API_URL=https://backend-route-url
+### Phase 3: Project Setup
 
-# Custom frontend variables
-VITE_CUSTOM_FEATURE=enabled
-VITE_ANALYTICS_ID=UA-123456-1
-VITE_APP_VERSION=1.0.0
-```
+- Create or verify OpenShift project
+- Setup SSH keys for Git access
+- Add deploy key to GitHub (if token provided)
 
-### Webhook Branch Filter (Optional)
+### Phase 4: Database Deployment
 
-Control which Git branches trigger OpenShift builds:
+- Create application secrets
+- Deploy PostgreSQL database
+- Configure persistent storage
 
-```bash
-# Only trigger builds when main branch is updated
-WEBHOOK_BRANCH_FILTER=main
-```
+### Phase 5: Application Deployment
 
-**How it works:**
-- Configures OpenShift BuildConfig webhook triggers with branch filters
-- GitHub webhooks receive all push events, but OpenShift only builds specified branch
-- Useful for production environments to prevent builds from feature branches
-- Leave empty or unset to trigger builds on all branches (default)
+- Deploy frontend application
+- Deploy backend application
+- Update secrets with generated URLs
+- Deploy OAuth2 Proxy (if configured)
 
-**Common use cases:**
-- **Production**: `WEBHOOK_BRANCH_FILTER=main` or `master`
-- **Staging**: `WEBHOOK_BRANCH_FILTER=develop` or `staging`
-- **Feature testing**: Leave empty to build all branches
+### Phase 6: Configuration
 
-**Example scenarios:**
-```bash
-# Production environment - only build from main
-WEBHOOK_BRANCH_FILTER=main
+- Configure frontend environment
+- Configure backend environment
+- Group application resources
+- Setup resource labels
 
-# Staging environment - only build from develop
-WEBHOOK_BRANCH_FILTER=develop
+### Phase 7: Post-Deployment
 
-# Development environment - build all branches
-# WEBHOOK_BRANCH_FILTER=
-```
-
-### GitHub Integration (Optional)
-
-The script supports both IBM GitHub Enterprise and Public GitHub through the `GITHUB_HOST` variable.
-
-```bash
-# GitHub Host (default: github.ibm.com)
-GITHUB_HOST=github.ibm.com  # For IBM GitHub Enterprise
-# GITHUB_HOST=github.com    # For Public GitHub
-
-# GitHub Personal Access Token for automatic webhook creation and deploy key management
-GITHUB_TOKEN=ghp_your_personal_access_token_here
-```
-
-**How to create a GitHub Personal Access Token:**
-
-For **IBM GitHub Enterprise**:
-1. Go to https://github.ibm.com/settings/tokens
-
-For **Public GitHub**:
-1. Go to https://github.com/settings/tokens
-
-Then:
-2. Click "Generate new token (classic)"
-3. Give it a descriptive name (e.g., "OpenShift Deployment")
-4. Select the following scopes:
-   - `repo` - Full control of private repositories
-   - `admin:repo_hook` - Full control of repository hooks
-5. Click "Generate token" and copy the token
-
-**Required GitHub Token Permissions:**
-- `repo` - Full control of private repositories
-- `admin:repo_hook` - Full control of repository hooks
-
-**Supported GitHub Instances:**
-- IBM GitHub Enterprise: `github.ibm.com` (default)
-- Public GitHub: `github.com`
-- Custom GitHub Enterprise: Your custom domain
-
-### Backend CORS (Optional)
-
-```bash
-# Auto-generated from frontend URL if not provided
-BACKEND_CORS_ORIGINS=https://frontend-url,https://another-domain
-```
-
-## Advanced Features
-
-### 1. Dynamic Secret Creation
-
-The script automatically creates OpenShift secrets with ALL variables from your `.env.production` file:
-
-```bash
-# All these variables are automatically added to the secret
-CUSTOM_VAR_1=value1
-CUSTOM_VAR_2=value2
-ANY_OTHER_VAR=value3
-```
-
-No need to manually update the script when adding new environment variables!
-
-### 2. Automatic VITE_ Variable Injection
-
-Any variable starting with `VITE_` is automatically injected into the frontend build:
-
-```bash
-# In .env.production
-VITE_FEATURE_FLAG=enabled
-VITE_API_TIMEOUT=5000
-VITE_DEBUG_MODE=false
-```
-
-These become available in your frontend code:
-
-```typescript
-// In your React/Vue/etc. code
-const featureEnabled = import.meta.env.VITE_FEATURE_FLAG;
-const apiTimeout = import.meta.env.VITE_API_TIMEOUT;
-```
-
-### 3. SSH Key Management
-
-#### Automatic Deploy Key Setup
-
-If `GITHUB_TOKEN` is provided:
-- Script checks if deploy key exists on GitHub
-- Automatically adds deploy key if missing
-- No manual intervention required
-
-#### Manual Deploy Key Setup
-
-If `GITHUB_TOKEN` is not provided:
-- Script displays the public key
-- Prompts you to add it to GitHub
-- Waits for confirmation
-
-#### Key Regeneration
-
-Use `--regenerate-ssh-key` to:
-- Delete existing keys (local, GitHub, OpenShift)
-- Generate new keys
-- Setup new deploy key
-
-### 4. GitHub Webhook Automation
-
-When `GITHUB_TOKEN` is provided, the script automatically:
-- Creates webhooks for frontend and backend
-- Configures them to trigger on push events
-- Skips creation if webhooks already exist
-
-Without `GITHUB_TOKEN`:
-- Displays webhook URLs
-- Prompts you to add them manually to GitHub
-
-### 5. Database Reset
-
-The `--reset-prod-db` flag provides a safe way to reset the database:
-
-```bash
-./oc-deploy.sh --reset-prod-db
-```
-
-**Process:**
-1. Prompts for confirmation (requires typing "yes")
-2. Deletes PostgreSQL deployment
-3. Deletes PostgreSQL service
-4. Deletes PVC (all data is lost)
-5. Recreates database from scratch
-6. Restarts backend to apply migrations
-
-**Use Cases:**
-- Development/staging environment resets
-- Corrupted database recovery
-- Schema migration issues
-- Testing fresh deployments
-
-### 6. Idempotent Operations
-
-The script can be run multiple times safely:
-
-- **Resources**: Only created if they don't exist
-- **Secrets**: Updated if they exist, created if they don't
-- **Deployments**: Updated if they exist, created if they don't
-- **Routes**: Reused if they exist
-- **SSH Keys**: Reused if valid, regenerated if missing
-
-### 7. Validation and Error Handling
-
-**Pre-flight Checks:**
-- OpenShift CLI version (4.14+)
-- OpenShift login status
-- Environment file existence
-- All required variables present
-- Variable format validation
-
-**Runtime Checks:**
-- Resource creation success
-- Deployment rollout status
-- Pod readiness
-- Route availability
-
-**Error Messages:**
-- Clear, actionable error messages
-- Colored output for visibility
-- Sensitive values masked in logs
+- Setup GitHub webhooks (if token provided)
+- Display deployment summary
+- Show application URLs
 
 ## Troubleshooting
 
 ### Common Issues
 
-#### 1. Missing Environment Variables
+#### 1. OpenShift Login Failed
 
-**Error:**
-```
-==> The following required environment variables are missing:
-  - APP_NAME
-  - POSTGRES_PASSWORD
-```
+**Error:** `You must be logged in to the server`
 
 **Solution:**
-Add the missing variables to your `.env.production` file.
 
-#### 2. Invalid Variable Format
-
-**Error:**
-```
-==> Invalid name: 'My-App'. Must contain only lowercase letters, numbers, and hyphens.
-```
-
-**Solution:**
-Fix the variable format according to validation rules (e.g., use `my-app` instead of `My-App`).
-
-#### 3. OpenShift Login Required
-
-**Error:**
-```
-==> Not logged into OpenShift. Please login first using:
-oc login --token=<token> --server=<server-url>
-```
-
-**Solution:**
-Login to OpenShift before running the script:
 ```bash
-oc login --token=your-token --server=https://api.cluster.example.com:6443
+oc login --server=https://your-openshift-cluster:6443
 ```
 
-#### 4. SSH Key Not Added to GitHub
+#### 2. SSH Key Already Exists on GitHub
 
-**Error:**
-Build fails with authentication error.
-
-**Solution:**
-1. Check if deploy key is added to GitHub repository
-2. Go to: Repository → Settings → Deploy keys
-3. Add the public key displayed by the script
-4. Enable "Allow write access" if needed
-
-#### 5. Database Connection Issues
-
-**Error:**
-Backend can't connect to database.
-
-**Solution:**
-1. Check PostgreSQL pod status:
-   ```bash
-   oc get pods -l app=postgresql
-   ```
-2. Check PostgreSQL logs:
-   ```bash
-   oc logs deployment/postgresql
-   ```
-3. Verify database credentials in secret:
-   ```bash
-   oc get secret <app-name>-env -o yaml
-   ```
-
-#### 6. Frontend Build Fails
-
-**Error:**
-Frontend build fails with missing environment variables.
-
-**Solution:**
-1. Ensure all `VITE_` variables are in `.env.production`
-2. Check build logs:
-   ```bash
-   oc logs -f bc/frontend
-   ```
-3. Verify build config:
-   ```bash
-   oc get bc/frontend -o yaml
-   ```
-
-#### 7. Webhook Creation Fails
-
-**Error:**
-```
-==> Failed to create GitHub webhook for frontend (HTTP 401)
-API Response: {"message": "Bad credentials"}
-```
+**Error:** `Deploy key already exists on GitHub`
 
 **Solution:**
 
-The script now provides detailed error messages for webhook failures. Common issues:
-
-**Authentication Failed (HTTP 401):**
-- Verify `GITHUB_TOKEN` is correct and not expired
-- Ensure token has required scopes: `repo`, `admin:repo_hook`
-- For IBM GitHub Enterprise, token must be from https://github.ibm.com/settings/tokens
-- For Public GitHub, token must be from https://github.com/settings/tokens
-
-**Repository Not Found (HTTP 404):**
-- Verify `GIT_SSH_URL` is correct
-- Ensure token has access to the repository
-- Check that `GITHUB_HOST` matches your Git URL (e.g., `github.ibm.com` or `github.com`)
-
-**Validation Failed (HTTP 422):**
-- Webhook URL may be invalid or unreachable
-- Webhook may already exist (check GitHub repository settings)
-
-**Manual Webhook Setup:**
-If automatic creation fails, the script will display webhook URLs. Add them manually:
-1. Go to your GitHub repository
-2. Navigate to Settings → Webhooks → Add webhook
-3. Paste the webhook URL
-4. Set Content type to `application/json`
-5. Select "Just the push event"
-6. Click "Add webhook"
-
-### Verifying Webhook Configuration
-
-After deployment, verify webhooks are properly configured:
-
-#### Check Webhooks on GitHub
-
-**For IBM GitHub Enterprise:**
 ```bash
-# Using curl with your GITHUB_TOKEN
-curl -H "Authorization: token $GITHUB_TOKEN" \
-  https://api.github.ibm.com/repos/OWNER/REPO/hooks
+# Regenerate SSH keys
+./scripts/oc-deploy.sh --regenerate-ssh-key
 ```
 
-**For Public GitHub:**
-```bash
-# Using curl with your GITHUB_TOKEN
-curl -H "Authorization: token $GITHUB_TOKEN" \
-  https://api.github.com/repos/OWNER/REPO/hooks
-```
+#### 3. Database Connection Failed
 
-Or check via web interface:
-1. Go to your repository on GitHub
-2. Navigate to Settings → Webhooks
-3. You should see two webhooks (frontend and backend)
-4. Each webhook should show a green checkmark if successfully delivered
+**Error:** `Failed to connect to database`
 
-#### Test Webhook Triggers
+**Solution:**
 
-1. Make a small change to your repository and push:
-   ```bash
-   git commit --allow-empty -m "Test webhook trigger"
-   git push
-   ```
+- Check database pod status: `oc get pods`
+- View database logs: `oc logs <postgres-pod-name>`
+- Verify database password in secrets
 
-2. Check OpenShift build status:
-   ```bash
-   # Watch builds
-   oc get builds -w
-   
-   # Check specific build logs
-   oc logs -f bc/frontend
-   oc logs -f bc/backend
-   ```
+#### 4. Build Failed
 
-3. Verify webhook delivery on GitHub:
-   - Go to Settings → Webhooks
-   - Click on each webhook
-   - Check "Recent Deliveries" tab
-   - Should show successful deliveries (HTTP 200)
+**Error:** `Build failed` or `ImagePullBackOff`
 
-#### Troubleshooting Webhook Issues
+**Solution:**
 
-**Webhook shows red X on GitHub:**
-- Check OpenShift route is accessible: `curl -I https://your-openshift-route`
-- Verify RoleBinding exists: `oc get rolebinding webhook-access-unauthenticated`
-- Check OpenShift logs for webhook requests
+- Check build logs: `oc logs -f bc/<app-name>-frontend`
+- Verify Git repository access
+- Check SSH key configuration
 
-**Builds not triggering on push:**
-- Verify webhook secret matches BuildConfig
-- Check branch filter if `WEBHOOK_BRANCH_FILTER` is set
-- Ensure webhook is active on GitHub
+#### 5. Route Not Accessible
 
-**Get webhook URLs from OpenShift:**
-```bash
-# Frontend webhook
-oc describe bc/frontend | grep "Webhook Generic" -A 1
+**Error:** Application URL returns 404 or connection refused
 
-# Backend webhook
-oc describe bc/backend | grep "Webhook Generic" -A 1
-```
+**Solution:**
+
+- Wait for builds to complete: `oc get builds`
+- Check pod status: `oc get pods`
+- Verify route: `oc get routes`
+- Check pod logs: `oc logs <pod-name>`
 
 ### Debug Mode
 
-To see detailed output, you can modify the script temporarily:
+Enable verbose output to see environment values:
 
 ```bash
-# Add at the top of the script (after set -euo pipefail)
-set -x  # Enable debug mode
+./scripts/oc-deploy.sh --show-env-values
 ```
 
-Or run with bash debug:
-
-```bash
-bash -x ./oc-deploy.sh
-```
-
-### Checking Deployment Status
+### Manual Verification
 
 ```bash
 # Check all resources
 oc get all
 
-# Check specific deployment
-oc get deployment/backend
-oc get deployment/frontend
-oc get deployment/postgresql
-
-# Check pod status
-oc get pods
-
-# Check pod logs
-oc logs deployment/backend
-oc logs deployment/frontend
-oc logs deployment/postgresql
+# Check secrets
+oc get secrets
 
 # Check routes
 oc get routes
 
-# Check secrets
-oc get secrets
+# Check builds
+oc get builds
+
+# View pod logs
+oc logs -f <pod-name>
 ```
 
-### Manual Cleanup
+## Advanced Usage
 
-If you need to start fresh:
+### Manual GitHub Setup
+
+If you don't have a GitHub token, manually configure:
+
+1. **Add Deploy Key:**
+
+   - Get public key: `oc get secret git-ssh-key -o jsonpath='{.data.ssh-publickey}' | base64 -d`
+   - Go to GitHub repository → Settings → Deploy keys
+   - Add new deploy key with read access
+
+2. **Add Webhooks:**
+   - Get webhook URLs from deployment summary
+   - Go to GitHub repository → Settings → Webhooks
+   - Add webhook with URL and secret from OpenShift
+
+### Database Reset
+
+**⚠️ WARNING:** This deletes all production data!
 
 ```bash
-# Delete entire project (⚠️ WARNING: Deletes everything!)
-oc delete project <project-name>
-
-# Or delete specific resources
-oc delete deployment/backend deployment/frontend deployment/postgresql
-oc delete service/backend service/frontend service/postgresql
-oc delete route/backend route/frontend
-oc delete pvc/postgresql-data
-oc delete secret/<app-name>-env git-secret
+./scripts/oc-deploy.sh --reset-prod-db
 ```
+
+This will:
+
+1. Delete the PostgreSQL deployment
+2. Delete the persistent volume claim
+3. Redeploy a fresh database
+4. Run initial data migrations
+
+### Custom Environment File
+
+Use a different environment file:
+
+```bash
+./scripts/oc-deploy.sh --env-file /path/to/custom.env
+```
+
+### Extending the Script
+
+The script uses a modular library structure in `scripts/lib/`:
+
+| Library             | Purpose                | Key Functions                                                          |
+| ------------------- | ---------------------- | ---------------------------------------------------------------------- |
+| `00-common.sh`      | Core utilities         | `print_status()`, `print_success()`, `print_error()`                   |
+| `10-validation.sh`  | Input validation       | `validate_name()`, `validate_email()`, `validate_git_url()`            |
+| `20-environment.sh` | Environment management | `load_env_file()`, `validate_required_vars()`                          |
+| `30-openshift.sh`   | OpenShift operations   | `setup_project()`, `resource_exists()`, `apply_resource()`             |
+| `40-ssh.sh`         | SSH key management     | `setup_ssh_keys()`, `add_github_deploy_key()`                          |
+| `50-secrets.sh`     | Secret management      | `create_initial_app_env_secret()`, `update_app_env_secret_with_urls()` |
+| `60-database.sh`    | Database operations    | `deploy_database()`, `reset_production_database()`                     |
+| `70-deployment.sh`  | Application deployment | `deploy_frontend()`, `deploy_backend()`, `configure_frontend()`        |
+| `75-oauth.sh`       | OAuth2 Proxy           | `deploy_oauth_proxy()`, `create_oauth_proxy_route()`                   |
+| `80-webhooks.sh`    | Webhook management     | `setup_webhooks()`, `create_github_webhook()`                          |
+
+#### Adding Custom Functionality
+
+1. Create a new library file in `scripts/lib/` (e.g., `85-custom.sh`)
+2. Follow the naming convention: `NN-name.sh` where NN determines load order
+3. Use the print functions with library context:
+   ```bash
+   print_status "Doing something..." "custom"
+   print_success "Done!" "custom"
+   ```
+4. Return error codes (0=success, 1=failure) instead of using `exit`
+5. Add deployment info to summary:
+   ```bash
+   add_deployment_output "custom_url" "https://custom.example.com"
+   ```
+
+## Architecture
+
+### Modular Design
+
+The script follows a modular architecture with clear separation of concerns:
+
+```
+scripts/
+├── oc-deploy.sh              # Main orchestration script (215 lines)
+├── .env.production           # Configuration file
+├── .env.production.example   # Configuration template
+└── lib/                      # Modular libraries
+    ├── 00-common.sh          # Utilities & output
+    ├── 10-validation.sh      # Input validation
+    ├── 20-environment.sh     # Environment management
+    ├── 30-openshift.sh       # OpenShift operations
+    ├── 40-ssh.sh             # SSH key management
+    ├── 50-secrets.sh         # Secret management
+    ├── 60-database.sh        # Database operations
+    ├── 70-deployment.sh      # Application deployment
+    ├── 75-oauth.sh           # OAuth2 Proxy
+    └── 80-webhooks.sh        # Webhook automation
+```
+
+### Benefits
+
+- **88% smaller main script** (1514 → 215 lines)
+- **Maintainable** - Easy to find and update code
+- **Testable** - Each library can be tested independently
+- **Extensible** - Add new features without modifying core logic
+- **Professional** - Follows shell scripting best practices
+
+### Output System
+
+The script uses a structured print system with:
+
+- **Color-coded messages** (status, success, error, warning)
+- **Library context prefixes** (e.g., `[openshift]`, `[database]`)
+- **Phase headers** for clear progress tracking
+- **Deployment summary** with all important URLs and information
+
+See [`PRINT_SYSTEM.md`](PRINT_SYSTEM.md) for detailed documentation.
 
 ## Best Practices
 
-### 1. Environment File Management
+### Security
 
-✅ **DO:**
-- Keep `.env.production` in a secure location
-- Use different env files for different environments
-- Version control `.env.production.example` (without secrets)
-- Use strong, unique passwords
+- ✅ Never commit `.env.production` to version control
+- ✅ Use strong passwords (minimum 8 characters)
+- ✅ Rotate API keys and secrets regularly
+- ✅ Use GitHub tokens with minimal required permissions
+- ✅ Review OpenShift RBAC permissions
 
-❌ **DON'T:**
-- Commit `.env.production` to Git
-- Share production credentials
-- Use default/weak passwords
-- Reuse passwords across environments
+### Deployment
 
-### 2. GitHub Token Security
+- ✅ Test in development environment first
+- ✅ Review deployment summary after each run
+- ✅ Monitor build logs for errors
+- ✅ Verify application functionality after deployment
+- ✅ Keep `.env.production.example` updated with new variables
 
-✅ **DO:**
-- Use fine-grained personal access tokens
-- Limit token scope to specific repositories
-- Rotate tokens regularly
-- Store tokens securely (password manager)
+### Maintenance
 
-❌ **DON'T:**
-- Use tokens with excessive permissions
-- Share tokens
-- Commit tokens to Git
-- Use the same token for multiple purposes
-
-### 3. Database Management
-
-✅ **DO:**
-- Backup database before using `--reset-prod-db`
-- Use strong database passwords
-- Monitor database storage usage
-- Test migrations in staging first
-
-❌ **DON'T:**
-- Use `--reset-prod-db` in production without backups
-- Use default database credentials
-- Ignore database logs
-- Skip migration testing
-
-### 4. Deployment Strategy
-
-✅ **DO:**
-- Test in staging environment first
-- Review changes before deploying
-- Monitor deployment logs
-- Keep deployment scripts updated
-- Document custom configurations
-
-❌ **DON'T:**
-- Deploy directly to production without testing
-- Ignore error messages
-- Skip validation steps
-- Modify deployed resources manually
-
-### 5. SSH Key Management
-
-✅ **DO:**
-- Use separate SSH keys per project
-- Rotate keys periodically
-- Use `--regenerate-ssh-key` when compromised
-- Keep private keys secure
-
-❌ **DON'T:**
-- Reuse SSH keys across projects
-- Share private keys
-- Commit keys to Git
-- Ignore key rotation
-
-### 6. Monitoring and Maintenance
-
-✅ **DO:**
-- Monitor application logs regularly
-- Check resource usage (CPU, memory, storage)
-- Update dependencies regularly
-- Review and update environment variables
-- Test disaster recovery procedures
-
-❌ **DON'T:**
-- Ignore warning messages
-- Let storage fill up
-- Use outdated dependencies
-- Skip regular maintenance
-
-## Script Architecture
-
-### Function Organization
-
-The script is organized into logical sections:
-
-1. **Helper Functions**: Color output, status messages
-2. **Validation Functions**: Input validation (name, email, URL, API key, password)
-3. **Environment Loading**: Load and validate environment variables
-4. **OpenShift Helpers**: Resource management, version checks
-5. **Project Setup**: Project creation and selection
-6. **SSH Key Management**: Key generation, GitHub integration
-7. **Secret Management**: Dynamic secret creation
-8. **Database Management**: PostgreSQL deployment and reset
-9. **Application Deployment**: Frontend and backend deployment
-10. **Webhook Management**: GitHub webhook automation
-11. **Main Execution**: Argument parsing and orchestration
-
-### Key Design Principles
-
-- **Idempotency**: All operations can be safely repeated
-- **Modularity**: Functions are small and focused
-- **Error Handling**: Comprehensive error checking and reporting
-- **Security**: Sensitive values masked, secure defaults
-- **Flexibility**: Dynamic configuration from environment file
-- **Automation**: Minimal manual intervention required
-
-## Contributing
-
-When modifying the script:
-
-1. Maintain idempotency
-2. Add validation for new variables
-3. Update documentation
-4. Test in staging environment
-5. Follow existing code style
-6. Add error handling
-7. Update help text
+- ✅ Document custom environment variables
+- ✅ Keep OpenShift CLI updated
+- ✅ Review and update resource quotas as needed
+- ✅ Backup database before using `--reset-prod-db`
+- ✅ Test webhook functionality after setup
 
 ## Support
 
 For issues or questions:
 
-1. Check this documentation
-2. Review error messages carefully
-3. Check OpenShift logs
-4. Verify environment variables
-5. Test in staging environment first
+1. Check the [Troubleshooting](#troubleshooting) section
+2. Review OpenShift logs: `oc logs <pod-name>`
+3. Verify configuration in `.env.production`
+4. Check OpenShift cluster status and quotas
 
 ## License
 
-This script is part of the full-stack application template and follows the same license as the main project.
-
----
-
-**Last Updated**: 2025-01-25
-**Script Version**: 2.0 (Optimized)
+This deployment script is part of the full-stack application template created with [create-cen-app](https://github.com/felixpahlke/create-cen-app).

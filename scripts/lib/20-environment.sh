@@ -15,7 +15,6 @@ declare -a REQUIRED_VARS=(
     "FIRST_SUPERUSER"
     "FIRST_SUPERUSER_PASSWORD"
     "SIGNUP_ACCESS_PASSWORD"
-    "API_KEY"
     "ENVIRONMENT"
     "SECRET_KEY"
     "POSTGRES_SERVER"
@@ -27,12 +26,10 @@ declare -a REQUIRED_VARS=(
 
 # OAuth2 Proxy variables (conditionally required - all or nothing)
 declare -a OAUTH_VARS=(
-    "OAUTH2_PROXY_COOKIE_DOMAIN"
     "OAUTH2_PROXY_COOKIE_SECRET"
     "OAUTH2_PROXY_CLIENT_ID"
     "OAUTH2_PROXY_CLIENT_SECRET"
     "OAUTH2_PROXY_OIDC_ISSUER_URL"
-    "OAUTH2_PROXY_REDIRECT_URL"
 )
 
 # Variables that need password length validation (min 8 chars)

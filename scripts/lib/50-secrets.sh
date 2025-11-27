@@ -26,6 +26,11 @@ build_secret_literals() {
             local var_name="${BASH_REMATCH[1]}"
             local var_value="${!var_name:-}"
             
+            # Skip GitHub credentials
+            if [[ "$var_name" == "GITHUB_HOST" || "$var_name" == "GITHUB_TOKEN" ]]; then
+                continue
+            fi
+
             # Add to secret literals
             secret_literals+=" --from-literal=$var_name=\"$var_value\""
         fi
@@ -92,6 +97,13 @@ update_app_env_secret_with_urls() {
     frontend_url=$(oc get route frontend -o jsonpath='{.spec.host}' 2>/dev/null || echo "")
     backend_url=$(oc get route backend -o jsonpath='{.spec.host}' 2>/dev/null || echo "")
     
+    # If OAuth is enabled, these routes might not exist (which is expected).
+    # We will defer the URL updates to the OAuth phase in that case.
+    if is_oauth_enabled; then
+        print_status "OAuth is enabled - skipping standard URL updates (will be handled by OAuth deployment)" "secrets"
+        return 0
+    fi
+    
     if [[ -z "$frontend_url" || -z "$backend_url" ]]; then
         print_error "Could not get frontend or backend URLs. Make sure the routes are created." "secrets"
         return 1
@@ -113,15 +125,11 @@ update_app_env_secret_with_urls() {
     # Set DOMAIN for backend
     export DOMAIN="$backend_url"
     
-    # Set VITE_API_URL for frontend (also needed by backend if it serves frontend assets)
-    export VITE_API_URL="https://$backend_url"
-    
     # Store URLs in output collector
     add_deployment_output "frontend_url" "$frontend_url"
     add_deployment_output "backend_url" "$backend_url"
     add_deployment_output "backend_cors_origins" "$BACKEND_CORS_ORIGINS"
     add_deployment_output "domain" "$DOMAIN"
-    add_deployment_output "vite_api_url" "$VITE_API_URL"
     
     # Delete the existing secret
     oc delete secret "$secret_name"

@@ -18,19 +18,24 @@ readonly TEAL='\033[0;36m'
 readonly YELLOW='\033[1;33m'
 readonly NC='\033[0m' # No Color
 
-# Global output collector for deployment information
-declare -A DEPLOYMENT_OUTPUT=(
-    [frontend_url]=""
-    [backend_url]=""
-    [oauth_proxy_url]=""
-    [frontend_webhook]=""
-    [backend_webhook]=""
-    [secret_key_generated]=""
-    [backend_cors_origins]=""
-    [domain]=""
-    [vite_api_url]=""
-    [github_webhooks_configured]=""
+# Global output collector for deployment information (Bash 3 compatible)
+DEPLOYMENT_OUTPUT_KEYS=(
+    frontend_url
+    backend_url
+    oauth_proxy_url
+    oauth_redirect_url
+    frontend_webhook
+    backend_webhook
+    secret_key_generated
+    backend_cors_origins
+    domain
+    vite_api_url
+    github_webhooks_configured
 )
+
+for key in "${DEPLOYMENT_OUTPUT_KEYS[@]}"; do
+    printf -v "DEPLOYMENT_OUTPUT__${key}" ''
+done
 
 #############################################
 # Print Functions
@@ -95,11 +100,19 @@ print_section_header() {
 # Output Collection Functions
 #############################################
 
-# Function to add deployment output
+# Functions to manage deployment output
 add_deployment_output() {
     local key=$1
     local value=$2
-    DEPLOYMENT_OUTPUT[$key]="$value"
+
+    printf -v "DEPLOYMENT_OUTPUT__${key}" '%s' "$value"
+}
+
+get_deployment_output() {
+    local key=$1
+
+    local var="DEPLOYMENT_OUTPUT__${key}"
+    printf '%s' "${!var-}"
 }
 
 # Function to print deployment summary
@@ -112,57 +125,79 @@ print_deployment_summary() {
     echo -e "${TEAL}═══════════════════════════════════════════════════${NC}"
     echo
     
+    local oauth_proxy_url oauth_redirect_url frontend_url backend_url frontend_webhook backend_webhook secret_key_generated github_webhooks_configured
+    local domain backend_cors_origins vite_api_url
+
+    oauth_proxy_url=$(get_deployment_output "oauth_proxy_url")
+    oauth_redirect_url=$(get_deployment_output "oauth_redirect_url")
+    frontend_url=$(get_deployment_output "frontend_url")
+    backend_url=$(get_deployment_output "backend_url")
+    frontend_webhook=$(get_deployment_output "frontend_webhook")
+    backend_webhook=$(get_deployment_output "backend_webhook")
+    secret_key_generated=$(get_deployment_output "secret_key_generated")
+    github_webhooks_configured=$(get_deployment_output "github_webhooks_configured")
+    domain=$(get_deployment_output "domain")
+    backend_cors_origins=$(get_deployment_output "backend_cors_origins")
+    vite_api_url=$(get_deployment_output "vite_api_url")
+
     # Application URLs
-    if [[ -n "${DEPLOYMENT_OUTPUT[oauth_proxy_url]}" ]]; then
+    if [[ -n "$oauth_proxy_url" ]]; then
         echo -e "${GREEN}OAuth2 Proxy URL (Main Entry Point):${NC}"
-        echo "  https://${DEPLOYMENT_OUTPUT[oauth_proxy_url]}"
+        echo "  https://$oauth_proxy_url"
         echo
+
+        if [[ -n "$oauth_redirect_url" ]]; then
+            echo -e "${YELLOW}⚠️  OAUTH CONFIGURATION REQUIRED:${NC}"
+            echo -e "You must add this Redirect URL to your identity provider (e.g., App ID):"
+            echo -e "${GREEN}  $oauth_redirect_url${NC}"
+            echo
+        fi
     fi
     
-    if [[ -n "${DEPLOYMENT_OUTPUT[frontend_url]}" ]]; then
+    if [[ -n "$frontend_url" ]]; then
         echo -e "${GREEN}Frontend URL:${NC}"
-        echo "  https://${DEPLOYMENT_OUTPUT[frontend_url]}"
+        echo "  https://$frontend_url"
         echo
     fi
     
-    if [[ -n "${DEPLOYMENT_OUTPUT[backend_url]}" ]]; then
+    if [[ -n "$backend_url" ]]; then
         echo -e "${GREEN}Backend URL:${NC}"
-        echo "  https://${DEPLOYMENT_OUTPUT[backend_url]}"
+        echo "  https://$backend_url"
         echo
     fi
     
     # Webhooks
-    if [[ "${DEPLOYMENT_OUTPUT[github_webhooks_configured]}" == "true" ]]; then
+    if [[ "$github_webhooks_configured" == "true" ]]; then
         print_success "GitHub webhooks have been configured automatically!"
         echo
     else
-        if [[ -n "${DEPLOYMENT_OUTPUT[frontend_webhook]}" ]]; then
+        if [[ -n "$frontend_webhook" ]]; then
             echo -e "${GREEN}Frontend Webhook URL:${NC}"
-            echo "  ${DEPLOYMENT_OUTPUT[frontend_webhook]}"
+            echo "  $frontend_webhook"
             echo
         fi
         
-        if [[ -n "${DEPLOYMENT_OUTPUT[backend_webhook]}" ]]; then
+        if [[ -n "$backend_webhook" ]]; then
             echo -e "${GREEN}Backend Webhook URL:${NC}"
-            echo "  ${DEPLOYMENT_OUTPUT[backend_webhook]}"
+            echo "  $backend_webhook"
             echo
         fi
         
-        if [[ -n "${DEPLOYMENT_OUTPUT[frontend_webhook]}" || -n "${DEPLOYMENT_OUTPUT[backend_webhook]}" ]]; then
+        if [[ -n "$frontend_webhook" || -n "$backend_webhook" ]]; then
             print_status "Please add these webhook URLs to your GitHub repository"
             echo
         fi
     fi
     
     # Generated secrets
-    if [[ -n "${DEPLOYMENT_OUTPUT[secret_key_generated]}" ]]; then
+    if [[ -n "$secret_key_generated" ]]; then
         echo -e "${YELLOW}⚠️  IMPORTANT: Save this SECRET_KEY for future reference:${NC}"
-        echo -e "${GREEN}SECRET_KEY=${DEPLOYMENT_OUTPUT[secret_key_generated]}${NC}"
+        echo -e "${GREEN}SECRET_KEY=$secret_key_generated${NC}"
         echo
     fi
     
     # Build status note
-    if [[ -n "${DEPLOYMENT_OUTPUT[frontend_url]}" && -n "${DEPLOYMENT_OUTPUT[backend_url]}" ]]; then
+    if [[ -n "$frontend_url" && -n "$backend_url" ]]; then
         echo -e "${BLUE}Note: Builds may take a few minutes to complete.${NC}"
         echo "Once builds are finished, your application will be accessible at the URLs above."
         echo
@@ -217,7 +252,6 @@ ${GREEN}REQUIRED ENVIRONMENT VARIABLES:${NC}
         FIRST_SUPERUSER             Admin email address
         FIRST_SUPERUSER_PASSWORD    Admin password (min 8 characters)
         SIGNUP_ACCESS_PASSWORD      Signup password (min 8 characters, can be empty)
-        API_KEY                     Backend API key (16, 32, or 64 characters)
         ENVIRONMENT                 Environment name (e.g., production)
         SECRET_KEY                  Backend secret key (min 8 characters)
         

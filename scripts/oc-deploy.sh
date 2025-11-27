@@ -23,8 +23,9 @@
 
 set -eo pipefail
 
-# Get script directory
+# Get directories
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 LIB_DIR="$SCRIPT_DIR/lib"
 
 # Source all library files in order
@@ -35,8 +36,8 @@ for lib_file in "$LIB_DIR"/*.sh; do
     fi
 done
 
-# Default environment file location
-ENV_FILE="$SCRIPT_DIR/.env.production"
+# Default environment file location (project root)
+ENV_FILE="$PROJECT_ROOT/.env.production"
 
 # Default GitHub host (can be overridden in .env.production)
 # Set to github.ibm.com for IBM GitHub Enterprise
@@ -158,6 +159,16 @@ main() {
     
     # Deploy database
     deploy_database || exit 1
+
+    # Pre-configure OAuth to avoid backend restarts
+    if is_oauth_enabled; then
+        print_status "OAuth2 Proxy is enabled. Pre-configuring secrets to avoid backend restarts..."
+        # Order matters: we need the route first to get the URL for the secret
+        create_oauth_proxy_service || exit 1
+        create_oauth_proxy_route || exit 1
+        create_oauth_proxy_secret || exit 1
+        update_backend_with_oauth_url || exit 1
+    fi
     
     # ============================================================
     # PHASE 5: APPLICATION DEPLOYMENT
@@ -176,11 +187,7 @@ main() {
     # See scripts/.env.production.example for required variables
     if is_oauth_enabled; then
         print_status "OAuth2 Proxy is enabled, deploying..."
-        create_oauth_proxy_secret || exit 1
         deploy_oauth_proxy || exit 1
-        create_oauth_proxy_service || exit 1
-        create_oauth_proxy_route || exit 1
-        update_backend_with_oauth_url || exit 1
     fi
     
     # ============================================================

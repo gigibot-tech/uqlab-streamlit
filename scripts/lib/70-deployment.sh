@@ -15,7 +15,7 @@
 # Function to configure buildconfig webhook branch filter
 configure_buildconfig_branch_filter() {
     local buildconfig_name=$1
-    local branch_filter="${WEBHOOK_BRANCH_FILTER:-}"
+    local branch_filter="${DEPLOYMENT_BRANCH_FILTER:-}"
     
     if [[ -n "$branch_filter" ]]; then
         print_status "Configuring $buildconfig_name to build only from branch: $branch_filter" "deployment"
@@ -88,10 +88,19 @@ deploy_frontend() {
     
     # Check if route exists
     if ! resource_exists "route" "frontend"; then
-        print_status "Exposing frontend service..." "deployment"
-        oc create route edge frontend --service=frontend --port=8080
+        if ! is_oauth_enabled; then
+            print_status "Exposing frontend service (OAuth disabled)..." "deployment"
+            oc create route edge frontend --service=frontend --port=8080
+        else
+            print_status "Skipping frontend route creation (OAuth enabled)" "deployment"
+        fi
     else
-        print_status "Frontend route already exists, skipping creation" "deployment"
+        if is_oauth_enabled; then
+            print_warning "Frontend route exists but OAuth is enabled. Deleting public route..." "deployment"
+            oc delete route frontend
+        else
+            print_status "Frontend route already exists, skipping creation" "deployment"
+        fi
     fi
     
     return 0
@@ -122,10 +131,19 @@ deploy_backend() {
     
     # Check if route exists
     if ! resource_exists "route" "backend"; then
-        print_status "Exposing backend service..." "deployment"
-        oc create route edge backend --service=backend --port=8000
+        if ! is_oauth_enabled; then
+            print_status "Exposing backend service (OAuth disabled)..." "deployment"
+            oc create route edge backend --service=backend --port=8000
+        else
+            print_status "Skipping backend route creation (OAuth enabled)" "deployment"
+        fi
     else
-        print_status "Backend route already exists, skipping creation" "deployment"
+        if is_oauth_enabled; then
+            print_warning "Backend route exists but OAuth is enabled. Deleting public route..." "deployment"
+            oc delete route backend
+        else
+            print_status "Backend route already exists, skipping creation" "deployment"
+        fi
     fi
     
     return 0
@@ -133,20 +151,11 @@ deploy_backend() {
 
 # Function to configure frontend build with environment variables
 configure_frontend() {
-    local frontend_url
-    local backend_url
-    
-    frontend_url=$(oc get route frontend -o jsonpath='{.spec.host}')
-    backend_url=$(oc get route backend -o jsonpath='{.spec.host}')
-    
     # Build VITE_ build arguments JSON array
     # Note: Vite embeds these at BUILD time, so they must be build args, not runtime env vars
     local vite_buildargs_json="["
     local first=true
-    
-    # Add VITE_API_URL
-    vite_buildargs_json+="{\"name\":\"VITE_API_URL\",\"value\":\"https://$backend_url\"}"
-    first=false
+    local has_args=false
     
     # Add all VITE_ prefixed variables from .env.production file
     if [[ -f "$ENV_FILE" ]]; then
@@ -165,28 +174,34 @@ configure_frontend() {
                 var_value="${var_value#\'}"
                 var_value="${var_value%\'}"
                 
-                # Skip VITE_API_URL as we already added it
-                if [[ "$var_name" != "VITE_API_URL" ]]; then
-                    if [[ "$first" == "false" ]]; then
-                        vite_buildargs_json+=","
-                    fi
-                    vite_buildargs_json+="{\"name\":\"$var_name\",\"value\":\"$var_value\"}"
-                    first=false
-                    print_status "Found $var_name in .env.production" "deployment"
+                # Do not automatically set VITE_API_URL
+                # nginx.conf handles the /api proxy, so relative paths work by default
+                
+                if [[ "$first" == "false" ]]; then
+                    vite_buildargs_json+=","
                 fi
+                vite_buildargs_json+="{\"name\":\"$var_name\",\"value\":\"$var_value\"}"
+                first=false
+                has_args=true
+                print_status "Found $var_name in .env.production" "deployment"
             fi
         done < "$ENV_FILE"
     fi
     
     vite_buildargs_json+="]"
     
-    # Configure frontend build with all VITE_ variables as BUILD ARGS
-    print_status "Configuring frontend build with VITE_ build arguments..." "deployment"
-    oc patch bc/frontend --type=merge -p "{\"spec\":{\"strategy\":{\"dockerStrategy\":{\"buildArgs\":$vite_buildargs_json}}}}"
-    
-    print_status "Restarting frontend build to apply build args..." "deployment"
-    oc cancel-build bc/frontend --state=new --state=pending --state=running 2>/dev/null || true
-    oc start-build bc/frontend
+    # Only patch and rebuild if we actually have VITE arguments
+    if [[ "$has_args" == "true" ]]; then
+        # Configure frontend build with all VITE_ variables as BUILD ARGS
+        print_status "Configuring frontend build with VITE_ build arguments..." "deployment"
+        oc patch bc/frontend --type=merge -p "{\"spec\":{\"strategy\":{\"dockerStrategy\":{\"buildArgs\":$vite_buildargs_json}}}}"
+        
+        print_status "Restarting frontend build to apply build args..." "deployment"
+        oc cancel-build bc/frontend --state=new --state=pending --state=running 2>/dev/null || true
+        oc start-build bc/frontend
+    else
+        print_status "No VITE_ variables found in .env.production. Skipping frontend rebuild." "deployment"
+    fi
     
     return 0
 }

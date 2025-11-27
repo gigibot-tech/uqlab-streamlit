@@ -8,6 +8,7 @@
 # - OAuth secret management
 # - OAuth service and route creation
 #
+
 #############################################
 # OAuth Detection Functions
 #############################################
@@ -15,12 +16,10 @@
 # Function to check if OAuth is enabled
 is_oauth_enabled() {
     # Check if any OAuth variable is set
-    if [[ -n "${OAUTH2_PROXY_COOKIE_DOMAIN:-}" ]] || \
-       [[ -n "${OAUTH2_PROXY_COOKIE_SECRET:-}" ]] || \
+    if [[ -n "${OAUTH2_PROXY_COOKIE_SECRET:-}" ]] || \
        [[ -n "${OAUTH2_PROXY_CLIENT_ID:-}" ]] || \
        [[ -n "${OAUTH2_PROXY_CLIENT_SECRET:-}" ]] || \
-       [[ -n "${OAUTH2_PROXY_OIDC_ISSUER_URL:-}" ]] || \
-       [[ -n "${OAUTH2_PROXY_REDIRECT_URL:-}" ]]; then
+       [[ -n "${OAUTH2_PROXY_OIDC_ISSUER_URL:-}" ]]; then
         return 0
     fi
     return 1
@@ -34,6 +33,48 @@ is_oauth_enabled() {
 create_oauth_proxy_secret() {
     local secret_name="$APP_NAME-oauth-proxy-secret"
     
+    # NOTE: We cannot derive the redirect URL or cookie domain from the oauth-proxy route yet
+    # because that route hasn't been created. The deployment flow is:
+    # 1. Create Secret (needs URLs)
+    # 2. Deploy Proxy (uses Secret)
+    # 3. Create Service
+    # 4. Create Route (generates the URL we needed in step 1)
+    #
+    # To solve this circular dependency, we'll create the route *first* (or check for it),
+    # then update the secret with the correct values.
+    
+    # Check if route exists, if not create it immediately to get the host
+    if ! resource_exists "route" "oauth-proxy"; then
+        print_status "Pre-creating OAuth2 Proxy route to reserve hostname..." "oauth"
+        create_oauth_proxy_service || return 1
+        create_oauth_proxy_route || return 1
+    fi
+
+    # Now get the OAuth proxy URL
+    local oauth_url
+    oauth_url=$(oc get route oauth-proxy -o jsonpath='{.spec.host}' 2>/dev/null || echo "")
+    
+    if [[ -z "$oauth_url" ]]; then
+        print_error "Could not get OAuth proxy URL. Make sure the route is created." "oauth"
+        return 1
+    fi
+
+    # Derive values strictly from the OAuth proxy route
+    local derived_redirect_url="https://$oauth_url/oauth2/callback"
+    
+    # Store in output collector for summary
+    add_deployment_output "oauth_redirect_url" "$derived_redirect_url"
+    
+    # Derive cookie domain (strip protocol, path, port)
+    local derived_cookie_domain="$oauth_url"
+    derived_cookie_domain="${derived_cookie_domain#*://}"
+    derived_cookie_domain="${derived_cookie_domain%%/*}"
+    derived_cookie_domain="${derived_cookie_domain%:*}"
+
+    print_status "Configuring OAuth2 Proxy with derived values from OAuth Route:" "oauth"
+    echo "  - Redirect URL: $derived_redirect_url"
+    echo "  - Cookie Domain: $derived_cookie_domain"
+    
     print_status "Creating OAuth2 Proxy secret..." "oauth"
     
     # Check if secret exists
@@ -43,15 +84,23 @@ create_oauth_proxy_secret() {
     fi
     
     # Create secret with OAuth variables
+    # Note: redirect-url and cookiedomain are derived from oauth_url
     oc create secret generic "$secret_name" \
-        --from-literal=cookiedomain="$OAUTH2_PROXY_COOKIE_DOMAIN" \
+        --from-literal=cookiedomain="$derived_cookie_domain" \
         --from-literal=cookiesecret="$OAUTH2_PROXY_COOKIE_SECRET" \
         --from-literal=clientid="$OAUTH2_PROXY_CLIENT_ID" \
         --from-literal=clientsecret="$OAUTH2_PROXY_CLIENT_SECRET" \
         --from-literal=oidc-issuer-url="$OAUTH2_PROXY_OIDC_ISSUER_URL" \
-        --from-literal=redirect-url="$OAUTH2_PROXY_REDIRECT_URL"
+        --from-literal=redirect-url="$derived_redirect_url"
     
     print_success "OAuth2 Proxy secret created: $secret_name" "oauth"
+    
+    # We need to restart the deployment if it already exists to pick up the secret changes
+    if resource_exists "deployment" "oauth-proxy"; then
+        print_status "Restarting OAuth2 Proxy to apply new secret configuration..." "oauth"
+        oc rollout restart deployment/oauth-proxy
+    fi
+    
     return 0
 }
 
@@ -243,6 +292,13 @@ update_backend_with_oauth_url() {
         fi
     fi
     
+    # Derive well-known URL if not set (auto-discovery)
+    local clean_issuer_url="${OAUTH2_PROXY_OIDC_ISSUER_URL%/}"
+    local well_known_url="${OAUTH2_PROXY_WELL_KNOWN_URL:-${clean_issuer_url}/.well-known/openid-configuration}"
+
+    # Export it so build_secret_literals picks it up if the key exists in .env
+    export OAUTH2_PROXY_WELL_KNOWN_URL="$well_known_url"
+    
     # Recreate the app environment secret with updated values
     local secret_name="$APP_NAME-env"
     print_status "Updating $secret_name secret with OAuth proxy URL..." "oauth"
@@ -251,8 +307,16 @@ update_backend_with_oauth_url() {
     oc delete secret "$secret_name"
     
     # Recreate the secret with all values including OAuth URL
+    local secret_literals=$(build_secret_literals)
     local secret_cmd="oc create secret generic $secret_name"
-    secret_cmd+=$(build_secret_literals)
+    secret_cmd+="$secret_literals"
+
+    # Add OAUTH2_PROXY_WELL_KNOWN_URL if it was not included by build_secret_literals
+    # (build_secret_literals only includes keys that exist in the .env file)
+    if [[ "$secret_literals" != *"OAUTH2_PROXY_WELL_KNOWN_URL="* ]]; then
+         secret_cmd+=" --from-literal=OAUTH2_PROXY_WELL_KNOWN_URL=\"$well_known_url\""
+         print_status "Added derived OAUTH2_PROXY_WELL_KNOWN_URL to backend environment" "oauth"
+    fi
     
     # Execute the command
     eval "$secret_cmd"
