@@ -5,6 +5,7 @@ Automated deployment script for deploying full-stack applications to OpenShift w
 ## Table of Contents
 
 - [Quick Start](#quick-start)
+- [Deployment Flavors](#deployment-flavors)
 - [Prerequisites](#prerequisites)
 - [Configuration](#configuration)
 - [Usage](#usage)
@@ -44,6 +45,36 @@ Automated deployment script for deploying full-stack applications to OpenShift w
    ```bash
    ./scripts/oc-deploy.sh
    ```
+
+## Deployment Flavors
+
+The script supports 6 deployment flavors, each with specific component combinations and required variables. Set `DEPLOYMENT_FLAVOR` in `.env.production`:
+
+| Flavor | Components | Auth | Use Case |
+|--------|------------|------|----------|
+| **local-auth** (default) | Frontend + Backend + DB | Local (user/pass) | Standard full-stack app with built-in user management |
+| **backend-only** | Backend + DB | API Key | Backend API for mobile apps or external frontends |
+| **oauth-proxy** | Frontend + Backend + DB + OAuth | OAuth2/OIDC | Enterprise apps with SSO integration |
+| **backend-only-no-db** | Backend only | API Key | Stateless APIs, microservices, proxy services |
+| **local-auth-custom-ui** | Backend + DB | Local (user/pass) | Custom frontend using the backend API |
+| **oauth-proxy-custom-ui** | Backend + DB + OAuth | OAuth2/OIDC | Custom frontend with enterprise SSO |
+
+**Required Variables by Flavor:**
+- **local-auth**: `APP_NAME`, `PROJECT_NAME`, `GIT_SSH_URL`, `ENVIRONMENT`, `FIRST_SUPERUSER`, `FIRST_SUPERUSER_PASSWORD`, `SECRET_KEY`, `POSTGRES_*`
+- **backend-only**: `APP_NAME`, `PROJECT_NAME`, `GIT_SSH_URL`, `ENVIRONMENT`, `API_KEY`, `POSTGRES_*`
+- **oauth-proxy**: `APP_NAME`, `PROJECT_NAME`, `GIT_SSH_URL`, `ENVIRONMENT`, `OAUTH2_PROXY_*`, `POSTGRES_*`
+- **backend-only-no-db**: `APP_NAME`, `PROJECT_NAME`, `GIT_SSH_URL`, `ENVIRONMENT`, `API_KEY`
+- **local-auth-custom-ui**: Same as local-auth
+- **oauth-proxy-custom-ui**: Same as oauth-proxy
+
+**Usage:**
+```bash
+# Set in .env.production
+DEPLOYMENT_FLAVOR=backend-only
+
+# Or override via command line
+./scripts/oc-deploy.sh --flavor oauth-proxy
+```
 
 ## Prerequisites
 
