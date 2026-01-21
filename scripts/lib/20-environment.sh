@@ -194,7 +194,8 @@ detect_flavor() {
 get_flavor_vars() {
     local flavor="${DEPLOYMENT_FLAVOR:-$DEFAULT_FLAVOR}"
     local var_array_name="FLAVOR_${flavor//-/_}_VARS[@]"
-    var_array_name="${var_array_name^^}"  # Convert to uppercase
+    # Convert to uppercase using tr for Bash 3.2 compatibility (macOS)
+    var_array_name=$(echo "$var_array_name" | tr '[:lower:]' '[:upper:]')
     
     # Return the array name for indirect reference
     echo "$var_array_name"
@@ -204,7 +205,8 @@ get_flavor_vars() {
 get_flavor_password_vars() {
     local flavor="${DEPLOYMENT_FLAVOR:-$DEFAULT_FLAVOR}"
     local var_array_name="FLAVOR_${flavor//-/_}_PASSWORD_VARS[@]"
-    var_array_name="${var_array_name^^}"  # Convert to uppercase
+    # Convert to uppercase using tr for Bash 3.2 compatibility (macOS)
+    var_array_name=$(echo "$var_array_name" | tr '[:lower:]' '[:upper:]')
     
     # Return the array name for indirect reference
     echo "$var_array_name"
