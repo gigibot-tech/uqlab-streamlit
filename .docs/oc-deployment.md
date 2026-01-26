@@ -69,7 +69,7 @@ The script guides you through the process and handles everything automatically.
 
 ## Deployment Flavors
 
-Set `DEPLOYMENT_FLAVOR` in `.env.production`:
+Set `CEN_FLAVOR` in `.env.production`:
 
 | Flavor                    | Components                      | Auth    | Use Case                        |
 | ------------------------- | ------------------------------- | ------- | ------------------------------- |

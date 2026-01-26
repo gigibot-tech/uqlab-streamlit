@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export LANG=en_US.UTF-8
+
 ### ------------------------ PRELIMINARIES ------------------------ ###
 set -e
 
@@ -20,6 +22,8 @@ print_section() {
     echo -e "${TEAL}  $1${NC}"
     echo -e "${TEAL}========================================${NC}"
 }
+
+print_section "PRE-CHECKS"
 
 # Load environment variables
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -57,6 +61,25 @@ if [ ${#MISSING_VARS[@]} -gt 0 ]; then
     exit 1
 fi
 print_success "All required environment variables are set"
+
+check_nginx_config() {
+    print_status "Checking nginx configuration..."
+    NGINX_CONF="$SCRIPT_DIR/../frontend/nginx.conf"
+    
+    if [ -f "$NGINX_CONF" ]; then
+        # Check if "location /api" is active (not commented out)
+        if grep -E "^\s*location /api" "$NGINX_CONF" | grep -vE "^\s*#" > /dev/null; then
+            print_error "Found active 'location /api' block in frontend/nginx.conf"
+            print_error "Please comment out or remove the 'location /api' block for CE deployments."
+            exit 1
+        fi
+        print_success "nginx.conf check passed"
+    else
+        print_warning "nginx.conf not found at $NGINX_CONF - skipping check"
+    fi
+}
+
+check_nginx_config
 
 ### ------------------------ IBM CLOUD SETUP ------------------------ ###
 print_section "IBM CLOUD SETUP"
@@ -146,7 +169,7 @@ fi
 
 # Get the project subdomain and extract cluster ID
 print_status "Fetching Code Engine project subdomain..."
-CE_SUBDOMAIN=$(ibmcloud ce project current | grep -E "(Subdomain|Unterdomäne):" | awk '{print $2}')
+CE_SUBDOMAIN=$(ibmcloud ce project current | grep "Subdomain:" | awk '{print $2}')
 if [ -z "$CE_SUBDOMAIN" ]; then
     print_error "Failed to get Code Engine project subdomain"
     exit 1
@@ -175,8 +198,8 @@ else
     print_status "Creating registry secret '${_CR_REGISTRY_SECRET_NAME}'..."
     
     # Check if IAM API key is provided
-    if [ -z "${IAM_API_KEY}" ]; then
-        print_error "IAM API key (IAM_API_KEY) is required to create registry secret"
+    if [ -z "${_IAM_API_KEY}" ]; then
+        print_error "IAM API key (_IAM_API_KEY) is required to create registry secret"
         print_error "Please add it to your .env.production file"
         exit 1
     fi
@@ -184,7 +207,7 @@ else
         --name ${_CR_REGISTRY_SECRET_NAME} \
         --server ${_CR_REGISTRY} \
         --username iamapikey \
-        --password ${IAM_API_KEY} || { print_error "Failed to create registry secret"; exit 1; }
+        --password ${_IAM_API_KEY} || { print_error "Failed to create registry secret"; exit 1; }
     print_success "Registry secret '${_CR_REGISTRY_SECRET_NAME}' created successfully!"
 fi
 
@@ -367,6 +390,7 @@ deploy_applications() {
         -t ${_CR_REGISTRY}/${_CR_NAMESPACE}/${_CE_FRONTEND_IMAGE_NAME}:latest \
         "${VITE_BUILD_ARGS[@]}" \
         --build-arg NODE_ENV=${NODE_ENV:-production} \
+        --load \
         ./frontend || { print_error "Failed to build frontend image"; exit 1; }
     
     print_status "Pushing frontend image..."
@@ -402,7 +426,9 @@ deploy_applications() {
     
     ### BACKEND ###
     print_status "Building backend image..."
-    docker image build --platform linux/amd64 -t ${_CR_REGISTRY}/${_CR_NAMESPACE}/${_CE_BACKEND_IMAGE_NAME}:latest \
+    docker image build --platform linux/amd64 \
+        -t ${_CR_REGISTRY}/${_CR_NAMESPACE}/${_CE_BACKEND_IMAGE_NAME}:latest \
+        --load \
         ./backend || { print_error "Failed to build backend image"; exit 1; }
     
     print_status "Pushing backend image..."
@@ -417,13 +443,13 @@ deploy_applications() {
         FROM_LITERALS+=(--from-literal "$line")
     done < "$ENV_FILE"
     
-    if ! ibmcloud ce secret get --name "$SECRET_NAME" &>/dev/null; then
-        print_status "Creating backend secrets..."
-        ibmcloud ce secret create --name "$SECRET_NAME" "${FROM_LITERALS[@]}" || { print_error "Failed to create secrets"; exit 1; }
-    else
-        print_status "Updating backend secrets..."
-        ibmcloud ce secret update --name "$SECRET_NAME" "${FROM_LITERALS[@]}" || { print_error "Failed to update secrets"; exit 1; }
+    if ibmcloud ce secret get --name "$SECRET_NAME" &>/dev/null; then
+        print_status "Removing existing backend secrets to ensure strict sync..."
+        ibmcloud ce secret delete --name "$SECRET_NAME" --force || { print_error "Failed to delete existing secrets"; exit 1; }
     fi
+
+    print_status "Creating backend secrets..."
+    ibmcloud ce secret create --name "$SECRET_NAME" "${FROM_LITERALS[@]}" || { print_error "Failed to create secrets"; exit 1; }
     
     if ibmcloud ce application get --name "${_CE_BACKEND_APPLICATION_NAME}" &>/dev/null; then
         print_status "Updating backend application..."
@@ -431,6 +457,8 @@ deploy_applications() {
             --name "${_CE_BACKEND_APPLICATION_NAME}" \
             --image ${_CR_REGISTRY}/${_CR_NAMESPACE}/${_CE_BACKEND_IMAGE_NAME}:latest \
             --min-scale 1 --max-scale 2 --scale-down-delay 600 \
+            --probe-live initial-delay=10 --probe-live type=http --probe-live path=/api/v1/utils/health-check/ --probe-live port=8000 \
+            --probe-ready initial-delay=10 --probe-ready type=http --probe-ready path=/api/v1/utils/health-check/ --probe-ready port=8000 \
             --ephemeral-storage 1.5G || { print_error "Failed to update backend"; exit 1; }
         
         print_success "Backend application updated successfully!"
@@ -449,8 +477,8 @@ deploy_applications() {
             --registry-secret ${_CR_REGISTRY_SECRET_NAME} \
             --port http1:8000 \
             $CLUSTER_LOCAL_FLAG \
-            --probe-live type=http --probe-live path=/api/v1/utils/health-check/ --probe-live port=8000 \
-            --probe-ready type=http --probe-ready path=/api/v1/utils/health-check/ --probe-ready port=8000 \
+            --probe-live initial-delay=10 --probe-live type=http --probe-live path=/api/v1/utils/health-check/ --probe-live port=8000 \
+            --probe-ready initial-delay=10 --probe-ready type=http --probe-ready path=/api/v1/utils/health-check/ --probe-ready port=8000 \
             --cpu 1 --memory 4G --ephemeral-storage 1.5G \
             --min-scale 1 --max-scale 4 --scale-down-delay 600 \
             --env-from-secret ${_CE_BACKEND_ENV_SECRET_NAME} || { print_error "Failed to create backend"; exit 1; }
