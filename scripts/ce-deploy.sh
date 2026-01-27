@@ -37,12 +37,26 @@ fi
 
 source $ENV_FILE
 
+# Validate _CE_PROJECT_NAME length
+if [ ${#_CE_PROJECT_NAME} -gt 20 ]; then
+    print_error "_CE_PROJECT_NAME must be 20 characters or less (current: ${#_CE_PROJECT_NAME})"
+    print_error "This is because derived names (like namespace) must be <= 30 chars."
+    exit 1
+fi
+
+# Set defaults for optional variables (can be overridden in .env.production)
+_CE_FRONTEND_IMAGE_NAME="${_CE_FRONTEND_IMAGE_NAME:-frontend}"
+_CE_FRONTEND_APPLICATION_NAME="${_CE_FRONTEND_APPLICATION_NAME:-${_CE_PROJECT_NAME}-frontend}"
+_CE_BACKEND_IMAGE_NAME="${_CE_BACKEND_IMAGE_NAME:-backend}"
+_CE_BACKEND_ENV_SECRET_NAME="${_CE_BACKEND_ENV_SECRET_NAME:-${_CE_PROJECT_NAME}-backend-config}"
+_CE_BACKEND_APPLICATION_NAME="${_CE_BACKEND_APPLICATION_NAME:-${_CE_PROJECT_NAME}-backend}"
+_CR_REGISTRY_SECRET_NAME="${_CR_REGISTRY_SECRET_NAME:-${_CE_PROJECT_NAME}-registry-secret}"
+_CR_NAMESPACE="${_CR_NAMESPACE:-${_CE_PROJECT_NAME}-namespace}"
+
 # Validate required variables
 REQUIRED_VARS=(
     "_IBM_CLOUD_RESOURCE_GROUP" "_IBM_CLOUD_REGION" "_IBM_CLOUD_ACCOUNT_NAME"
-    "_CE_PROJECT_NAME" "_CR_NAMESPACE" "_CR_REGISTRY" "_CR_REGISTRY_SECRET_NAME"
-    "_CE_FRONTEND_IMAGE_NAME" "_CE_FRONTEND_APPLICATION_NAME"
-    "_CE_BACKEND_IMAGE_NAME" "_CE_BACKEND_ENV_SECRET_NAME" "_CE_BACKEND_APPLICATION_NAME"
+    "_CE_PROJECT_NAME" "_CR_REGISTRY"
 )
 
 print_status "Validating required environment variables..."

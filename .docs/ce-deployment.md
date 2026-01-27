@@ -1,16 +1,13 @@
-# Code Engine Deployment Guide
+# IBM Code Engine Deployment Guide
 
-This guide covers deploying the application to production environments. The application supports two deployment strategies:
-
-1. **IBM Code Engine** - Serverless container platform with 1Password integration
-2. **OpenShift** - Enterprise Kubernetes platform with optional OAuth2 Proxy
+This guide covers deploying the application to **IBM Code Engine**, a serverless container platform with automatic scaling.
 
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
 - [Environment Configuration](#environment-configuration)
-- [Deployment Method 1: IBM Code Engine](#deployment-method-1-ibm-code-engine)
-- [Deployment Method 2: OpenShift](#deployment-method-2-openshift)
+- [Frontend Configuration](#frontend-configuration)
+- [Deployment](#deployment)
 - [OAuth2 Proxy Configuration](#oauth2-proxy-configuration)
 - [Post-Deployment](#post-deployment)
 - [Troubleshooting](#troubleshooting)
@@ -19,27 +16,25 @@ This guide covers deploying the application to production environments. The appl
 
 ## Prerequisites
 
-### General Requirements
+- **IBM Cloud Account** with appropriate permissions
+- **IBM Cloud CLI** installed
+- **Container Registry Namespace** created
+- **PostgreSQL Database** (provisioned manually)
 
-- Docker installed and running
-- Access to your deployment platform (IBM Cloud or OpenShift)
-- Git repository with SSH access
-- PostgreSQL database (managed or self-hosted)
+### Install Required Tools
 
-### Platform-Specific Requirements
+1. **IBM Cloud CLI**:
 
-#### IBM Code Engine
+   ```bash
+   curl -fsSL https://clis.cloud.ibm.com/install/linux | sh
+   ```
 
-- IBM Cloud account with appropriate permissions
-- IBM Cloud CLI installed
-- 1Password CLI installed (for secrets management)
-- Container Registry namespace created
+2. **Required Plugins**:
 
-#### OpenShift
-
-- OpenShift CLI (`oc`) installed
-- Active OpenShift cluster login
-- GitHub Personal Access Token (optional but recommended)
+   ```bash
+   ibmcloud plugin install container-registry
+   ibmcloud plugin install code-engine
+   ```
 
 ---
 
@@ -50,19 +45,20 @@ This guide covers deploying the application to production environments. The appl
 Copy the example file to create your production configuration:
 
 ```bash
-cp .env.production.merged.example .env.production
+cp .env.production.example .env.production
 ```
 
 ### Step 2: Configure Required Variables
 
-Edit `.env.production` and set the following required variables:
+Edit `.env.production` and set the required variables.
 
-#### Common Configuration (Required for All Deployments)
+#### 1. General Configuration
 
 ```bash
 # Application Identity
-PROJECT_NAME=my-app
-APP_NAME=my-app
+_APP_NAME=my-app
+PROJECT_NAME=my-openshift-project
+ENVIRONMENT=production
 
 # Admin User
 FIRST_SUPERUSER=admin@example.com
@@ -79,89 +75,77 @@ POSTGRES_USER=postgres
 POSTGRES_PASSWORD=your-db-password
 ```
 
-**Important:** Replace all `changethis` values with secure, production-ready values.
-
----
-
-## Deployment Method 1: IBM Code Engine
-
-IBM Code Engine provides a serverless container platform with automatic scaling and 1Password integration for secure secrets management.
-
-### Prerequisites
-
-1. Install IBM Cloud CLI:
-
-   ```bash
-   curl -fsSL https://clis.cloud.ibm.com/install/linux | sh
-   ```
-
-2. Install required plugins:
-
-   ```bash
-   ibmcloud plugin install container-registry
-   ibmcloud plugin install code-engine
-   ```
-
-3. Install 1Password CLI:
-   ```bash
-   # See: https://developer.1password.com/docs/cli/get-started/
-   ```
-
-### Configuration
-
-#### 1. Set Up 1Password Vault
-
-Create a vault in 1Password for your project and store all secrets with the structure:
-
-```
-op://<YOUR_VAULT>/.env.production/VARIABLE_NAME
-```
-
-#### 2. Configure IBM Cloud Variables
-
-In `.env.production`, uncomment and configure the Code Engine section:
+#### 2. IBM Cloud Configuration
 
 ```bash
 # IBM Cloud Authentication
-_IBM_API_KEY=op://<YOUR_VAULT>/.env.production/IBM_API_KEY
-_IBM_CLOUD_URL=op://<YOUR_VAULT>/.env.production/IBM_CLOUD_URL
+_IBM_API_KEY=<your-api-key>
+_IBM_CLOUD_URL=https://cloud.ibm.com
 
-# IBM Cloud Configuration
+# IBM Cloud Resources
 _IBM_CLOUD_RESOURCE_GROUP=Default
 _IBM_CLOUD_REGION=eu-de
 _IBM_CLOUD_ACCOUNT_NAME=Your Account Name
 
 # Code Engine Project
 _CE_PROJECT_NAME=my-project
-_CR_NAMESPACE=my-namespace
 _CR_REGISTRY=private.de.icr.io
-_CR_REGISTRY_SECRET_NAME=my-registry-secret
-
-# Application Names
-_CE_FRONTEND_IMAGE_NAME=frontend
-_CE_FRONTEND_APPLICATION_NAME=my-app-frontend
-_CE_BACKEND_IMAGE_NAME=backend
-_CE_BACKEND_ENV_SECRET_NAME=my-app-backend-config
-_CE_BACKEND_APPLICATION_NAME=my-app-backend
 ```
 
-#### 3. Configure Application Secrets with 1Password
+### Understanding Variable Prefixes
 
-Replace direct values with 1Password references:
+You will notice some variables in `.env.production` are prefixed with an underscore (e.g., `_CE_PROJECT_NAME`).
 
-```bash
-PROJECT_NAME=op://<YOUR_VAULT>/.env.production/PROJECT_NAME
-SECRET_KEY=op://<YOUR_VAULT>/.env.production/SECRET_KEY
-FIRST_SUPERUSER=op://<YOUR_VAULT>/.env.production/FIRST_SUPERUSER
-FIRST_SUPERUSER_PASSWORD=op://<YOUR_VAULT>/.env.production/FIRST_SUPERUSER_PASSWORD
-POSTGRES_SERVER=op://<YOUR_VAULT>/.env.production/POSTGRES_SERVER
-POSTGRES_PASSWORD=op://<YOUR_VAULT>/.env.production/POSTGRES_PASSWORD
-VITE_API_URL=op://<YOUR_VAULT>/.env.production/VITE_API_URL
+- **Variables starting with `_`**: These are used **only by the deployment script** (e.g., to configure infrastructure) and are **NOT** passed to the application container.
+- **Variables without `_`**: These are passed as environment variables to the running application.
+
+> [!NOTE]
+> This separation ensures that sensitive infrastructure credentials or script-specific configurations do not pollute the application's runtime environment.
+
+---
+
+## Frontend Configuration
+
+### Nginx Configuration
+
+The frontend use an Nginx server to serve the static files. For Code Engine deployments, the backend and frontend run as separate services (apps).
+
+**Requirement:** You **MUST** disable the `/api` location block in `frontend/nginx.conf`.
+
+1. Open `frontend/nginx.conf`.
+2. Locate the `location /api` block.
+3. Comment it out or remove it.
+
+```nginx
+# frontend/nginx.conf
+
+# ... other config ...
+
+# COMMENT THIS OUT FOR CODE ENGINE:
+# location /api {
+#   proxy_pass http://backend:8000;
+# }
 ```
 
-### Deployment
+> [!IMPORTANT]
+> If you leave this block active, Nginx will try to proxy requests to `http://backend:8000` inside the same container/pod, which **will fail** on Code Engine because the backend runs in a separate service. The deployment script has a check that will prevent deployment if this block is active.
 
-#### Standard Deployment (Without OAuth)
+---
+
+## Deployment
+
+### 1. Configure Secrets
+
+Ensure all sensitive values in `.env.production` (like `SECRET_KEY`, `POSTGRES_PASSWORD`, `_IBM_API_KEY`) are set to your actual secret values.
+
+> [!WARNING]
+> Never commit `.env.production` to version control as it contains sensitive credentials.
+
+### 2. Run Deployment Script
+
+#### Standard Deployment
+
+Deploys frontend and backend with public access (unless OAuth is configured).
 
 ```bash
 ./scripts/ce-deploy.sh
@@ -169,182 +153,20 @@ VITE_API_URL=op://<YOUR_VAULT>/.env.production/VITE_API_URL
 
 #### Deployment with OAuth2 Proxy
 
+Deploys with OAuth2 Proxy sidecar for authentication/authorization.
+
 ```bash
 ./scripts/ce-deploy-oauth.sh
-```
-
-The OAuth deployment script will:
-
-1. Deploy OAuth2 Proxy first to obtain the cluster URL
-2. Extract the cluster identifier
-3. Update `.env.production` with correct URLs
-4. Deploy frontend and backend with proper configuration
-
-### Post-Deployment
-
-After successful deployment, the script will display:
-
-- Application URLs
-- Infrastructure details
-- Direct access URLs (for debugging)
-
----
-
-## Deployment Method 2: OpenShift
-
-OpenShift provides an enterprise Kubernetes platform with built-in CI/CD capabilities.
-
-### Prerequisites
-
-1. Install OpenShift CLI:
-
-   ```bash
-   # Download from: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/
-   ```
-
-2. Login to your OpenShift cluster:
-   ```bash
-   oc login --server=https://your-cluster-url:6443
-   ```
-
-### Configuration
-
-#### 1. Configure Git Repository
-
-In `.env.production`, set your Git repository:
-
-```bash
-# Git Repository (SSH format required)
-GIT_SSH_URL=git@github.com:username/repository.git
-
-# GitHub Host (default: github.ibm.com)
-GITHUB_HOST=github.ibm.com
-```
-
-#### 2. Configure GitHub Token (Optional but Recommended)
-
-A GitHub Personal Access Token enables automatic webhook and deploy key management.
-
-**Creating a GitHub Token:**
-
-For IBM GitHub Enterprise:
-
-1. Go to https://github.ibm.com/settings/tokens
-
-For Public GitHub:
-
-1. Go to https://github.com/settings/tokens
-
-Then: 2. Click "Generate new token (classic)" 3. Give it a descriptive name (e.g., "OpenShift Deployment") 4. Select scopes:
-
-- `repo` (Full control of private repositories)
-- `admin:repo_hook` (Full control of repository hooks)
-
-5. Generate and copy the token
-
-Add to `.env.production`:
-
-```bash
-GITHUB_TOKEN=ghp_your_token_here
-```
-
-#### 3. Configure OpenShift Project
-
-```bash
-PROJECT_NAME=my-openshift-project
-```
-
-#### 4. Optional: Branch Filter
-
-Deploy only from specific branches:
-
-```bash
-DEPLOYMENT_BRANCH_FILTER=main
-```
-
-### Deployment
-
-#### Full Deployment (Frontend + Backend + Database)
-
-```bash
-./scripts/oc-deploy.sh
-```
-
-#### Backend-Only Deployment
-
-```bash
-./scripts/oc-deploy.sh --backend-only
-```
-
-#### Backend-Only Without Database
-
-```bash
-./scripts/oc-deploy.sh --backend-only --no-db
-```
-
-### Deployment Options
-
-| Option                 | Description                                           |
-| ---------------------- | ----------------------------------------------------- |
-| `--help`               | Show help message                                     |
-| `--env-file <path>`    | Use custom environment file                           |
-| `--backend-only`       | Deploy only backend (skip frontend)                   |
-| `--no-db`              | Skip database deployment (requires --backend-only)    |
-| `--reset-prod-db`      | Reset production database (DESTRUCTIVE)               |
-| `--regenerate-ssh-key` | Regenerate SSH deploy keys                            |
-| `--show-env-values`    | Display environment variable values during deployment |
-
-### Database Management
-
-#### Reset Production Database
-
-**WARNING:** This will delete all data!
-
-```bash
-./scripts/oc-deploy.sh --reset-prod-db
-```
-
-This will:
-
-1. Delete the existing database pod
-2. Delete the persistent volume claim
-3. Redeploy a fresh database
-4. Run migrations
-
-### SSH Key Management
-
-The deployment script automatically manages SSH keys for Git access:
-
-- Creates SSH key pair if not exists
-- Adds public key to OpenShift secret
-- Automatically adds deploy key to GitHub (if token provided)
-- Verifies deploy key access
-
-To regenerate SSH keys:
-
-```bash
-./scripts/oc-deploy.sh --regenerate-ssh-key
 ```
 
 ---
 
 ## OAuth2 Proxy Configuration
 
-OAuth2 Proxy provides authentication for your application using OIDC providers (e.g., IBM App ID, Keycloak, Auth0).
-
-### Prerequisites
-
-- OIDC provider configured (e.g., IBM App ID)
-- Client ID and Client Secret from your OIDC provider
-- OIDC Issuer URL
-
-### Configuration
-
-In `.env.production`, configure OAuth2 Proxy variables:
+To protect your application with an OIDC provider (e.g., IBM App ID, Keycloak, Auth0), configure the following in `.env.production`:
 
 ```bash
 # OAuth2 Proxy Cookie Secret (32 characters recommended)
-# Generate with: openssl rand -base64 32 | tr -d "=+/" | cut -c1-32
 OAUTH2_PROXY_COOKIE_SECRET=your-32-char-secret
 
 # OIDC Provider Configuration
@@ -352,40 +174,27 @@ OAUTH2_PROXY_CLIENT_ID=your-client-id
 OAUTH2_PROXY_CLIENT_SECRET=your-client-secret
 OAUTH2_PROXY_OIDC_ISSUER_URL=https://your-oidc-provider.com
 
-# Optional: Well-Known URL (auto-discovered if not provided)
+# Optional: Well-Known URL
 OAUTH2_PROXY_WELL_KNOWN_URL=https://your-oidc-provider.com/.well-known/openid-configuration
 ```
 
-### Deployment
+**Behavior:**
 
-#### Code Engine with OAuth
-
-```bash
-./scripts/ce-deploy-oauth.sh
-```
-
-#### OpenShift with OAuth
-
-OAuth is automatically deployed if OAuth variables are configured:
-
-```bash
-./scripts/oc-deploy.sh
-```
-
-### OAuth Behavior
-
-- **All variables set:** OAuth2 Proxy is deployed and protects the application
-- **Any variable missing:** OAuth2 Proxy is skipped, application is publicly accessible
+- **All variables set:** OAuth2 Proxy is deployed and protects the application. Nginx and Backend are set to internal (cluster-local) access only.
+- **Any variable missing:** OAuth2 Proxy is skipped. Application is publicly accessible.
 
 ---
 
 ## Post-Deployment
 
-### Verify Deployment
+After a successful deployment, the script will output:
 
-#### Code Engine
+- **Application URLs** (Frontend, Backend, or OAuth Proxy)
+- **Infrastructure Details** (Region, Project, Registry)
 
-Check application status:
+### Verifying Status
+
+Check application status via CLI:
 
 ```bash
 ibmcloud ce application list
@@ -394,33 +203,8 @@ ibmcloud ce application list
 View logs:
 
 ```bash
-ibmcloud ce application logs --name my-app-backend
+ibmcloud ce application logs --name <your-app-name>
 ```
-
-#### OpenShift
-
-Check pods:
-
-```bash
-oc get pods
-```
-
-View logs:
-
-```bash
-oc logs deployment/backend
-```
-
-### Access Your Application
-
-The deployment script will display the application URL at the end. Access it in your browser.
-
-### Initial Login
-
-Use the admin credentials configured in `.env.production`:
-
-- Email: Value of `FIRST_SUPERUSER`
-- Password: Value of `FIRST_SUPERUSER_PASSWORD`
 
 ---
 
@@ -430,96 +214,34 @@ Use the admin credentials configured in `.env.production`:
 
 #### 1. Database Connection Failed
 
-**Symptoms:** Backend fails to start, logs show database connection errors
-
-**Solutions:**
-
-- Verify `POSTGRES_SERVER`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD` are correct
-- Ensure database is accessible from the deployment platform
-- Check database is running: `oc get pods` (OpenShift) or check Code Engine logs
+- **Symptoms:** Backend fails to start, logs show connection refused.
+- **Fix:** Ensure `POSTGRES_SERVER` host is reachable from Code Engine. Check if your database allows connections from public IPs (if using public endpoints) or the correct private network. Code Engine does NOT run in your VPC by default; it connects via public internet unless specifically configured with Satellite or VPN.
 
 #### 2. Frontend Cannot Reach Backend
 
-**Symptoms:** Frontend loads but API calls fail
+- **Symptoms:** Frontend loads, but API calls fail (404 or Network Error).
+- **Fix:**
+  - Check browser console.
+  - Verify `VITE_API_URL` was correctly updated in `.env.production` by the script.
+  - Ensure `BACKEND_CORS_ORIGINS` includes the frontend URL.
 
-**Solutions:**
+#### 3. Deployment Script Fails on Nginx Check
 
-- Verify `VITE_API_URL` is set correctly
-- Check `BACKEND_CORS_ORIGINS` includes the frontend URL
-- For OpenShift: Ensure routes are created (`oc get routes`)
-- For Code Engine: Check application URLs match configuration
-
-#### 3. OAuth2 Proxy Redirect Loop
-
-**Symptoms:** Continuous redirects when accessing the application
-
-**Solutions:**
-
-- Verify `OAUTH2_PROXY_REDIRECT_URL` matches the configured callback URL in your OIDC provider
-- Check `OAUTH2_PROXY_COOKIE_SECRET` is at least 16 characters
-- Ensure `OAUTH2_PROXY_OIDC_ISSUER_URL` is correct
+- **Symptoms:** Script exits with "Found active 'location /api' block".
+- **Fix:** Follow instructions in [Frontend Configuration](#frontend-configuration) to comment out the `/api` block.
 
 #### 4. Build Failures
 
-**Symptoms:** Docker build fails during deployment
+- **Symptoms:** `docker image build` fails.
+- **Fix:**
+  - Ensure Docker is running locally with `docker info`.
+  - Check disk space.
+  - If on Apple Silicon (M1/M2/M3), ensure you can build `linux/amd64` images (Deployment script forces this platform).
 
-**Solutions:**
+### Debugging
 
-- Ensure Docker is running
-- Check available disk space
-- Verify Dockerfile syntax
-- For Code Engine: Check IBM Cloud CLI is logged in
-
-#### 5. SSH Key Issues (OpenShift)
-
-**Symptoms:** Build fails with Git authentication errors
-
-**Solutions:**
-
-- Verify `GIT_SSH_URL` is in SSH format (git@github.com:user/repo.git)
-- Check GitHub token has correct permissions
-- Regenerate SSH keys: `./scripts/oc-deploy.sh --regenerate-ssh-key`
-- Manually verify deploy key in GitHub repository settings
-
-### Getting Help
-
-1. Check deployment logs for specific error messages
-2. Verify all required environment variables are set
-3. Ensure prerequisites are installed and configured
-4. Review the deployment script output for warnings
-
-### Debug Mode
-
-Enable verbose output:
+Enable verbose output for connection debugging by checking the `.env.production` values (the script updates them automatically):
 
 ```bash
-# OpenShift
-./scripts/oc-deploy.sh --show-env-values
-
-# Code Engine
-# Check logs after deployment
-ibmcloud ce application logs --name my-app-backend --follow
+cat .env.production | grep URL
 ```
-
----
-
-## Security Best Practices
-
-1. **Never commit `.env.production`** - It contains sensitive credentials
-2. **Use strong passwords** - Minimum 16 characters for production
-3. **Rotate secrets regularly** - Update `SECRET_KEY`, database passwords periodically
-4. **Use OAuth2 Proxy** - Protect production deployments with authentication
-5. **Limit database access** - Use firewall rules to restrict database connections
-6. **Monitor logs** - Regularly review application and security logs
-7. **Keep dependencies updated** - Regularly update base images and dependencies
-
----
-
-## Additional Resources
-
-- [IBM Code Engine Documentation](https://cloud.ibm.com/docs/codeengine)
-- [OpenShift Documentation](https://docs.openshift.com/)
-- [OAuth2 Proxy Documentation](https://oauth2-proxy.github.io/oauth2-proxy/)
-- [1Password CLI Documentation](https://developer.1password.com/docs/cli/)
-- [FastAPI Documentation](https://fastapi.tiangolo.com/)
-- [React Documentation](https://react.dev/)
