@@ -53,11 +53,33 @@ _CE_BACKEND_APPLICATION_NAME="${_CE_BACKEND_APPLICATION_NAME:-${_CE_PROJECT_NAME
 _CR_REGISTRY_SECRET_NAME="${_CR_REGISTRY_SECRET_NAME:-${_CE_PROJECT_NAME}-registry-secret}"
 _CR_NAMESPACE="${_CR_NAMESPACE:-${_CE_PROJECT_NAME}-namespace}"
 
-# Validate required variables
+# Validate _CEN_FLAVOR
+if [ -z "${_CEN_FLAVOR}" ]; then
+    print_error "_CEN_FLAVOR is missing in .env.production"
+    print_error "Please set it to one of: local-auth, backend-only, oauth-proxy, backend-only-no-db, local-auth-custom-ui, oauth-proxy-custom-ui"
+    exit 1
+fi
+
+print_status "Deployment Identity: ${_CEN_FLAVOR}"
+
+# Initialize required variables with common ones
 REQUIRED_VARS=(
     "_IBM_CLOUD_RESOURCE_GROUP" "_IBM_CLOUD_REGION" "_IBM_CLOUD_ACCOUNT_NAME"
     "_CE_PROJECT_NAME" "_CR_REGISTRY"
 )
+
+# Add database variables if NOT backend-only-no-db
+if [[ "${_CEN_FLAVOR}" != "backend-only-no-db" ]]; then
+    REQUIRED_VARS+=("POSTGRES_SERVER" "POSTGRES_PORT" "POSTGRES_DB" "POSTGRES_USER" "POSTGRES_PASSWORD")
+fi
+
+# OAuth Configuration
+if [[ "${_CEN_FLAVOR}" == "oauth-proxy" || "${_CEN_FLAVOR}" == "oauth-proxy-custom-ui" ]]; then
+    REQUIRED_VARS+=("OAUTH2_PROXY_COOKIE_SECRET" "OAUTH2_PROXY_CLIENT_ID" "OAUTH2_PROXY_CLIENT_SECRET" "OAUTH2_PROXY_OIDC_ISSUER_URL")
+    OAUTH_ENABLED=true
+else
+    OAUTH_ENABLED=false
+fi
 
 print_status "Validating required environment variables..."
 MISSING_VARS=()
@@ -225,29 +247,11 @@ else
     print_success "Registry secret '${_CR_REGISTRY_SECRET_NAME}' created successfully!"
 fi
 
-### ------------------------ CHECK OAUTH CONFIGURATION ------------------------ ###
 # Check if OAuth2 Proxy should be deployed
-OAUTH_VARS=(
-    "OAUTH2_PROXY_COOKIE_SECRET"
-    "OAUTH2_PROXY_CLIENT_ID"
-    "OAUTH2_PROXY_CLIENT_SECRET"
-    "OAUTH2_PROXY_OIDC_ISSUER_URL"
-)
-
-OAUTH_ENABLED=true
-MISSING_OAUTH_VARS=()
-for var in "${OAUTH_VARS[@]}"; do
-    if [ -z "${!var}" ]; then
-        OAUTH_ENABLED=false
-        MISSING_OAUTH_VARS+=("$var")
-    fi
-done
-
 if [ "$OAUTH_ENABLED" = true ]; then
-    print_success "OAuth2 Proxy configuration detected - will deploy with OAuth protection"
+    print_success "OAuth2 Proxy flavor detected - will deploy with OAuth protection"
 else
-    print_warning "OAuth2 Proxy configuration incomplete - deploying without OAuth protection"
-    print_warning "Missing OAuth variables: ${MISSING_OAUTH_VARS[*]}"
+    print_status "OAuth2 Proxy not enabled for flavor '${_CEN_FLAVOR}'"
 fi
 
 ### ------------------------ OAUTH2 PROXY DEPLOYMENT (IF ENABLED) ------------------------ ###
