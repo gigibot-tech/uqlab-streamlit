@@ -3,7 +3,7 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { type SubmitHandler, useForm } from "react-hook-form";
 
 import { Logo } from "@/components/common/Logo";
-import type { Body_login_login_access_token as AccessToken } from "../client";
+import type { BodyLoginLoginAccessToken as AccessToken } from "../client";
 import useAuth, { isLoggedIn } from "../hooks/useAuth";
 import { emailPattern } from "../utils";
 

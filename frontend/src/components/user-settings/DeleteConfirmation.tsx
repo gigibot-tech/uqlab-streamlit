@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
+import { AxiosError } from "axios";
 
-import { type ApiError, UsersService } from "../../client";
+import { deleteUserMe } from "../../client";
 import useAuth from "../../hooks/useAuth";
 import { handleError } from "../../utils";
 import { Modal } from "@carbon/react";
@@ -21,13 +22,13 @@ const DeleteConfirmation = ({ isOpen, onClose }: DeleteProps) => {
   const { logout } = useAuth();
 
   const mutation = useMutation({
-    mutationFn: () => UsersService.deleteUserMe(),
+    mutationFn: () => deleteUserMe(),
     onSuccess: () => {
       toast.success("Your account has been successfully deleted.");
       logout();
       onClose();
     },
-    onError: (err: ApiError) => {
+    onError: (err: AxiosError) => {
       handleError(err);
     },
     onSettled: () => {

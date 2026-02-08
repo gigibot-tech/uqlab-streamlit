@@ -1,7 +1,8 @@
 import { useMutation } from "@tanstack/react-query";
 import { useForm, type SubmitHandler } from "react-hook-form";
+import { AxiosError } from "axios";
 
-import { type ApiError, type UpdatePassword, UsersService } from "../../client";
+import { type UpdatePassword, updatePasswordMe } from "../../client";
 import { handleError } from "../../utils";
 
 import { Button, Form, PasswordInput, Stack, Tile } from "@carbon/react";
@@ -25,13 +26,12 @@ const ChangePassword = () => {
   const { errors } = form.formState;
 
   const { mutate: updatePassword, isPending } = useMutation({
-    mutationFn: (data: UpdatePassword) =>
-      UsersService.updatePasswordMe({ requestBody: data }),
+    mutationFn: (data: UpdatePassword) => updatePasswordMe({ body: data }),
     onSuccess: () => {
       toast.success("Password updated successfully.");
       form.reset();
     },
-    onError: (err: ApiError) => {
+    onError: (err: AxiosError) => {
       handleError(err);
     },
   });

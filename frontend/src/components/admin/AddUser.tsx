@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, type SubmitHandler } from "react-hook-form";
+import { AxiosError } from "axios";
 
-import { type UserCreate, UsersService } from "../../client";
-import type { ApiError } from "../../client/core/ApiError";
+import { type UserCreate, createUser } from "../../client";
 import { emailPattern, handleError } from "../../utils";
 
 import {
@@ -41,15 +41,14 @@ const AddUser = ({ isOpen, onClose }: AddUserProps) => {
 
   const { errors, isValid } = form.formState;
 
-  const { mutate: createUser, isPending } = useMutation({
-    mutationFn: (data: UserCreate) =>
-      UsersService.createUser({ requestBody: data }),
+  const { mutate: createUserMutation, isPending } = useMutation({
+    mutationFn: (data: UserCreate) => createUser({ body: data }),
     onSuccess: () => {
       toast.success("User created successfully.");
       form.reset();
       onClose();
     },
-    onError: (err: ApiError) => {
+    onError: (err: AxiosError) => {
       handleError(err);
     },
     onSettled: () => {
@@ -58,7 +57,7 @@ const AddUser = ({ isOpen, onClose }: AddUserProps) => {
   });
 
   const onSubmit: SubmitHandler<UserCreateForm> = (data) => {
-    createUser(data);
+    createUserMutation(data);
   };
 
   return (
