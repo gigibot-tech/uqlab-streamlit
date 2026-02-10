@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
-import { AxiosError } from "axios";
+import type { AxiosError } from "axios";
 
 import { type UserUpdateMe, updateUserMe } from "../../client";
 import useAuth from "../../hooks/useAuth";

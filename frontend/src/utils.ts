@@ -1,5 +1,5 @@
 import { toast } from "@/components/common/Toaster";
-import { AxiosError } from "axios";
+import type { AxiosError } from "axios";
 
 export const emailPattern = {
   value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { AxiosError } from "axios";
+import type { AxiosError } from "axios";
 
 import { deleteUserMe } from "../../client";
 import useAuth from "../../hooks/useAuth";
