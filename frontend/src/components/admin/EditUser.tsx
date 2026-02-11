@@ -40,7 +40,7 @@ const EditUser = ({ user, isOpen, onClose }: EditUserProps) => {
 
   const { errors, isValid } = form.formState;
 
-  const { mutate: updateUserMutation, isPending } = useMutation({
+  const { mutate: updateUser, isPending } = useMutation({
     mutationFn: (data: UserUpdateForm) =>
       Users.updateUser({ path: { user_id: user.id }, body: data }),
     onSuccess: () => {
@@ -62,7 +62,7 @@ const EditUser = ({ user, isOpen, onClose }: EditUserProps) => {
       data.password = undefined;
     }
 
-    updateUserMutation(data);
+    updateUser(data);
   };
 
   return (

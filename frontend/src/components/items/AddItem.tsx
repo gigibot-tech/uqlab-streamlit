@@ -26,7 +26,7 @@ const AddItem = ({ isOpen, onClose }: AddItemProps) => {
 
   const { errors, isValid } = form.formState;
 
-  const { mutate: createItemMutation, isPending } = useMutation({
+  const { mutate: createItem, isPending } = useMutation({
     mutationFn: (data: ItemCreate) => Items.createItem({ body: data }),
     onSuccess: () => {
       toast.success("Item created successfully.");
@@ -42,7 +42,7 @@ const AddItem = ({ isOpen, onClose }: AddItemProps) => {
   });
 
   const onSubmit: SubmitHandler<ItemCreate> = (data) => {
-    createItemMutation(data);
+    createItem(data);
   };
 
   return (

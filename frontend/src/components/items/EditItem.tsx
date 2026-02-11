@@ -28,7 +28,7 @@ const EditItem = ({ item, isOpen, onClose }: EditItemProps) => {
 
   const { errors, isValid } = form.formState;
 
-  const { mutate: updateItemMutation, isPending } = useMutation({
+  const { mutate: updateItem, isPending } = useMutation({
     mutationFn: (data: ItemUpdate) =>
       Items.updateItem({ path: { id: item.id }, body: data }),
     onSuccess: () => {
@@ -45,7 +45,7 @@ const EditItem = ({ item, isOpen, onClose }: EditItemProps) => {
   });
 
   const onSubmit: SubmitHandler<ItemUpdate> = (data) => {
-    updateItemMutation(data);
+    updateItem(data);
   };
 
   return (
