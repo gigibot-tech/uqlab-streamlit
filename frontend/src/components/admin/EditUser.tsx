@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import type { AxiosError } from "axios";
 
-import { type UserPublic, type UserUpdate, updateUser } from "../../client";
+import { type UserPublic, type UserUpdate, Users } from "../../client";
 import { emailPattern, handleError } from "../../utils";
 
 import {
@@ -42,7 +42,7 @@ const EditUser = ({ user, isOpen, onClose }: EditUserProps) => {
 
   const { mutate: updateUserMutation, isPending } = useMutation({
     mutationFn: (data: UserUpdateForm) =>
-      updateUser({ path: { user_id: user.id }, body: data }),
+      Users.updateUser({ path: { user_id: user.id }, body: data }),
     onSuccess: () => {
       toast.success("User updated successfully.");
       form.reset();

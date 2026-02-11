@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import type { AxiosError } from "axios";
 
-import { type UserCreate, createUser } from "../../client";
+import { type UserCreate, Users } from "../../client";
 import { emailPattern, handleError } from "../../utils";
 
 import {
@@ -42,7 +42,7 @@ const AddUser = ({ isOpen, onClose }: AddUserProps) => {
   const { errors, isValid } = form.formState;
 
   const { mutate: createUserMutation, isPending } = useMutation({
-    mutationFn: (data: UserCreate) => createUser({ body: data }),
+    mutationFn: (data: UserCreate) => Users.createUser({ body: data }),
     onSuccess: () => {
       toast.success("User created successfully.");
       form.reset();

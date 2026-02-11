@@ -13,13 +13,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import { type UserPublic, readUsers } from "../../client";
+import { type UserPublic, Users } from "../../client";
 import ActionsMenu from "../common/ActionsMenu";
 
 const getUsersQueryOptions = (page: number, pageSize: number) => {
   return {
     queryFn: async () => {
-      const response = await readUsers({
+      const response = await Users.readUsers({
         query: { skip: (page - 1) * pageSize, limit: pageSize },
       });
       return response.data!;

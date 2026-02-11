@@ -12,7 +12,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect } from "react";
 
-import { readItems } from "../../client";
+import { Items } from "../../client";
 import ActionsMenu from "../common/ActionsMenu";
 
 const PER_PAGE = 10;
@@ -20,7 +20,7 @@ const PER_PAGE = 10;
 function getItemsQueryOptions({ page }: { page: number }) {
   return {
     queryFn: async () => {
-      const response = await readItems({
+      const response = await Items.readItems({
         query: { skip: (page - 1) * PER_PAGE, limit: PER_PAGE },
       });
       return response.data;

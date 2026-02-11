@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import type { AxiosError } from "axios";
 
-import { type UserUpdateMe, updateUserMe } from "../../client";
+import { type UserUpdateMe, Users } from "../../client";
 import useAuth from "../../hooks/useAuth";
 import { emailPattern, handleError } from "../../utils";
 import {
@@ -46,7 +46,7 @@ const UserInformation = () => {
   };
 
   const { mutate: updateUser, isPending } = useMutation({
-    mutationFn: (data: UserUpdateMe) => updateUserMe({ body: data }),
+    mutationFn: (data: UserUpdateMe) => Users.updateUserMe({ body: data }),
     onSuccess: () => {
       toast.success("User updated successfully.");
       toggleEditMode();

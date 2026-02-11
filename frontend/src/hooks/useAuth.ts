@@ -6,11 +6,10 @@ import { AxiosError } from "axios";
 import { toast } from "@/components/common/Toaster";
 import {
   type BodyLoginLoginAccessToken as AccessToken,
-  loginAccessToken,
   type UserPublic,
   type UserRegister,
-  readUserMe,
-  registerUser,
+  Login,
+  Users,
 } from "../client";
 
 const isLoggedIn = () => {
@@ -25,7 +24,7 @@ const useAuth = () => {
     queryKey: ["currentUser"],
     queryFn: async () => {
       try {
-        const response = await readUserMe();
+        const response = await Users.readUserMe();
         return response.data ?? null;
       } catch (err) {
         if (err instanceof AxiosError) {
@@ -44,7 +43,7 @@ const useAuth = () => {
 
   const signUpMutation = useMutation({
     mutationFn: async (data: UserRegister) => {
-      const response = await registerUser({ body: data });
+      const response = await Users.registerUser({ body: data });
       return response.data;
     },
     onSuccess: () => {
@@ -75,7 +74,7 @@ const useAuth = () => {
 
   const loginMutation = useMutation({
     mutationFn: async (data: AccessToken) => {
-      const response = await loginAccessToken({ body: data });
+      const response = await Login.loginAccessToken({ body: data });
       if (response.data?.access_token) {
         localStorage.setItem("access_token", response.data.access_token);
       }

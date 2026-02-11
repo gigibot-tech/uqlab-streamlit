@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import type { AxiosError } from "axios";
 
-import { type ItemCreate, createItem } from "../../client";
+import { type ItemCreate, Items } from "../../client";
 import { handleError } from "../../utils";
 
 import { Form, Modal, Stack, TextInput } from "@carbon/react";
@@ -27,7 +27,7 @@ const AddItem = ({ isOpen, onClose }: AddItemProps) => {
   const { errors, isValid } = form.formState;
 
   const { mutate: createItemMutation, isPending } = useMutation({
-    mutationFn: (data: ItemCreate) => createItem({ body: data }),
+    mutationFn: (data: ItemCreate) => Items.createItem({ body: data }),
     onSuccess: () => {
       toast.success("Item created successfully.");
       form.reset();
