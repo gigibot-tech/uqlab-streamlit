@@ -1,12 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, type SubmitHandler } from "react-hook-form";
+import type { AxiosError } from "axios";
 
-import {
-  type ApiError,
-  type ItemPublic,
-  type ItemUpdate,
-  ItemsService,
-} from "../../client";
+import { type ItemPublic, type ItemUpdate, Items } from "../../client";
 import { handleError } from "../../utils";
 
 import { Form, Modal, Stack, TextInput } from "@carbon/react";
@@ -32,15 +28,15 @@ const EditItem = ({ item, isOpen, onClose }: EditItemProps) => {
 
   const { errors, isValid } = form.formState;
 
-  const { mutate: updateItem, isPending } = useMutation({
+  const { mutate: updateItemMutation, isPending } = useMutation({
     mutationFn: (data: ItemUpdate) =>
-      ItemsService.updateItem({ id: item.id, requestBody: data }),
+      Items.updateItem({ path: { id: item.id }, body: data }),
     onSuccess: () => {
       toast.success("Item updated successfully.");
       form.reset();
       onClose();
     },
-    onError: (err: ApiError) => {
+    onError: (err: AxiosError) => {
       handleError(err);
     },
     onSettled: () => {
@@ -49,7 +45,7 @@ const EditItem = ({ item, isOpen, onClose }: EditItemProps) => {
   });
 
   const onSubmit: SubmitHandler<ItemUpdate> = (data) => {
-    updateItem(data);
+    updateItemMutation(data);
   };
 
   return (

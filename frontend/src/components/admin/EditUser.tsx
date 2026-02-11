@@ -1,12 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, type SubmitHandler } from "react-hook-form";
+import type { AxiosError } from "axios";
 
-import {
-  type ApiError,
-  type UserPublic,
-  type UserUpdate,
-  UsersService,
-} from "../../client";
+import { type UserPublic, type UserUpdate, Users } from "../../client";
 import { emailPattern, handleError } from "../../utils";
 
 import {
@@ -44,15 +40,15 @@ const EditUser = ({ user, isOpen, onClose }: EditUserProps) => {
 
   const { errors, isValid } = form.formState;
 
-  const { mutate: updateUser, isPending } = useMutation({
+  const { mutate: updateUserMutation, isPending } = useMutation({
     mutationFn: (data: UserUpdateForm) =>
-      UsersService.updateUser({ userId: user.id, requestBody: data }),
+      Users.updateUser({ path: { user_id: user.id }, body: data }),
     onSuccess: () => {
       toast.success("User updated successfully.");
       form.reset();
       onClose();
     },
-    onError: (err: ApiError) => {
+    onError: (err: AxiosError) => {
       handleError(err);
     },
     onSettled: () => {
@@ -66,7 +62,7 @@ const EditUser = ({ user, isOpen, onClose }: EditUserProps) => {
       data.password = undefined;
     }
 
-    updateUser(data);
+    updateUserMutation(data);
   };
 
   return (
