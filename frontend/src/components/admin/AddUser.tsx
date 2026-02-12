@@ -41,7 +41,7 @@ const AddUser = ({ isOpen, onClose }: AddUserProps) => {
 
   const { errors, isValid } = form.formState;
 
-  const { mutate: createUserMutation, isPending } = useMutation({
+  const { mutate: createUser, isPending } = useMutation({
     mutationFn: (data: UserCreate) => Users.createUser({ body: data }),
     onSuccess: () => {
       toast.success("User created successfully.");
@@ -57,7 +57,7 @@ const AddUser = ({ isOpen, onClose }: AddUserProps) => {
   });
 
   const onSubmit: SubmitHandler<UserCreateForm> = (data) => {
-    createUserMutation(data);
+    createUser(data);
   };
 
   return (
