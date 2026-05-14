@@ -115,9 +115,13 @@ async def create_experiment_no_auth(
     exp_id = str(uuid.uuid4())
     now = datetime.utcnow()
     
+    # Store config as dict for later conversion to YAML
+    config_dict = experiment.config.model_dump()
+    
     mock_exp = {
         "id": exp_id,
         "name": experiment.name,
+        "config_yaml": config_dict,  # Store as dict, will convert to YAML when starting
         "status": JobStatus.QUEUED,
         "progress": 0.0,
         "created_at": now.isoformat(),
@@ -209,17 +213,42 @@ async def list_experiments_no_auth(
 
 
 @router.post("/no-auth/{experiment_id}/start")
-async def start_experiment_no_auth(experiment_id: str) -> dict:
-    """Start a mock experiment (simulates progress for testing)."""
+async def start_experiment_no_auth(experiment_id: str, session: SessionDep) -> dict:
+    """Start real ML training for no-auth experiment."""
     if experiment_id not in _mock_experiments:
         raise HTTPException(status_code=404, detail="Experiment not found")
     
-    exp = _mock_experiments[experiment_id]
-    exp["status"] = JobStatus.RUNNING
-    exp["started_at"] = datetime.utcnow().isoformat()
-    exp["progress"] = 0.1
+    # Convert mock experiment to database experiment for real training
+    mock_exp = _mock_experiments[experiment_id]
     
-    return {"message": "Experiment started (mock)", "id": experiment_id}
+    # Get or create test user
+    user = get_or_create_test_user(session)
+    
+    # Create database experiment from mock
+    import yaml
+    config_dict = yaml.safe_load(mock_exp.get("config_yaml", "{}")) if isinstance(mock_exp.get("config_yaml"), str) else mock_exp.get("config_yaml", {})
+    
+    db_experiment = UncertaintyExperiment(
+        id=uuid.UUID(experiment_id),
+        name=mock_exp["name"],
+        config_yaml=yaml.dump(config_dict) if config_dict else "{}",
+        created_by_id=user.id,
+        status=JobStatus.QUEUED,
+    )
+    session.add(db_experiment)
+    session.commit()
+    session.refresh(db_experiment)
+    
+    # Start real training
+    if not ML_SCRIPT.exists():
+        raise HTTPException(status_code=500, detail=f"ML script not found at {ML_SCRIPT}")
+    
+    try:
+        orchestrator = get_orchestrator(session)
+        await orchestrator.start_training(uuid.UUID(experiment_id))
+        return {"id": experiment_id, "status": "running", "message": "Real ML training started"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to start training: {str(e)}")
 
 
 @router.post("/no-auth/{experiment_id}/simulate-progress")
