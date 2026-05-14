@@ -243,17 +243,7 @@ def main():
                         st.success(f"✅ Experiment created: {result['name']}")
                         st.info(f"Experiment ID: {result['id']}")
                         st.info(f"Status: {result['status']}")
-                        
-                        # Option to start immediately
-                        if st.button("▶️ Start Experiment Now"):
-                            start_response = requests.post(
-                                f"{API_BASE_URL}/api/v1/experiments/{result['id']}/start",
-                                headers=get_headers(),
-                                timeout=30
-                            )
-                            start_response.raise_for_status()
-                            st.success("Experiment started!")
-                            st.rerun()
+                        st.json(result)
                         
                     except requests.exceptions.RequestException as e:
                         st.error(f"Failed to create experiment: {str(e)}")
