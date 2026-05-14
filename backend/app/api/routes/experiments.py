@@ -17,7 +17,7 @@ from app.core.config import settings
 from app.core.security import get_password_hash
 from app.domain.models import TrainingConfig
 from app.repositories.experiment_repository import ExperimentRepository
-from app.services.executors.subprocess_executor import SubprocessExecutor
+from app.services.executors.direct_executor import DirectExecutor
 from app.services.training_orchestrator import TrainingOrchestrator
 from app.tables import JobStatus, UncertaintyExperiment, User
 
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Path to the ML script (now inside the project at backend/scripts/)
+# Path to the ML script (now inside the project at scripts/)
 ML_SCRIPT = Path(settings.DTAG_ROOT) / "run_fast_uncertainty_classification.py"
 
 # Global orchestrator instance (in production, use dependency injection)
@@ -34,10 +34,10 @@ _orchestrator: TrainingOrchestrator | None = None
 
 
 def get_orchestrator(session: SessionDep) -> TrainingOrchestrator:
-    """Get or create training orchestrator."""
+    """Get or create training orchestrator with direct import executor."""
     global _orchestrator
     if _orchestrator is None:
-        executor = SubprocessExecutor(ML_SCRIPT)
+        executor = DirectExecutor(ML_SCRIPT)
         repository = ExperimentRepository(session)
         _orchestrator = TrainingOrchestrator(executor, repository)
     return _orchestrator
