@@ -45,6 +45,10 @@ def main():
     
     # Sidebar configuration
     with st.sidebar:
+        st.success("✅ Logged in as: **test@example.com**")
+        st.caption("(Auto-created test user)")
+        
+        st.markdown("---")
         st.header("⚙️ Configuration")
         dataset_name = st.selectbox(
             "Dataset",
@@ -226,9 +230,9 @@ def main():
                             }
                         }
                         
-                        # Create experiment
+                        # Create experiment (using no-auth endpoint)
                         response = requests.post(
-                            f"{API_BASE_URL}/api/v1/experiments/",
+                            f"{API_BASE_URL}/api/v1/experiments/no-auth",
                             json=experiment_data,
                             headers=get_headers(),
                             timeout=30
@@ -258,7 +262,44 @@ def main():
     
     with tab2:
         st.subheader("Experiment Results")
-        st.info("Results viewer coming soon! This will display completed experiments and their metrics.")
+        
+        if st.button("🔄 Refresh Experiments"):
+            st.rerun()
+        
+        try:
+            # Fetch experiments using no-auth endpoint
+            response = requests.get(
+                f"{API_BASE_URL}/api/v1/experiments/no-auth",
+                headers=get_headers(),
+                timeout=10
+            )
+            response.raise_for_status()
+            experiments = response.json()
+            
+            if not experiments:
+                st.info("No experiments found. Create one in the 'Run Experiment' tab!")
+            else:
+                # Display experiments table
+                exp_data = []
+                for exp in experiments:
+                    exp_data.append({
+                        "Name": exp["name"],
+                        "Status": exp["status"],
+                        "Progress": f"{exp.get('progress', 0):.1%}",
+                        "Created": pd.to_datetime(exp["created_at"]).strftime("%Y-%m-%d %H:%M"),
+                        "Aleatoric AUROC": f"{exp['aleatoric_auroc']:.3f}" if exp.get('aleatoric_auroc') else "N/A",
+                        "Epistemic AUROC": f"{exp['epistemic_auroc']:.3f}" if exp.get('epistemic_auroc') else "N/A",
+                    })
+                
+                df_exp = pd.DataFrame(exp_data)
+                st.dataframe(df_exp, use_container_width=True, hide_index=True)
+                
+                st.caption(f"Total experiments: {len(experiments)}")
+                
+        except requests.exceptions.RequestException as e:
+            st.error(f"Failed to fetch experiments: {str(e)}")
+            if hasattr(e, 'response') and e.response is not None:
+                st.error(f"Response: {e.response.text}")
     
     # Footer
     st.markdown("---")
