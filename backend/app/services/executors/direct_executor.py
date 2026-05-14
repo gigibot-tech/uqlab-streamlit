@@ -14,14 +14,27 @@ logger = logging.getLogger(__name__)
 
 
 class DirectExecutor(TrainingExecutor):
-    """Execute ML training by directly importing and calling the script."""
+    """
+    Execute ML training by directly importing and calling the script.
+    
+    Configuration:
+    - USE_THREAD_POOL: Set to False to run in main thread (blocks event loop but simpler)
+    - USE_THREAD_POOL: Set to True to run in thread pool (non-blocking, recommended)
+    """
+    
+    USE_THREAD_POOL = True  # Set to False to run in main thread (simpler but blocking)
 
     def __init__(self, script_path: Path):
         self.script_path = script_path
-        # Add scripts directory to Python path if not already there
+        # Add both scripts directory AND project root to Python path
         scripts_dir = script_path.parent
-        if str(scripts_dir) not in sys.path:
-            sys.path.insert(0, str(scripts_dir))
+        project_root = scripts_dir.parent  # Go up one more level to walaris-cen
+        
+        for path in [str(scripts_dir), str(project_root)]:
+            if path not in sys.path:
+                sys.path.insert(0, path)
+        
+        logger.info(f"Added to sys.path: {scripts_dir}, {project_root}")
 
     async def execute(
         self, config_path: Path, output_dir: Path, progress_callback: Callable[[ProgressUpdate], None]
@@ -43,13 +56,19 @@ class DirectExecutor(TrainingExecutor):
         ))
 
         try:
-            # Run in thread pool to not block event loop
-            result = await asyncio.to_thread(
-                self._run_training_sync,
-                config_path,
-                output_dir,
-                progress_callback
-            )
+            if self.USE_THREAD_POOL:
+                # Run in thread pool to not block event loop (recommended)
+                logger.info("Running training in thread pool (non-blocking)")
+                result = await asyncio.to_thread(
+                    self._run_training_sync,
+                    config_path,
+                    output_dir,
+                    progress_callback
+                )
+            else:
+                # Run in main thread (simpler but blocks event loop)
+                logger.warning("Running training in main thread (BLOCKING - not recommended for production)")
+                result = self._run_training_sync(config_path, output_dir, progress_callback)
             
             logger.info("Training completed successfully")
             progress_callback(ProgressUpdate(
