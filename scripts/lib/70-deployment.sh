@@ -112,15 +112,13 @@ deploy_backend() {
     
     # Check if backend app already exists
     if resource_exists "buildconfig" "backend"; then
-        print_status "Backend buildconfig already exists, triggering rollout restart..." "deployment"
-        # Just restart the deployment to pick up new environment variables
-        # Don't rebuild unless explicitly requested
-        if resource_exists "deployment" "backend"; then
-            oc rollout restart deployment/backend
-            oc rollout status deployment/backend --timeout=300s
-        else
-            print_warning "Backend deployment not found, skipping restart" "deployment"
-        fi
+        print_status "Backend buildconfig already exists, triggering new build..." "deployment"
+        # Cancel any running builds first
+        oc cancel-build bc/backend --state=new --state=pending --state=running 2>/dev/null || true
+        # Start a new build to pick up code changes
+        oc start-build bc/backend
+        # Wait for build to complete
+        oc logs -f bc/backend || true
     else
         print_status "Creating new backend application..." "deployment"
         oc new-app --name=backend --strategy=docker --context-dir=backend --source-secret=git-secret "$GIT_SSH_URL"
