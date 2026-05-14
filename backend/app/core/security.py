@@ -20,10 +20,12 @@ def create_access_token(subject: str | Any, expires_delta: timedelta) -> str:
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    # Bcrypt has 72 byte limit, truncate if needed
-    return pwd_context.verify(plain_password[:72], hashed_password)
+    # Bcrypt has 72 byte limit, encode to bytes then truncate
+    password_bytes = plain_password.encode('utf-8')[:72]
+    return pwd_context.verify(password_bytes, hashed_password)
 
 
 def get_password_hash(password: str) -> str:
-    # Bcrypt has 72 byte limit, truncate if needed
-    return pwd_context.hash(password[:72])
+    # Bcrypt has 72 byte limit, encode to bytes then truncate
+    password_bytes = password.encode('utf-8')[:72]
+    return pwd_context.hash(password_bytes)
