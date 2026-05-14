@@ -160,12 +160,9 @@ def main():
     # Experiment section
     st.header("🧪 Experiments")
     
-    tab1, tab2 = st.tabs(["Run Experiment", "View Results"])
+    st.subheader("Create New Experiment")
     
-    with tab1:
-        st.subheader("Configure and Run Experiment")
-        
-        with st.form("experiment_form"):
+    with st.form("experiment_form"):
             exp_name = st.text_input("Experiment Name", value=f"exp_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}")
             
             st.markdown("#### Data Configuration")
@@ -250,50 +247,65 @@ def main():
                         if hasattr(e, 'response') and e.response is not None:
                             st.error(f"Response: {e.response.text}")
     
-    with tab2:
-        st.subheader("Experiment Results")
+    # Display experiment results below the form
+    st.markdown("---")
+    st.subheader("📋 Experiment Results")
+    
+    if st.button("🔄 Refresh Experiments"):
+        st.rerun()
+    
+    try:
+        # Fetch experiments using no-auth endpoint
+        response = requests.get(
+            f"{API_BASE_URL}/api/v1/experiments/no-auth",
+            headers=get_headers(),
+            timeout=10
+        )
+        response.raise_for_status()
+        experiments = response.json()
         
-        if st.button("🔄 Refresh Experiments"):
-            st.rerun()
-        
-        try:
-            # Fetch experiments using no-auth endpoint
-            response = requests.get(
-                f"{API_BASE_URL}/api/v1/experiments/no-auth",
-                headers=get_headers(),
-                timeout=10
-            )
-            response.raise_for_status()
-            experiments = response.json()
+        if not experiments:
+            st.info("No experiments found. Create one using the form above!")
+        else:
+            # Display experiments table
+            exp_data = []
+            for exp in experiments:
+                exp_data.append({
+                    "Name": exp["name"],
+                    "Status": exp["status"],
+                    "Progress": f"{exp.get('progress', 0):.1%}",
+                    "Created": pd.to_datetime(exp["created_at"]).strftime("%Y-%m-%d %H:%M"),
+                    "Aleatoric AUROC": f"{exp['aleatoric_auroc']:.3f}" if exp.get('aleatoric_auroc') else "N/A",
+                    "Epistemic AUROC": f"{exp['epistemic_auroc']:.3f}" if exp.get('epistemic_auroc') else "N/A",
+                })
             
-            if not experiments:
-                st.info("No experiments found. Create one in the 'Run Experiment' tab!")
-            else:
-                # Display experiments table
-                exp_data = []
-                for exp in experiments:
-                    exp_data.append({
-                        "Name": exp["name"],
-                        "Status": exp["status"],
-                        "Progress": f"{exp.get('progress', 0):.1%}",
-                        "Created": pd.to_datetime(exp["created_at"]).strftime("%Y-%m-%d %H:%M"),
-                        "Aleatoric AUROC": f"{exp['aleatoric_auroc']:.3f}" if exp.get('aleatoric_auroc') else "N/A",
-                        "Epistemic AUROC": f"{exp['epistemic_auroc']:.3f}" if exp.get('epistemic_auroc') else "N/A",
-                    })
-                
-                df_exp = pd.DataFrame(exp_data)
-                st.dataframe(df_exp, use_container_width=True, hide_index=True)
-                
-                st.caption(f"Total experiments: {len(experiments)}")
-                
-                # Simulate progress for testing
-                st.markdown("---")
-                st.subheader("🎮 Test Controls")
-                st.caption("Simulate experiment progress (for testing)")
-                
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button("▶️ Simulate Progress (All Experiments)"):
+            df_exp = pd.DataFrame(exp_data)
+            st.dataframe(df_exp, use_container_width=True, hide_index=True)
+            
+            st.caption(f"Total experiments: {len(experiments)}")
+            
+            # Simulate progress for testing
+            st.markdown("---")
+            st.subheader("🎮 Test Controls")
+            st.caption("Simulate experiment progress (for testing)")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("▶️ Simulate Progress (All Experiments)"):
+                    for exp in experiments:
+                        try:
+                            requests.post(
+                                f"{API_BASE_URL}/api/v1/experiments/no-auth/{exp['id']}/simulate-progress",
+                                headers=get_headers(),
+                                timeout=10
+                            )
+                        except:
+                            pass
+                    st.success("Progress simulated! Click 'Refresh Experiments' to see updates.")
+            
+            with col2:
+                if st.button("🔄 Auto-refresh (5 times)"):
+                    for i in range(5):
                         for exp in experiments:
                             try:
                                 requests.post(
@@ -303,26 +315,12 @@ def main():
                                 )
                             except:
                                 pass
-                        st.success("Progress simulated! Click 'Refresh Experiments' to see updates.")
-                
-                with col2:
-                    if st.button("🔄 Auto-refresh (5 times)"):
-                        for i in range(5):
-                            for exp in experiments:
-                                try:
-                                    requests.post(
-                                        f"{API_BASE_URL}/api/v1/experiments/no-auth/{exp['id']}/simulate-progress",
-                                        headers=get_headers(),
-                                        timeout=10
-                                    )
-                                except:
-                                    pass
-                            st.rerun()
-                
-        except requests.exceptions.RequestException as e:
-            st.error(f"Failed to fetch experiments: {str(e)}")
-            if hasattr(e, 'response') and e.response is not None:
-                st.error(f"Response: {e.response.text}")
+                        st.rerun()
+            
+    except requests.exceptions.RequestException as e:
+        st.error(f"Failed to fetch experiments: {str(e)}")
+        if hasattr(e, 'response') and e.response is not None:
+            st.error(f"Response: {e.response.text}")
     
     # Footer
     st.markdown("---")
