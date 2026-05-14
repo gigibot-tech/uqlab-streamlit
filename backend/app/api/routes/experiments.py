@@ -1,5 +1,7 @@
 """Experiment management and execution endpoints."""
 
+import logging
+import traceback
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -17,6 +19,9 @@ from app.repositories.experiment_repository import ExperimentRepository
 from app.services.executors.subprocess_executor import SubprocessExecutor
 from app.services.training_orchestrator import TrainingOrchestrator
 from app.tables import JobStatus, UncertaintyExperiment, User
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -214,41 +219,189 @@ async def list_experiments_no_auth(
 
 @router.post("/no-auth/{experiment_id}/start")
 async def start_experiment_no_auth(experiment_id: str, session: SessionDep) -> dict:
-    """Start real ML training for no-auth experiment."""
+    """Start real ML training for no-auth experiment with enterprise-grade error handling."""
+    logger.info(f"Starting experiment {experiment_id}")
+    
+    # Validate experiment_id format
+    try:
+        experiment_uuid = uuid.UUID(experiment_id)
+    except ValueError as e:
+        logger.error(f"Invalid experiment ID format: {experiment_id}", exc_info=True)
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid experiment ID format: {experiment_id}. Must be a valid UUID."
+        )
+    
+    # Check if experiment exists in mock data
     if experiment_id not in _mock_experiments:
-        raise HTTPException(status_code=404, detail="Experiment not found")
+        logger.warning(f"Experiment not found: {experiment_id}")
+        raise HTTPException(
+            status_code=404,
+            detail=f"Experiment not found: {experiment_id}"
+        )
     
-    # Convert mock experiment to database experiment for real training
     mock_exp = _mock_experiments[experiment_id]
+    logger.debug(f"Found mock experiment: {mock_exp.get('name', 'Unknown')}")
     
-    # Get or create test user
-    user = get_or_create_test_user(session)
-    
-    # Create database experiment from mock
-    import yaml
-    config_dict = yaml.safe_load(mock_exp.get("config_yaml", "{}")) if isinstance(mock_exp.get("config_yaml"), str) else mock_exp.get("config_yaml", {})
-    
-    db_experiment = UncertaintyExperiment(
-        id=uuid.UUID(experiment_id),
-        name=mock_exp["name"],
-        config_yaml=yaml.dump(config_dict) if config_dict else "{}",
-        created_by_id=user.id,
-        status=JobStatus.QUEUED,
-    )
-    session.add(db_experiment)
-    session.commit()
-    session.refresh(db_experiment)
-    
-    # Start real training
+    # Validate ML script exists before proceeding
     if not ML_SCRIPT.exists():
-        raise HTTPException(status_code=500, detail=f"ML script not found at {ML_SCRIPT}")
+        error_msg = f"ML script not found at {ML_SCRIPT}"
+        logger.error(error_msg)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Configuration error: {error_msg}. Please check ML_SCRIPT path configuration."
+        )
     
     try:
-        orchestrator = get_orchestrator(session)
-        await orchestrator.start_training(uuid.UUID(experiment_id))
-        return {"id": experiment_id, "status": "running", "message": "Real ML training started"}
+        # Get or create test user
+        logger.debug("Getting or creating test user")
+        user = get_or_create_test_user(session)
+        logger.info(f"Using user: {user.email} (ID: {user.id})")
+        
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to start training: {str(e)}")
+        logger.error("Failed to get or create test user", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database error: Failed to get or create test user. {str(e)}"
+        )
+    
+    try:
+        # Parse and validate config
+        logger.debug("Parsing experiment configuration")
+        config_yaml_raw = mock_exp.get("config_yaml", "{}")
+        
+        if isinstance(config_yaml_raw, str):
+            config_dict = yaml.safe_load(config_yaml_raw)
+        else:
+            config_dict = config_yaml_raw
+        
+        if not isinstance(config_dict, dict):
+            config_dict = {}
+            logger.warning(f"Invalid config format for experiment {experiment_id}, using empty config")
+        
+        config_yaml = yaml.dump(config_dict) if config_dict else "{}"
+        logger.debug(f"Parsed config: {len(config_yaml)} bytes")
+        
+    except yaml.YAMLError as e:
+        logger.error(f"Failed to parse YAML configuration for experiment {experiment_id}", exc_info=True)
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid YAML configuration: {str(e)}"
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error parsing configuration for experiment {experiment_id}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Configuration parsing error: {str(e)}"
+        )
+    
+    try:
+        # Create database experiment from mock
+        logger.debug(f"Creating database experiment with ID: {experiment_uuid}")
+        db_experiment = UncertaintyExperiment(
+            id=experiment_uuid,
+            name=mock_exp["name"],
+            config_yaml=config_yaml,
+            created_by_id=user.id,
+            status=JobStatus.QUEUED,
+        )
+        session.add(db_experiment)
+        session.commit()
+        session.refresh(db_experiment)
+        logger.info(f"Database experiment created successfully: {db_experiment.id}")
+        
+    except Exception as e:
+        logger.error(
+            f"Failed to create database experiment {experiment_id}",
+            exc_info=True,
+            extra={
+                "experiment_id": experiment_id,
+                "user_id": user.id if user else None,
+                "traceback": traceback.format_exc()
+            }
+        )
+        session.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database error: Failed to create experiment record. {str(e)}"
+        )
+    
+    try:
+        # Initialize orchestrator and start training
+        logger.info(f"Initializing training orchestrator for experiment {experiment_id}")
+        orchestrator = get_orchestrator(session)
+        
+        logger.info(f"Starting training for experiment {experiment_id}")
+        await orchestrator.start_training(experiment_uuid)
+        
+        logger.info(f"Training started successfully for experiment {experiment_id}")
+        return {
+            "id": experiment_id,
+            "status": "running",
+            "message": "Real ML training started successfully"
+        }
+        
+    except FileNotFoundError as e:
+        logger.error(
+            f"File not found error while starting training for experiment {experiment_id}",
+            exc_info=True,
+            extra={
+                "experiment_id": experiment_id,
+                "ml_script": str(ML_SCRIPT),
+                "traceback": traceback.format_exc()
+            }
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"File system error: Required file not found. {str(e)}"
+        )
+        
+    except PermissionError as e:
+        logger.error(
+            f"Permission error while starting training for experiment {experiment_id}",
+            exc_info=True,
+            extra={
+                "experiment_id": experiment_id,
+                "ml_script": str(ML_SCRIPT),
+                "traceback": traceback.format_exc()
+            }
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Permission error: Insufficient permissions to execute training. {str(e)}"
+        )
+        
+    except ValueError as e:
+        logger.error(
+            f"Validation error while starting training for experiment {experiment_id}",
+            exc_info=True,
+            extra={
+                "experiment_id": experiment_id,
+                "traceback": traceback.format_exc()
+            }
+        )
+        raise HTTPException(
+            status_code=400,
+            detail=f"Validation error: Invalid training parameters. {str(e)}"
+        )
+        
+    except Exception as e:
+        logger.error(
+            f"Unexpected error while starting training for experiment {experiment_id}",
+            exc_info=True,
+            extra={
+                "experiment_id": experiment_id,
+                "experiment_name": mock_exp.get("name", "Unknown"),
+                "user_id": user.id if user else None,
+                "ml_script": str(ML_SCRIPT),
+                "error_type": type(e).__name__,
+                "traceback": traceback.format_exc()
+            }
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to start training: {type(e).__name__}: {str(e)}. Check server logs for details."
+        )
 
 
 @router.post("/no-auth/{experiment_id}/simulate-progress")
