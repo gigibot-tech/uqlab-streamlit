@@ -111,17 +111,17 @@ _mock_experiments: dict[str, dict] = {}
 async def create_experiment_no_auth(
     experiment: ExperimentCreate,
 ) -> Any:
-    """Create experiment without authentication or database (for local testing)."""
+    """Create experiment (will auto-start via Streamlit)."""
     exp_id = str(uuid.uuid4())
     now = datetime.utcnow()
     
-    # Store config as dict for later conversion to YAML
+    # Store config as dict
     config_dict = experiment.config.model_dump()
     
     mock_exp = {
         "id": exp_id,
         "name": experiment.name,
-        "config_yaml": config_dict,  # Store as dict, will convert to YAML when starting
+        "config_yaml": config_dict,
         "status": JobStatus.QUEUED,
         "progress": 0.0,
         "created_at": now.isoformat(),

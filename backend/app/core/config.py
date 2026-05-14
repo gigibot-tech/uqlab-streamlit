@@ -5,7 +5,6 @@ from typing import Annotated, Any, Literal
 from pydantic import (
     AnyUrl,
     BeforeValidator,
-    PostgresDsn,
     computed_field,
     model_validator,
 )
@@ -47,23 +46,25 @@ class Settings(BaseSettings):
         ]
 
     PROJECT_NAME: str
-    POSTGRES_SERVER: str
+    
+    # Database configuration - modular for future persistence
+    # Use in-memory SQLite by default, can switch to PostgreSQL via env vars
+    USE_SQLITE: bool = True  # Set to False to use PostgreSQL
+    POSTGRES_SERVER: str = "localhost"
     POSTGRES_PORT: int = 5432
-    POSTGRES_USER: str
+    POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = ""
     POSTGRES_DB: str = ""
 
     @computed_field  # type: ignore[prop-decorator]
     @property
-    def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:
-        return PostgresDsn.build(
-            scheme="postgresql+psycopg",
-            username=self.POSTGRES_USER,
-            password=self.POSTGRES_PASSWORD,
-            host=self.POSTGRES_SERVER,
-            port=self.POSTGRES_PORT,
-            path=self.POSTGRES_DB,
-        )
+    def SQLALCHEMY_DATABASE_URI(self) -> str:
+        if self.USE_SQLITE:
+            # In-memory SQLite - fast, no setup needed
+            return "sqlite:///:memory:"
+        else:
+            # PostgreSQL for production persistence
+            return f"postgresql+psycopg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
     # TODO: update type to EmailStr when sqlmodel supports it
     EMAIL_TEST_USER: str = "test@example.com"
