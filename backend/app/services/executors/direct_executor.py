@@ -4,13 +4,25 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Optional
 
 from app.domain.models import TrainingResult
 from app.domain.value_objects import ProgressUpdate, TrainingStage
 from app.services.executors.base import TrainingExecutor
 
 logger = logging.getLogger(__name__)
+
+# Global progress callback that ML scripts can use
+_GLOBAL_PROGRESS_CALLBACK: Optional[Callable[[ProgressUpdate], None]] = None
+
+def set_progress_callback(callback: Optional[Callable[[ProgressUpdate], None]]) -> None:
+    """Set the global progress callback for ML scripts to use."""
+    global _GLOBAL_PROGRESS_CALLBACK
+    _GLOBAL_PROGRESS_CALLBACK = callback
+
+def get_progress_callback() -> Optional[Callable[[ProgressUpdate], None]]:
+    """Get the current global progress callback."""
+    return _GLOBAL_PROGRESS_CALLBACK
 
 
 class DirectExecutor(TrainingExecutor):
@@ -120,6 +132,9 @@ class DirectExecutor(TrainingExecutor):
             # Import the main function (do this inside try block to catch import errors)
             from run_fast_uncertainty_classification import main
             
+            # Set the global progress callback so ML script can use it
+            set_progress_callback(progress_callback)
+            
             sys.argv = [
                 str(self.script_path),
                 "--config", str(config_path),
@@ -161,6 +176,8 @@ class DirectExecutor(TrainingExecutor):
             sys.argv = original_argv
             sys.stdout = original_stdout
             sys.stderr = original_stderr
+            # Clear the global progress callback
+            set_progress_callback(None)
 
     def _read_results(self, output_dir: Path) -> TrainingResult:
         """Read results from summary.json."""
