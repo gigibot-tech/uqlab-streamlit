@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # Path to the ML script
-ML_SCRIPT = Path(__file__).resolve().parents[6] / "Desktop" / "GigiApps" / "dtag" / "experiments" / "run_fast_uncertainty_classification.py"
+ML_SCRIPT = Path.home() / "Desktop" / "GigiApps" / "dtag" / "experiments" / "run_fast_uncertainty_classification.py"
 
 # Global orchestrator instance (in production, use dependency injection)
 _orchestrator: TrainingOrchestrator | None = None
