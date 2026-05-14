@@ -29,18 +29,19 @@ router = APIRouter()
 # Path to the ML script (now inside the project at scripts/)
 ML_SCRIPT = Path(settings.DTAG_ROOT) / "run_fast_uncertainty_classification.py"
 
-# Global orchestrator instance (in production, use dependency injection)
-_orchestrator: TrainingOrchestrator | None = None
+# Global executor instance (stateless, can be reused)
+_executor: DirectExecutor | None = None
 
 
 def get_orchestrator(session: SessionDep) -> TrainingOrchestrator:
-    """Get or create training orchestrator with direct import executor."""
-    global _orchestrator
-    if _orchestrator is None:
-        executor = DirectExecutor(ML_SCRIPT)
-        repository = ExperimentRepository(session)
-        _orchestrator = TrainingOrchestrator(executor, repository)
-    return _orchestrator
+    """Get or create training orchestrator with fresh session."""
+    global _executor
+    if _executor is None:
+        _executor = DirectExecutor(ML_SCRIPT)
+    
+    # Always create fresh repository with current session
+    repository = ExperimentRepository(session)
+    return TrainingOrchestrator(_executor, repository)
 
 
 def get_or_create_test_user(session: Session) -> User:
