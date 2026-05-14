@@ -10,7 +10,7 @@ from typing import Any
 import yaml
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-from sqlmodel import Session, select
+from sqlmodel import Session, select, desc
 
 from app.api.deps import CurrentUser, SessionDep
 from app.core.config import settings
@@ -111,37 +111,17 @@ class ExperimentResponse(BaseModel):
     results_path: str | None
 
 
-# In-memory storage for no-auth experiments (no database required)
-_mock_experiments: dict[str, dict] = {}
-
 @router.post("/no-auth", response_model=ExperimentResponse)
 async def create_experiment_no_auth(
     experiment: ExperimentCreate,
+    session: SessionDep,
 ) -> Any:
-    """Create experiment (will auto-start via Streamlit)."""
-    exp_id = str(uuid.uuid4())
-    now = datetime.utcnow()
+    """Create experiment in database (no authentication required for local testing)."""
+    # Get or create test user
+    user = get_or_create_test_user(session)
     
-    # Store config as dict
-    config_dict = experiment.config.model_dump()
-    
-    mock_exp = {
-        "id": exp_id,
-        "name": experiment.name,
-        "config_yaml": config_dict,
-        "status": JobStatus.QUEUED,
-        "progress": 0.0,
-        "created_at": now.isoformat(),
-        "started_at": None,
-        "completed_at": None,
-        "error_message": None,
-        "aleatoric_auroc": None,
-        "epistemic_auroc": None,
-        "results_path": None,
-    }
-    
-    _mock_experiments[exp_id] = mock_exp
-    return mock_exp
+    # Use the same implementation as authenticated endpoint
+    return await _create_experiment_impl(experiment, session, user)
 
 
 @router.post("", response_model=ExperimentResponse)
@@ -211,12 +191,15 @@ async def _create_experiment_impl(
 
 @router.get("/no-auth", response_model=list[ExperimentResponse])
 async def list_experiments_no_auth(
+    session: SessionDep,
     skip: int = 0,
     limit: int = 100,
 ) -> Any:
-    """List all experiments without authentication or database (for local testing)."""
-    experiments = list(_mock_experiments.values())
-    return experiments[skip:skip+limit]
+    """List all experiments from database (no authentication required for local testing)."""
+    # Query database for all experiments
+    statement = select(UncertaintyExperiment).offset(skip).limit(limit).order_by(desc(UncertaintyExperiment.created_at))
+    experiments = session.exec(statement).all()
+    return experiments
 
 
 @router.post("/no-auth/{experiment_id}/start")
@@ -234,16 +217,16 @@ async def start_experiment_no_auth(experiment_id: str, session: SessionDep) -> d
             detail=f"Invalid experiment ID format: {experiment_id}. Must be a valid UUID."
         )
     
-    # Check if experiment exists in mock data
-    if experiment_id not in _mock_experiments:
-        logger.warning(f"Experiment not found: {experiment_id}")
+    # Check if experiment exists in database
+    db_experiment = session.get(UncertaintyExperiment, experiment_uuid)
+    if not db_experiment:
+        logger.warning(f"Experiment not found in database: {experiment_id}")
         raise HTTPException(
             status_code=404,
             detail=f"Experiment not found: {experiment_id}"
         )
     
-    mock_exp = _mock_experiments[experiment_id]
-    logger.debug(f"Found mock experiment: {mock_exp.get('name', 'Unknown')}")
+    logger.debug(f"Found experiment in database: {db_experiment.name}")
     
     # Validate ML script exists before proceeding
     if not ML_SCRIPT.exists():
@@ -268,21 +251,10 @@ async def start_experiment_no_auth(experiment_id: str, session: SessionDep) -> d
         )
     
     try:
-        # Parse and validate config
-        logger.debug("Parsing experiment configuration")
-        config_yaml_raw = mock_exp.get("config_yaml", "{}")
-        
-        if isinstance(config_yaml_raw, str):
-            config_dict = yaml.safe_load(config_yaml_raw)
-        else:
-            config_dict = config_yaml_raw
-        
-        if not isinstance(config_dict, dict):
-            config_dict = {}
-            logger.warning(f"Invalid config format for experiment {experiment_id}, using empty config")
-        
-        config_yaml = yaml.dump(config_dict) if config_dict else "{}"
-        logger.debug(f"Parsed config: {len(config_yaml)} bytes")
+        # Config is already stored as YAML string in database
+        logger.debug("Using experiment configuration from database")
+        config_yaml = db_experiment.config_yaml
+        logger.debug(f"Config: {len(config_yaml)} bytes")
         
     except yaml.YAMLError as e:
         logger.error(f"Failed to parse YAML configuration for experiment {experiment_id}", exc_info=True)
@@ -306,7 +278,7 @@ async def start_experiment_no_auth(experiment_id: str, session: SessionDep) -> d
             logger.debug(f"Creating database experiment with ID: {experiment_uuid}")
             db_experiment = UncertaintyExperiment(
                 id=experiment_uuid,
-                name=mock_exp["name"],
+                name=db_experiment.name,
                 config_yaml=config_yaml,
                 created_by_id=user.id,
                 status=JobStatus.QUEUED,
@@ -399,7 +371,7 @@ async def start_experiment_no_auth(experiment_id: str, session: SessionDep) -> d
             exc_info=True,
             extra={
                 "experiment_id": experiment_id,
-                "experiment_name": mock_exp.get("name", "Unknown"),
+                "experiment_name": db_experiment.name,
                 "user_id": user.id if user else None,
                 "ml_script": str(ML_SCRIPT),
                 "error_type": type(e).__name__,
@@ -434,32 +406,7 @@ async def delete_experiment_no_auth(experiment_id: str, session: SessionDep) -> 
 
 
 
-@router.post("/no-auth/{experiment_id}/simulate-progress")
-async def simulate_progress_no_auth(experiment_id: str) -> dict:
-    """Simulate experiment progress (for testing UI)."""
-    if experiment_id not in _mock_experiments:
-        raise HTTPException(status_code=404, detail="Experiment not found")
-    
-    exp = _mock_experiments[experiment_id]
-    
-    # Simulate progress
-    if exp["status"] == JobStatus.QUEUED:
-        exp["status"] = JobStatus.RUNNING
-        exp["started_at"] = datetime.utcnow().isoformat()
-        exp["progress"] = 0.2
-    elif exp["status"] == JobStatus.RUNNING:
-        current_progress = exp.get("progress", 0.0)
-        if current_progress < 0.9:
-            exp["progress"] = min(current_progress + 0.15, 0.95)
-        else:
-            # Complete the experiment
-            exp["status"] = JobStatus.COMPLETED
-            exp["progress"] = 1.0
-            exp["completed_at"] = datetime.utcnow().isoformat()
-            exp["aleatoric_auroc"] = 0.85 + (hash(experiment_id) % 10) / 100  # Mock AUROC
-            exp["epistemic_auroc"] = 0.82 + (hash(experiment_id) % 15) / 100
-    
-    return exp
+# Removed simulate-progress endpoint - using real progress from ML training
 
 
 @router.get("", response_model=list[ExperimentResponse])
