@@ -19,3 +19,23 @@ git-push.sh
 
 # Local misc folder
 /local
+
+# Data files (large datasets)
+/data/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Temporary files
+/tmp/
+*.db
+*.sqlite
+*.sqlite3
