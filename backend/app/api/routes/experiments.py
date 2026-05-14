@@ -297,19 +297,25 @@ async def start_experiment_no_auth(experiment_id: str, session: SessionDep) -> d
         )
     
     try:
-        # Create database experiment from mock
-        logger.debug(f"Creating database experiment with ID: {experiment_uuid}")
-        db_experiment = UncertaintyExperiment(
-            id=experiment_uuid,
-            name=mock_exp["name"],
-            config_yaml=config_yaml,
-            created_by_id=user.id,
-            status=JobStatus.QUEUED,
-        )
-        session.add(db_experiment)
-        session.commit()
-        session.refresh(db_experiment)
-        logger.info(f"Database experiment created successfully: {db_experiment.id}")
+        # Check if experiment already exists in database
+        db_experiment = session.get(UncertaintyExperiment, experiment_uuid)
+        
+        if not db_experiment:
+            # Create database experiment from mock
+            logger.debug(f"Creating database experiment with ID: {experiment_uuid}")
+            db_experiment = UncertaintyExperiment(
+                id=experiment_uuid,
+                name=mock_exp["name"],
+                config_yaml=config_yaml,
+                created_by_id=user.id,
+                status=JobStatus.QUEUED,
+            )
+            session.add(db_experiment)
+            session.commit()
+            session.refresh(db_experiment)
+            logger.info(f"Database experiment created successfully: {db_experiment.id}")
+        else:
+            logger.info(f"Experiment {experiment_uuid} already exists in database, using existing record")
         
     except Exception as e:
         logger.error(
