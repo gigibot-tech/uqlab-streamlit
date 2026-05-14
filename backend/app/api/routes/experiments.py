@@ -12,10 +12,27 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
-from app.api.deps import CurrentUser, SessionDep
-from app.tables import JobStatus, UncertaintyExperiment
+from app.api.deps import CurrentUser, SessionDep, get_current_active_superuser
+from app.tables import JobStatus, UncertaintyExperiment, User
 
 router = APIRouter()
+
+# Helper to get or create a default user for testing
+def get_or_create_test_user(session: Session) -> User:
+    """Get or create a test user for local development."""
+    test_email = "test@example.com"
+    user = session.exec(select(User).where(User.email == test_email)).first()
+    if not user:
+        user = User(
+            email=test_email,
+            hashed_password="not_used",
+            is_superuser=False,
+            full_name="Test User"
+        )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+    return user
 
 # Path to the ML script
 DTAG_ROOT = Path(__file__).resolve().parents[6] / "Desktop" / "GigiApps" / "dtag"
@@ -71,6 +88,16 @@ class ExperimentResponse(BaseModel):
     results_path: str | None
 
 
+@router.post("/no-auth", response_model=ExperimentResponse)
+async def create_experiment_no_auth(
+    experiment: ExperimentCreate,
+    session: SessionDep,
+) -> Any:
+    """Create experiment without authentication (for local testing)."""
+    user = get_or_create_test_user(session)
+    return await _create_experiment_impl(experiment, session, user)
+
+
 @router.post("", response_model=ExperimentResponse)
 async def create_experiment(
     experiment: ExperimentCreate,
@@ -78,6 +105,15 @@ async def create_experiment(
     current_user: CurrentUser,
 ) -> Any:
     """Create a new experiment configuration."""
+    return await _create_experiment_impl(experiment, session, current_user)
+
+
+async def _create_experiment_impl(
+    experiment: ExperimentCreate,
+    session: Session,
+    user: User,
+) -> Any:
+    """Implementation of experiment creation."""
     # Convert config to YAML
     config_dict = {
         "seed": 42,
@@ -118,13 +154,24 @@ async def create_experiment(
     db_experiment = UncertaintyExperiment(
         name=experiment.name,
         config_yaml=config_yaml,
-        created_by_id=current_user.id,
+        created_by_id=user.id,
     )
     session.add(db_experiment)
     session.commit()
     session.refresh(db_experiment)
 
     return db_experiment
+
+
+@router.get("/no-auth", response_model=list[ExperimentResponse])
+async def list_experiments_no_auth(
+    session: SessionDep,
+    skip: int = 0,
+    limit: int = 100,
+) -> Any:
+    """List all experiments without authentication (for local testing)."""
+    user = get_or_create_test_user(session)
+    return await _list_experiments_impl(session, user, skip, limit)
 
 
 @router.get("", response_model=list[ExperimentResponse])
@@ -135,10 +182,19 @@ async def list_experiments(
     limit: int = 100,
 ) -> Any:
     """List all experiments for the current user."""
+    return await _list_experiments_impl(session, current_user, skip, limit)
+
+
+async def _list_experiments_impl(
+    session: Session,
+    user: User,
+    skip: int,
+    limit: int,
+) -> Any:
+    """Implementation of list experiments."""
     statement = (
         select(UncertaintyExperiment)
-        .where(UncertaintyExperiment.created_by_id == current_user.id)
-        .order_by(UncertaintyExperiment.created_at.desc())
+        .where(UncertaintyExperiment.created_by_id == user.id)
         .offset(skip)
         .limit(limit)
     )

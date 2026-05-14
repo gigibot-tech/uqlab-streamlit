@@ -161,34 +161,100 @@ def main():
     with tab1:
         st.subheader("Configure and Run Experiment")
         
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            exp_name = st.text_input("Experiment Name", value="test_experiment")
-            model_type = st.selectbox("Model Type", ["resnet18", "resnet34", "resnet50"])
-            epochs = st.number_input("Epochs", min_value=1, max_value=100, value=10)
-        
-        with col2:
-            batch_size = st.number_input("Batch Size", min_value=1, max_value=512, value=32)
-            learning_rate = st.number_input("Learning Rate", min_value=0.0001, max_value=1.0, value=0.001, format="%.4f")
-            uncertainty_method = st.selectbox("Uncertainty Method", ["ensemble", "mc_dropout", "deep_ensemble"])
-        
-        if st.button("🚀 Start Experiment", type="primary"):
-            st.info("Experiment functionality coming soon! This will trigger training via the backend API.")
-            st.code(f"""
-POST {API_BASE_URL}/api/v1/experiments/
-{{
-    "name": "{exp_name}",
-    "dataset_name": "{dataset_name}",
-    "model_type": "{model_type}",
-    "config": {{
-        "epochs": {epochs},
-        "batch_size": {batch_size},
-        "learning_rate": {learning_rate},
-        "uncertainty_method": "{uncertainty_method}"
-    }}
-}}
-            """)
+        with st.form("experiment_form"):
+            exp_name = st.text_input("Experiment Name", value=f"exp_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}")
+            
+            st.markdown("#### Data Configuration")
+            col1, col2 = st.columns(2)
+            with col1:
+                under_supported = st.text_input("Under-supported Classes", value="3,5", help="Comma-separated class IDs")
+                under_train_per_class = st.number_input("Under-supported Samples/Class", min_value=10, max_value=500, value=50)
+            with col2:
+                regular_train_per_class = st.number_input("Regular Samples/Class", min_value=50, max_value=1000, value=300)
+                eval_per_group = st.number_input("Eval Samples/Group", min_value=100, max_value=2000, value=600)
+            
+            st.markdown("#### Model Configuration")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                dinov2_model = st.selectbox("DINOv2 Model", ["small", "base", "large"], index=0)
+            with col2:
+                hidden_dim = st.number_input("Hidden Dimension", min_value=64, max_value=1024, value=256, step=64)
+            with col3:
+                dropout = st.number_input("Dropout", min_value=0.0, max_value=0.9, value=0.2, step=0.1)
+            
+            st.markdown("#### Training Configuration")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                epochs = st.number_input("Epochs", min_value=1, max_value=100, value=12)
+            with col2:
+                learning_rate = st.number_input("Learning Rate", min_value=0.0001, max_value=0.1, value=0.001, format="%.4f")
+            with col3:
+                weight_decay = st.number_input("Weight Decay", min_value=0.0, max_value=0.01, value=0.0001, format="%.5f")
+            
+            train_batch_size = st.number_input("Training Batch Size", min_value=16, max_value=512, value=256, step=16)
+            
+            st.markdown("#### Evaluation Configuration")
+            col1, col2 = st.columns(2)
+            with col1:
+                mc_passes = st.number_input("MC Dropout Passes", min_value=5, max_value=100, value=20)
+            with col2:
+                attribution_method = st.selectbox("Attribution Method", ["dualxda", "gradcam", "integrated_gradients"])
+            
+            submitted = st.form_submit_button("🚀 Create Experiment", type="primary")
+            
+            if submitted:
+                with st.spinner("Creating experiment..."):
+                    try:
+                        # Prepare experiment data
+                        experiment_data = {
+                            "name": exp_name,
+                            "config": {
+                                "noise_type": noise_type,
+                                "under_supported_classes": under_supported,
+                                "under_train_per_class": under_train_per_class,
+                                "regular_train_per_class": regular_train_per_class,
+                                "eval_per_group": eval_per_group,
+                                "dinov2_model": dinov2_model,
+                                "hidden_dim": hidden_dim,
+                                "dropout": dropout,
+                                "epochs": epochs,
+                                "learning_rate": learning_rate,
+                                "weight_decay": weight_decay,
+                                "train_batch_size": train_batch_size,
+                                "mc_passes": mc_passes,
+                                "attribution_method": attribution_method,
+                            }
+                        }
+                        
+                        # Create experiment
+                        response = requests.post(
+                            f"{API_BASE_URL}/api/v1/experiments/",
+                            json=experiment_data,
+                            headers=get_headers(),
+                            timeout=30
+                        )
+                        response.raise_for_status()
+                        result = response.json()
+                        
+                        st.success(f"✅ Experiment created: {result['name']}")
+                        st.info(f"Experiment ID: {result['id']}")
+                        st.info(f"Status: {result['status']}")
+                        
+                        # Option to start immediately
+                        if st.button("▶️ Start Experiment Now"):
+                            start_response = requests.post(
+                                f"{API_BASE_URL}/api/v1/experiments/{result['id']}/start",
+                                headers=get_headers(),
+                                timeout=30
+                            )
+                            start_response.raise_for_status()
+                            st.success("Experiment started!")
+                            st.rerun()
+                        
+                    except requests.exceptions.RequestException as e:
+                        st.error(f"Failed to create experiment: {str(e)}")
+                        if hasattr(e, 'response') and e.response is not None:
+                            st.error(f"Response: {e.response.text}")
     
     with tab2:
         st.subheader("Experiment Results")

@@ -1,51 +1,28 @@
-"""Experiments Page with Authentication"""
+"""Experiments Page - No Auth Version"""
 import streamlit as st
 import pandas as pd
-from services.api_client import APIClient
 
-def login_form():
-    """Display login form"""
-    st.warning("⚠️ Authentication Required")
-    with st.form("login_form"):
-        username = st.text_input("Username", value="admin@example.com")
-        password = st.text_input("Password", type="password", value="changethis")
-        if st.form_submit_button("Login"):
-            return username, password
-    return None, None
-
-def render(api_client: APIClient):
+def render(api_client):
     st.title("🧪 Experiments")
     
-    # Check if logged in
-    if "access_token" not in st.session_state:
-        username, password = login_form()
-        if username and password:
-            try:
-                # Login
-                response = api_client.post("/api/v1/login/access-token", {
-                    "username": username,
-                    "password": password
-                })
-                st.session_state.access_token = response["access_token"]
-                api_client.token = response["access_token"]
-                st.success("✅ Logged in!")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Login failed: {e}")
-        return
-    
-    # Logged in - show experiments
     tab1, tab2 = st.tabs(["Create", "View"])
     
     with tab1:
+        st.subheader("Create New Experiment")
         with st.form("exp_form"):
             name = st.text_input("Name", value=f"exp_{pd.Timestamp.now().strftime('%Y%m%d_%H%M')}")
-            epochs = st.number_input("Epochs", 1, 100, 12)
-            lr = st.number_input("Learning Rate", 0.0001, 0.1, 0.001, format="%.4f")
             
-            if st.form_submit_button("Create"):
+            col1, col2 = st.columns(2)
+            with col1:
+                epochs = st.number_input("Epochs", 1, 100, 12)
+                lr = st.number_input("Learning Rate", 0.0001, 0.1, 0.001, format="%.4f")
+            with col2:
+                batch_size = st.number_input("Batch Size", 16, 512, 256, step=16)
+                mc_passes = st.number_input("MC Passes", 5, 100, 20)
+            
+            if st.form_submit_button("🚀 Create Experiment", type="primary"):
                 try:
-                    result = api_client.post("/api/v1/experiments/", {
+                    result = api_client.post("/api/v1/experiments/no-auth", {
                         "name": name,
                         "config": {
                             "noise_type": "worse_label",
@@ -59,26 +36,36 @@ def render(api_client: APIClient):
                             "epochs": epochs,
                             "learning_rate": lr,
                             "weight_decay": 0.0001,
-                            "train_batch_size": 256,
-                            "mc_passes": 20,
+                            "train_batch_size": batch_size,
+                            "mc_passes": mc_passes,
                             "attribution_method": "dualxda"
                         }
                     })
-                    st.success(f"Created: {result['name']}")
+                    st.success(f"✅ Created: {result['name']}")
+                    st.json(result)
                 except Exception as e:
-                    st.error(f"Error: {e}")
+                    st.error(f"❌ Error: {e}")
     
     with tab2:
+        st.subheader("All Experiments")
+        if st.button("🔄 Refresh"):
+            st.rerun()
+        
         try:
-            exps = api_client.get("/api/v1/experiments/")
+            exps = api_client.get("/api/v1/experiments/no-auth")
             if exps:
-                data = [{
-                    "Name": e["name"],
-                    "Status": e["status"],
-                    "Created": pd.to_datetime(e["created_at"]).strftime("%Y-%m-%d %H:%M")
-                } for e in exps]
+                data = []
+                for e in exps:
+                    data.append({
+                        "Name": e["name"],
+                        "Status": e["status"],
+                        "Progress": f"{e.get('progress', 0):.1%}",
+                        "Created": pd.to_datetime(e["created_at"]).strftime("%Y-%m-%d %H:%M"),
+                        "Aleatoric": f"{e['aleatoric_auroc']:.3f}" if e.get('aleatoric_auroc') else "N/A",
+                        "Epistemic": f"{e['epistemic_auroc']:.3f}" if e.get('epistemic_auroc') else "N/A"
+                    })
                 st.dataframe(pd.DataFrame(data), use_container_width=True, hide_index=True)
             else:
-                st.info("No experiments yet")
+                st.info("No experiments yet. Create one in the 'Create' tab!")
         except Exception as e:
-            st.error(f"Error: {e}")
+            st.error(f"❌ Error loading experiments: {e}")
