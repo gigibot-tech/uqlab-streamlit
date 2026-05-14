@@ -303,6 +303,36 @@ def main():
             
             st.caption(f"Total experiments: {len(experiments)}")
             
+            # Expandable details for each experiment
+            st.markdown("### 📋 Experiment Details")
+            for exp in experiments:
+                with st.expander(f"🔍 {exp['name']} ({exp['status'].upper()})"):
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.markdown("**Basic Info**")
+                        st.json({
+                            "ID": exp["id"],
+                            "Name": exp["name"],
+                            "Status": exp["status"],
+                            "Progress": f"{exp.get('progress', 0):.1%}",
+                            "Created": exp["created_at"],
+                            "Started": exp.get("started_at", "N/A"),
+                            "Completed": exp.get("completed_at", "N/A"),
+                        })
+                    
+                    with col2:
+                        st.markdown("**Results**")
+                        st.json({
+                            "Aleatoric AUROC": exp.get("aleatoric_auroc", "N/A"),
+                            "Epistemic AUROC": exp.get("epistemic_auroc", "N/A"),
+                            "Results Path": exp.get("results_path", "N/A"),
+                            "Error": exp.get("error_message", "None"),
+                        })
+                    
+                    st.markdown("**Configuration**")
+                    st.json(exp.get("config_yaml", {}))
+            
             # Start training button for queued experiments
             queued_exps = [e for e in experiments if e["status"] == "queued"]
             if queued_exps:
