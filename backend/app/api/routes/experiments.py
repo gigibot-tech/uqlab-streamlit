@@ -194,6 +194,48 @@ async def list_experiments_no_auth(
     return experiments[skip:skip+limit]
 
 
+@router.post("/no-auth/{experiment_id}/start")
+async def start_experiment_no_auth(experiment_id: str) -> dict:
+    """Start a mock experiment (simulates progress for testing)."""
+    if experiment_id not in _mock_experiments:
+        raise HTTPException(status_code=404, detail="Experiment not found")
+    
+    exp = _mock_experiments[experiment_id]
+    exp["status"] = JobStatus.RUNNING
+    exp["started_at"] = datetime.utcnow().isoformat()
+    exp["progress"] = 0.1
+    
+    return {"message": "Experiment started (mock)", "id": experiment_id}
+
+
+@router.post("/no-auth/{experiment_id}/simulate-progress")
+async def simulate_progress_no_auth(experiment_id: str) -> dict:
+    """Simulate experiment progress (for testing UI)."""
+    if experiment_id not in _mock_experiments:
+        raise HTTPException(status_code=404, detail="Experiment not found")
+    
+    exp = _mock_experiments[experiment_id]
+    
+    # Simulate progress
+    if exp["status"] == JobStatus.QUEUED:
+        exp["status"] = JobStatus.RUNNING
+        exp["started_at"] = datetime.utcnow().isoformat()
+        exp["progress"] = 0.2
+    elif exp["status"] == JobStatus.RUNNING:
+        current_progress = exp.get("progress", 0.0)
+        if current_progress < 0.9:
+            exp["progress"] = min(current_progress + 0.15, 0.95)
+        else:
+            # Complete the experiment
+            exp["status"] = JobStatus.COMPLETED
+            exp["progress"] = 1.0
+            exp["completed_at"] = datetime.utcnow().isoformat()
+            exp["aleatoric_auroc"] = 0.85 + (hash(experiment_id) % 10) / 100  # Mock AUROC
+            exp["epistemic_auroc"] = 0.82 + (hash(experiment_id) % 15) / 100
+    
+    return exp
+
+
 @router.get("", response_model=list[ExperimentResponse])
 async def list_experiments(
     session: SessionDep,

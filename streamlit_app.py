@@ -286,6 +286,39 @@ def main():
                 
                 st.caption(f"Total experiments: {len(experiments)}")
                 
+                # Simulate progress for testing
+                st.markdown("---")
+                st.subheader("🎮 Test Controls")
+                st.caption("Simulate experiment progress (for testing)")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("▶️ Simulate Progress (All Experiments)"):
+                        for exp in experiments:
+                            try:
+                                requests.post(
+                                    f"{API_BASE_URL}/api/v1/experiments/no-auth/{exp['id']}/simulate-progress",
+                                    headers=get_headers(),
+                                    timeout=10
+                                )
+                            except:
+                                pass
+                        st.success("Progress simulated! Click 'Refresh Experiments' to see updates.")
+                
+                with col2:
+                    if st.button("🔄 Auto-refresh (5 times)"):
+                        for i in range(5):
+                            for exp in experiments:
+                                try:
+                                    requests.post(
+                                        f"{API_BASE_URL}/api/v1/experiments/no-auth/{exp['id']}/simulate-progress",
+                                        headers=get_headers(),
+                                        timeout=10
+                                    )
+                                except:
+                                    pass
+                            st.rerun()
+                
         except requests.exceptions.RequestException as e:
             st.error(f"Failed to fetch experiments: {str(e)}")
             if hasattr(e, 'response') and e.response is not None:
