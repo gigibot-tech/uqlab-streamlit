@@ -6,12 +6,8 @@ from passlib.context import CryptContext
 
 from app.core.config import settings
 
-# Configure bcrypt to truncate passwords automatically
-pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto",
-    bcrypt__truncate_error=False,  # Don't raise error, just truncate
-)
+# Use argon2 instead of bcrypt (no 72-byte limit, more secure, modern)
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 
 ALGORITHM = "HS256"
@@ -25,12 +21,8 @@ def create_access_token(subject: str | Any, expires_delta: timedelta) -> str:
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    # Bcrypt has 72 byte limit, encode to bytes then truncate
-    password_bytes = plain_password.encode('utf-8')[:72]
-    return pwd_context.verify(password_bytes, hashed_password)
+    return pwd_context.verify(plain_password, hashed_password)
 
 
 def get_password_hash(password: str) -> str:
-    # Bcrypt has 72 byte limit, encode to bytes then truncate
-    password_bytes = password.encode('utf-8')[:72]
-    return pwd_context.hash(password_bytes)
+    return pwd_context.hash(password)
