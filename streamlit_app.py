@@ -251,16 +251,25 @@ def main():
     st.markdown("---")
     st.subheader("📋 Experiment Results")
     
-    # Auto-polling controls
-    col1, col2 = st.columns([3, 1])
+    # Auto-polling controls with session state
+    if 'auto_refresh' not in st.session_state:
+        st.session_state.auto_refresh = False
+    
+    col1, col2, col3 = st.columns([2, 1, 1])
     with col1:
-        auto_poll = st.checkbox(
-            "🔄 Enable Auto-Refresh",
-            value=False,
-            help="Automatically refresh experiment status every 3 seconds"
+        auto_refresh = st.checkbox(
+            "🔄 Enable Auto-Refresh (5s)",
+            value=st.session_state.auto_refresh,
+            key="auto_refresh_checkbox",
+            help="Automatically refresh experiment status every 5 seconds"
         )
+        st.session_state.auto_refresh = auto_refresh
     with col2:
-        if st.button("🔄 Refresh Now"):
+        if st.button("🔄 Refresh Now", use_container_width=True):
+            st.rerun()
+    with col3:
+        if st.button("🛑 Stop Refresh", use_container_width=True):
+            st.session_state.auto_refresh = False
             st.rerun()
     
     try:
@@ -312,10 +321,15 @@ def main():
                         except Exception as e:
                             st.error(f"Failed to start training: {str(e)}")
             
-            # Auto-polling logic - just refresh
-            if auto_poll:
+            # Enterprise-grade auto-refresh using st.empty() placeholder
+            if st.session_state.auto_refresh:
+                # Use a placeholder for countdown
+                refresh_placeholder = st.empty()
                 import time
-                time.sleep(3)
+                for remaining in range(5, 0, -1):
+                    refresh_placeholder.info(f"🔄 Auto-refreshing in {remaining} seconds...")
+                    time.sleep(1)
+                refresh_placeholder.empty()
                 st.rerun()
             
     except requests.exceptions.RequestException as e:
