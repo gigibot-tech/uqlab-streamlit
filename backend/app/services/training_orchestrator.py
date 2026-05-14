@@ -11,6 +11,7 @@ from app.domain.value_objects import ProgressUpdate
 from app.repositories.experiment_repository import ExperimentRepository
 from app.services.executors.base import TrainingExecutor
 from app.tables import JobStatus
+from app.api.routes.websocket import broadcast_progress
 
 
 class TrainingOrchestrator:
@@ -20,12 +21,17 @@ class TrainingOrchestrator:
         self.executor = executor
         self.repository = repository
         self._running_jobs: dict[uuid.UUID, asyncio.Task] = {}
+        self._current_training: Optional[uuid.UUID] = None  # Single experiment at a time
 
     async def start_training(self, experiment_id: uuid.UUID) -> None:
-        """Start training job asynchronously."""
+        """Start training job asynchronously (one at a time)."""
+        if self._current_training is not None:
+            raise ValueError(f"Another experiment is already running: {self._current_training}")
+        
         if experiment_id in self._running_jobs:
             raise ValueError(f"Experiment {experiment_id} already running")
 
+        self._current_training = experiment_id
         task = asyncio.create_task(self._run_training(experiment_id))
         self._running_jobs[experiment_id] = task
 
@@ -43,9 +49,18 @@ class TrainingOrchestrator:
             # Update status to running
             self.repository.update_status(experiment_id, JobStatus.RUNNING, 0.0)
 
-            # Execute training
+            # Execute training with WebSocket broadcasting
             def progress_callback(update: ProgressUpdate):
+                # Update database
                 self.repository.update_status(experiment_id, JobStatus.RUNNING, update.progress, update.message)
+                # Broadcast via WebSocket (fire and forget)
+                asyncio.create_task(broadcast_progress(str(experiment_id), {
+                    "progress": update.progress,
+                    "stage": update.stage,
+                    "message": update.message,
+                    "epoch": update.epoch,
+                    "total_epochs": update.total_epochs
+                }))
 
             result = await self.executor.execute(config_path, output_dir, progress_callback)
 
@@ -56,6 +71,8 @@ class TrainingOrchestrator:
             self.repository.mark_failed(experiment_id, str(e))
         finally:
             self._running_jobs.pop(experiment_id, None)
+            if self._current_training == experiment_id:
+                self._current_training = None
 
     def _prepare_paths(self, experiment_id: uuid.UUID, config: TrainingConfig) -> tuple[Path, Path]:
         """Prepare config file and output directory."""
