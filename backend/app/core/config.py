@@ -48,9 +48,9 @@ class Settings(BaseSettings):
 
     PROJECT_NAME: str
     
-    # ML Script Configuration (relative to backend directory)
+    # ML Script Configuration (one level above backend directory)
     # Can be overridden via environment variable for custom locations
-    DTAG_ROOT: str = str(Path(__file__).resolve().parents[1] / "scripts")
+    DTAG_ROOT: str = str(Path(__file__).resolve().parents[2] / "scripts")
     
     # Database configuration - modular for future persistence
     # Use in-memory SQLite by default, can switch to PostgreSQL via env vars
