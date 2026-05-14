@@ -48,9 +48,10 @@ class Settings(BaseSettings):
 
     PROJECT_NAME: str
     
-    # ML Script Configuration (one level above backend directory)
+    # ML Script Configuration (project root level)
+    # Path: walaris-cen/scripts/run_fast_uncertainty_classification.py
     # Can be overridden via environment variable for custom locations
-    DTAG_ROOT: str = str(Path(__file__).resolve().parents[2] / "scripts")
+    DTAG_ROOT: str = str(Path(__file__).resolve().parents[3] / "scripts")
     
     # Database configuration - modular for future persistence
     # Use in-memory SQLite by default, can switch to PostgreSQL via env vars
