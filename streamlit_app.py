@@ -306,7 +306,28 @@ def main():
             # Expandable details for each experiment
             st.markdown("### 📋 Experiment Details")
             for exp in experiments:
-                with st.expander(f"🔍 {exp['name']} ({exp['status'].upper()})"):
+                # Try to load results from files
+                results_data = None
+                results_path = f"/tmp/walaris_experiments/{exp['id']}/results"
+                summary_file = f"{results_path}/summary.json"
+                
+                try:
+                    import json
+                    from pathlib import Path
+                    if Path(summary_file).exists():
+                        with open(summary_file) as f:
+                            results_data = json.load(f)
+                except Exception as e:
+                    pass  # Results not available yet
+                
+                status_emoji = {
+                    "queued": "⏳",
+                    "running": "🔄",
+                    "completed": "✅",
+                    "failed": "❌"
+                }.get(exp['status'], "❓")
+                
+                with st.expander(f"{status_emoji} {exp['name']} ({exp['status'].upper()})"):
                     col1, col2 = st.columns(2)
                     
                     with col1:
@@ -316,22 +337,86 @@ def main():
                             "Name": exp["name"],
                             "Status": exp["status"],
                             "Progress": f"{exp.get('progress', 0):.1%}",
+                            "Message": exp.get("progress_message", "N/A"),
                             "Created": exp["created_at"],
                             "Started": exp.get("started_at", "N/A"),
                             "Completed": exp.get("completed_at", "N/A"),
                         })
                     
                     with col2:
-                        st.markdown("**Results**")
+                        st.markdown("**Configuration**")
+                        config = exp.get("config_yaml", {})
                         st.json({
-                            "Aleatoric AUROC": exp.get("aleatoric_auroc", "N/A"),
-                            "Epistemic AUROC": exp.get("epistemic_auroc", "N/A"),
-                            "Results Path": exp.get("results_path", "N/A"),
-                            "Error": exp.get("error_message", "None"),
+                            "Noise Type": config.get("noise_type", "N/A"),
+                            "Epochs": config.get("epochs", "N/A"),
+                            "Model": config.get("dinov2_model", "N/A"),
+                            "Hidden Dim": config.get("hidden_dim", "N/A"),
+                            "Dropout": config.get("dropout", "N/A"),
                         })
                     
-                    st.markdown("**Configuration**")
-                    st.json(exp.get("config_yaml", {}))
+                    # Show results from files if available
+                    if results_data:
+                        st.markdown("---")
+                        st.markdown("### 📊 Results (from files)")
+                        
+                        # Best signals
+                        aurocs = results_data.get("one_vs_rest_auroc", [])
+                        if aurocs:
+                            st.markdown("**🎯 Best Uncertainty Signals:**")
+                            
+                            # Find best aleatoric and epistemic signals
+                            best_aleatoric = max(aurocs, key=lambda x: x.get("aleatoric_like_auroc", 0))
+                            best_epistemic = max(aurocs, key=lambda x: x.get("epistemic_like_auroc", 0))
+                            
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                st.metric(
+                                    "Best Aleatoric Signal",
+                                    f"{best_aleatoric['aleatoric_like_auroc']:.4f}",
+                                    delta=best_aleatoric['signal']
+                                )
+                            with col2:
+                                st.metric(
+                                    "Best Epistemic Signal",
+                                    f"{best_epistemic['epistemic_like_auroc']:.4f}",
+                                    delta=best_epistemic['signal']
+                                )
+                            
+                            # All signals table
+                            st.markdown("**All Signals:**")
+                            signals_df = pd.DataFrame(aurocs)
+                            signals_df = signals_df.rename(columns={
+                                "signal": "Signal",
+                                "aleatoric_like_auroc": "Aleatoric AUROC",
+                                "epistemic_like_auroc": "Epistemic AUROC"
+                            })
+                            st.dataframe(signals_df, use_container_width=True, hide_index=True)
+                        
+                        # Macro F1 scores
+                        macro_f1 = results_data.get("macro_f1", [])
+                        if macro_f1:
+                            st.markdown("**🎯 3-Way Classification F1 Scores:**")
+                            f1_df = pd.DataFrame(macro_f1)
+                            f1_df = f1_df.rename(columns={
+                                "signal_set": "Signal Set",
+                                "macro_f1": "Macro F1"
+                            })
+                            st.dataframe(f1_df, use_container_width=True, hide_index=True)
+                        
+                        # Dataset info
+                        st.markdown("**📦 Dataset Info:**")
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("Train Size", results_data.get("train_size", "N/A"))
+                        with col2:
+                            eval_sizes = results_data.get("eval_sizes", {})
+                            st.metric("Clean Eval", eval_sizes.get("clean", "N/A"))
+                        with col3:
+                            st.metric("Noisy Eval", eval_sizes.get("aleatoric_like", "N/A"))
+                    
+                    elif exp['status'] == 'completed':
+                        st.warning("⚠️ Results files not found. Check results_path.")
+                        st.code(f"Expected: {summary_file}")
                     
                     # Delete button
                     st.markdown("---")
