@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 from app.api.deps import CurrentUser, SessionDep, get_current_active_superuser
+from app.core.security import get_password_hash
 from app.tables import JobStatus, UncertaintyExperiment, User
 
 router = APIRouter()
@@ -25,7 +26,8 @@ def get_or_create_test_user(session: Session) -> User:
     if not user:
         user = User(
             email=test_email,
-            hashed_password="not_used",
+            hashed_password=get_password_hash("test_password"),
+            is_active=True,
             is_superuser=False,
             full_name="Test User"
         )
