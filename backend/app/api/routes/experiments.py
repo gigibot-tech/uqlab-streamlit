@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 from app.api.deps import CurrentUser, SessionDep
+from app.core.config import settings
 from app.core.security import get_password_hash
 from app.domain.models import TrainingConfig
 from app.repositories.experiment_repository import ExperimentRepository
@@ -25,8 +26,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Path to the ML script
-ML_SCRIPT = Path.home() / "Desktop" / "GigiApps" / "dtag" / "experiments" / "run_fast_uncertainty_classification.py"
+# Path to the ML script (now inside the project at backend/scripts/)
+ML_SCRIPT = Path(settings.DTAG_ROOT) / "run_fast_uncertainty_classification.py"
 
 # Global orchestrator instance (in production, use dependency injection)
 _orchestrator: TrainingOrchestrator | None = None

@@ -1,5 +1,6 @@
 import secrets
 import warnings
+from pathlib import Path
 from typing import Annotated, Any, Literal
 
 from pydantic import (
@@ -46,6 +47,10 @@ class Settings(BaseSettings):
         ]
 
     PROJECT_NAME: str
+    
+    # ML Script Configuration (relative to backend directory)
+    # Can be overridden via environment variable for custom locations
+    DTAG_ROOT: str = str(Path(__file__).resolve().parents[1] / "scripts")
     
     # Database configuration - modular for future persistence
     # Use in-memory SQLite by default, can switch to PostgreSQL via env vars
