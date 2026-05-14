@@ -25,7 +25,13 @@ class SubprocessExecutor(TrainingExecutor):
         """Execute training script and stream output in real-time."""
         cmd = [self.python_exe, str(self.script_path), "--config", str(config_path), "--output_dir", str(output_dir)]
         
-        logger.info(f"Starting training: {' '.join(cmd)}")
+        logger.info("=" * 80)
+        logger.info(f"TRAINING COMMAND: {' '.join(cmd)}")
+        logger.info(f"Config file: {config_path} (exists: {config_path.exists()})")
+        logger.info(f"Output dir: {output_dir} (exists: {output_dir.exists()})")
+        logger.info(f"Script path: {self.script_path} (exists: {self.script_path.exists()})")
+        logger.info("=" * 80)
+        
         progress_callback(ProgressUpdate(
             progress=0.0,
             stage=TrainingStage.INITIALIZING,
@@ -34,19 +40,23 @@ class SubprocessExecutor(TrainingExecutor):
             total_epochs=None
         ))
         
-        # Start process with stdout/stderr pipes
+        # Start process with separate stdout/stderr for better debugging
         process = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,  # Merge stderr into stdout
+            stderr=asyncio.subprocess.PIPE,  # Keep stderr separate for debugging
         )
+        
+        # Collect all output
+        all_output = []
         
         # Stream output line by line
         if process.stdout:
             async for line in process.stdout:
                 line_str = line.decode().strip()
                 if line_str:
-                    logger.info(f"[Training] {line_str}")
+                    all_output.append(f"[STDOUT] {line_str}")
+                    logger.info(f"[Training STDOUT] {line_str}")
                     # Update progress based on output
                     progress_callback(ProgressUpdate(
                         progress=0.5,
@@ -56,12 +66,22 @@ class SubprocessExecutor(TrainingExecutor):
                         total_epochs=None
                     ))
         
-        # Wait for process to complete
+        # Wait for process to complete and get stderr
         await process.wait()
         
+        # Read any stderr
+        if process.stderr:
+            stderr_data = await process.stderr.read()
+            stderr_str = stderr_data.decode().strip()
+            if stderr_str:
+                all_output.append(f"[STDERR] {stderr_str}")
+                logger.error(f"[Training STDERR] {stderr_str}")
+        
         if process.returncode != 0:
-            error_msg = f"Training failed with exit code {process.returncode}"
+            error_msg = f"Training failed with exit code {process.returncode}\n\nFull output:\n" + "\n".join(all_output[-50:])  # Last 50 lines
+            logger.error("=" * 80)
             logger.error(error_msg)
+            logger.error("=" * 80)
             raise RuntimeError(error_msg)
         
         logger.info("Training completed successfully")
