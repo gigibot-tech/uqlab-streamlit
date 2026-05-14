@@ -251,13 +251,16 @@ def main():
     st.markdown("---")
     st.subheader("📋 Experiment Results")
     
+    # Demo mode warning
+    st.info("🎮 **Demo Mode**: Using mock progress simulation. Real ML training not yet implemented.")
+    
     # Auto-polling controls
     col1, col2 = st.columns([3, 1])
     with col1:
         auto_poll = st.checkbox(
-            "🔄 Enable Auto-Polling",
+            "🔄 Enable Auto-Polling (Demo)",
             value=False,
-            help="Automatically refresh experiments and simulate progress every 3 seconds"
+            help="Automatically refresh and simulate progress every 3 seconds (for demo purposes)"
         )
     with col2:
         if st.button("🔄 Refresh Now"):
