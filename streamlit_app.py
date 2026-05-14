@@ -251,8 +251,17 @@ def main():
     st.markdown("---")
     st.subheader("📋 Experiment Results")
     
-    if st.button("🔄 Refresh Experiments"):
-        st.rerun()
+    # Auto-polling controls
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        auto_poll = st.checkbox(
+            "🔄 Enable Auto-Polling",
+            value=False,
+            help="Automatically refresh experiments and simulate progress every 3 seconds"
+        )
+    with col2:
+        if st.button("🔄 Refresh Now"):
+            st.rerun()
     
     try:
         # Fetch experiments using no-auth endpoint
@@ -284,15 +293,12 @@ def main():
             
             st.caption(f"Total experiments: {len(experiments)}")
             
-            # Simulate progress for testing
-            st.markdown("---")
-            st.subheader("🎮 Test Controls")
-            st.caption("Simulate experiment progress (for testing)")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("▶️ Simulate Progress (All Experiments)"):
-                    for exp in experiments:
+            # Auto-polling logic
+            if auto_poll:
+                import time
+                # Simulate progress for all running experiments
+                for exp in experiments:
+                    if exp["status"] in ["queued", "running"]:
                         try:
                             requests.post(
                                 f"{API_BASE_URL}/api/v1/experiments/no-auth/{exp['id']}/simulate-progress",
@@ -301,21 +307,10 @@ def main():
                             )
                         except:
                             pass
-                    st.success("Progress simulated! Click 'Refresh Experiments' to see updates.")
-            
-            with col2:
-                if st.button("🔄 Auto-refresh (5 times)"):
-                    for i in range(5):
-                        for exp in experiments:
-                            try:
-                                requests.post(
-                                    f"{API_BASE_URL}/api/v1/experiments/no-auth/{exp['id']}/simulate-progress",
-                                    headers=get_headers(),
-                                    timeout=10
-                                )
-                            except:
-                                pass
-                        st.rerun()
+                
+                # Auto-refresh after 3 seconds
+                time.sleep(3)
+                st.rerun()
             
     except requests.exceptions.RequestException as e:
         st.error(f"Failed to fetch experiments: {str(e)}")
