@@ -112,13 +112,15 @@ def main():
     st.header("🎯 Noise Distribution by Class")
     
     noise_per_class = stats.get('noise_per_class', {})
-    class_names = stats.get('class_names', {})
+    class_names = stats.get('class_names', [])
     
     if noise_per_class:
         # Prepare data for table
         table_data = []
         for class_id, data in noise_per_class.items():
-            class_name = class_names.get(int(class_id), f"Class {class_id}")
+            # class_names is a list, use index to get name
+            class_idx = int(class_id)
+            class_name = class_names[class_idx] if class_idx < len(class_names) else f"Class {class_id}"
             total = data.get('total', 0)
             noisy = data.get('noisy', 0)
             clean = total - noisy
