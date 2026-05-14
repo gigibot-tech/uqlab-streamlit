@@ -251,16 +251,13 @@ def main():
     st.markdown("---")
     st.subheader("📋 Experiment Results")
     
-    # Demo mode warning
-    st.info("🎮 **Demo Mode**: Using mock progress simulation. Real ML training not yet implemented.")
-    
     # Auto-polling controls
     col1, col2 = st.columns([3, 1])
     with col1:
         auto_poll = st.checkbox(
-            "🔄 Enable Auto-Polling (Demo)",
+            "🔄 Enable Auto-Refresh",
             value=False,
-            help="Automatically refresh and simulate progress every 3 seconds (for demo purposes)"
+            help="Automatically refresh experiment status every 3 seconds"
         )
     with col2:
         if st.button("🔄 Refresh Now"):
@@ -279,10 +276,11 @@ def main():
         if not experiments:
             st.info("No experiments found. Create one using the form above!")
         else:
-            # Display experiments table
+            # Display experiments table with start button
             exp_data = []
             for exp in experiments:
                 exp_data.append({
+                    "ID": exp["id"],
                     "Name": exp["name"],
                     "Status": exp["status"],
                     "Progress": f"{exp.get('progress', 0):.1%}",
@@ -296,22 +294,27 @@ def main():
             
             st.caption(f"Total experiments: {len(experiments)}")
             
-            # Auto-polling logic
+            # Start training button for queued experiments
+            queued_exps = [e for e in experiments if e["status"] == "queued"]
+            if queued_exps:
+                st.markdown("### 🚀 Start Training")
+                for exp in queued_exps:
+                    if st.button(f"Start: {exp['name']}", key=f"start_{exp['id']}"):
+                        try:
+                            start_response = requests.post(
+                                f"{API_BASE_URL}/api/v1/experiments/no-auth/{exp['id']}/start",
+                                headers=get_headers(),
+                                timeout=30
+                            )
+                            start_response.raise_for_status()
+                            st.success(f"✅ Training started for {exp['name']}")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Failed to start training: {str(e)}")
+            
+            # Auto-polling logic - just refresh
             if auto_poll:
                 import time
-                # Simulate progress for all running experiments
-                for exp in experiments:
-                    if exp["status"] in ["queued", "running"]:
-                        try:
-                            requests.post(
-                                f"{API_BASE_URL}/api/v1/experiments/no-auth/{exp['id']}/simulate-progress",
-                                headers=get_headers(),
-                                timeout=10
-                            )
-                        except:
-                            pass
-                
-                # Auto-refresh after 3 seconds
                 time.sleep(3)
                 st.rerun()
             

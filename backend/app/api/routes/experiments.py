@@ -1,7 +1,5 @@
 """Experiment management and execution endpoints."""
 
-import json
-import subprocess
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -12,13 +10,33 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
-from app.api.deps import CurrentUser, SessionDep, get_current_active_superuser
+from app.api.deps import CurrentUser, SessionDep
 from app.core.security import get_password_hash
+from app.domain.models import TrainingConfig
+from app.repositories.experiment_repository import ExperimentRepository
+from app.services.executors.subprocess_executor import SubprocessExecutor
+from app.services.training_orchestrator import TrainingOrchestrator
 from app.tables import JobStatus, UncertaintyExperiment, User
 
 router = APIRouter()
 
-# Helper to get or create a default user for testing
+# Path to the ML script
+ML_SCRIPT = Path(__file__).resolve().parents[6] / "Desktop" / "GigiApps" / "dtag" / "experiments" / "run_fast_uncertainty_classification.py"
+
+# Global orchestrator instance (in production, use dependency injection)
+_orchestrator: TrainingOrchestrator | None = None
+
+
+def get_orchestrator(session: SessionDep) -> TrainingOrchestrator:
+    """Get or create training orchestrator."""
+    global _orchestrator
+    if _orchestrator is None:
+        executor = SubprocessExecutor(ML_SCRIPT)
+        repository = ExperimentRepository(session)
+        _orchestrator = TrainingOrchestrator(executor, repository)
+    return _orchestrator
+
+
 def get_or_create_test_user(session: Session) -> User:
     """Get or create a test user for local development."""
     test_email = "test@example.com"
@@ -29,16 +47,12 @@ def get_or_create_test_user(session: Session) -> User:
             hashed_password=get_password_hash("test_password"),
             is_active=True,
             is_superuser=False,
-            full_name="Test User"
+            full_name="Test User",
         )
         session.add(user)
         session.commit()
         session.refresh(user)
     return user
-
-# Path to the ML script
-DTAG_ROOT = Path(__file__).resolve().parents[6] / "Desktop" / "GigiApps" / "dtag"
-ML_SCRIPT = DTAG_ROOT / "experiments" / "run_fast_uncertainty_classification.py"
 
 
 class ExperimentConfig(BaseModel):
@@ -285,7 +299,7 @@ async def start_experiment(
     session: SessionDep,
     current_user: CurrentUser,
 ) -> dict[str, Any]:
-    """Start experiment execution."""
+    """Start real ML training execution."""
     experiment = session.get(UncertaintyExperiment, experiment_id)
     if not experiment:
         raise HTTPException(status_code=404, detail="Experiment not found")
@@ -294,40 +308,21 @@ async def start_experiment(
     if experiment.status == JobStatus.RUNNING:
         raise HTTPException(status_code=400, detail="Experiment already running")
 
-    # Create temporary config file
-    config_path = Path(f"/tmp/experiment_{experiment_id}.yaml")
-    config_path.write_text(experiment.config_yaml)
+    if not ML_SCRIPT.exists():
+        raise HTTPException(status_code=500, detail=f"ML script not found at {ML_SCRIPT}")
 
-    # Update status
-    experiment.status = JobStatus.RUNNING
-    experiment.started_at = datetime.utcnow()
-    experiment.progress = 0.0
-    session.add(experiment)
-    session.commit()
-
-    # Start ML script in background (simplified - in production use Celery)
     try:
-        # For now, just validate the script exists
-        if not ML_SCRIPT.exists():
-            raise HTTPException(
-                status_code=500,
-                detail=f"ML script not found at {ML_SCRIPT}",
-            )
-
-        # In production, this would be:
-        # task = run_ml_experiment.delay(str(experiment_id), str(config_path))
-        # For now, return success
+        # Get orchestrator and start training asynchronously
+        orchestrator = get_orchestrator(session)
+        await orchestrator.start_training(experiment_id)
+        
         return {
-            "id": experiment_id,
+            "id": str(experiment_id),
             "status": "running",
-            "message": "Experiment started (background execution not yet implemented)",
+            "message": "Real ML training started successfully",
         }
     except Exception as e:
-        experiment.status = JobStatus.FAILED
-        experiment.error_message = str(e)
-        session.add(experiment)
-        session.commit()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to start training: {str(e)}")
 
 
 @router.delete("/{experiment_id}")
