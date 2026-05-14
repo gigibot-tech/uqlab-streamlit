@@ -411,6 +411,28 @@ async def start_experiment_no_auth(experiment_id: str, session: SessionDep) -> d
             detail=f"Failed to start training: {type(e).__name__}: {str(e)}. Check server logs for details."
         )
 
+@router.delete("/no-auth/{experiment_id}")
+async def delete_experiment_no_auth(experiment_id: str, session: SessionDep) -> dict:
+    """Delete an experiment (no authentication required for development)."""
+    try:
+        experiment_uuid = uuid.UUID(experiment_id)
+        repository = ExperimentRepository(session)
+        
+        deleted = repository.delete(experiment_uuid)
+        
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Experiment not found")
+        
+        logger.info(f"Experiment deleted: {experiment_id}")
+        return {"message": "Experiment deleted successfully", "id": experiment_id}
+        
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid experiment ID format")
+    except Exception as e:
+        logger.error(f"Failed to delete experiment {experiment_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to delete experiment: {str(e)}")
+
+
 
 @router.post("/no-auth/{experiment_id}/simulate-progress")
 async def simulate_progress_no_auth(experiment_id: str) -> dict:

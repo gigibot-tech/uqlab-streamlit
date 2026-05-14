@@ -332,6 +332,21 @@ def main():
                     
                     st.markdown("**Configuration**")
                     st.json(exp.get("config_yaml", {}))
+                    
+                    # Delete button
+                    st.markdown("---")
+                    if st.button(f"🗑️ Delete Experiment", key=f"delete_{exp['id']}", type="secondary"):
+                        try:
+                            delete_response = requests.delete(
+                                f"{API_BASE_URL}/api/v1/experiments/no-auth/{exp['id']}",
+                                headers=get_headers(),
+                                timeout=10
+                            )
+                            delete_response.raise_for_status()
+                            st.success(f"✅ Experiment '{exp['name']}' deleted successfully!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Failed to delete experiment: {str(e)}")
             
             # Start training button for queued experiments
             queued_exps = [e for e in experiments if e["status"] == "queued"]

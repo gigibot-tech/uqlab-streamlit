@@ -93,6 +93,16 @@ class ExperimentRepository:
         self.session.add(experiment)
         self.session.commit()
         self.session.refresh(experiment)
+    
+    def delete(self, experiment_id: uuid.UUID) -> bool:
+        """Delete experiment by ID. Returns True if deleted, False if not found."""
+        experiment = self.get(experiment_id)
+        if not experiment:
+            return False
+        
+        self.session.delete(experiment)
+        self.session.commit()
+        return True
 
 
 # Made with Bob
