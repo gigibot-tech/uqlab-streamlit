@@ -1,5 +1,5 @@
 {
-  "name": "frontend",
+  "name": "walaris-cen",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -71,5 +71,8 @@
     "**/*.{css,scss,md,json}": [
       "prettier --write"
     ]
+  },
+  "ct3aMetadata": {
+    "initVersion": "3.1.0"
   }
 }

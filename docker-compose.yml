@@ -37,6 +37,7 @@ services:
       - .env
     environment:
       - POSTGRES_SERVER=db
+      - DTAG_ROOT=/dtag
     healthcheck:
       test:
         [
@@ -54,6 +55,8 @@ services:
         - DOCKER_BUILDKIT=0
     ports:
       - "8000:8000"
+    volumes:
+      - ${HOME}/Desktop/GigiApps/dtag:/dtag:ro
     command:
       - fastapi
       - run

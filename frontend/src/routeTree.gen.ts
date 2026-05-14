@@ -13,6 +13,7 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
+import { Route as LayoutUncertaintyRouteImport } from './routes/_layout/uncertainty'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
@@ -34,6 +35,11 @@ const LayoutRoute = LayoutRouteImport.update({
 const LayoutIndexRoute = LayoutIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutUncertaintyRoute = LayoutUncertaintyRouteImport.update({
+  id: '/uncertainty',
+  path: '/uncertainty',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
@@ -58,6 +64,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof LayoutAdminRoute
   '/items': typeof LayoutItemsRoute
   '/settings': typeof LayoutSettingsRoute
+  '/uncertainty': typeof LayoutUncertaintyRoute
   '/': typeof LayoutIndexRoute
 }
 export interface FileRoutesByTo {
@@ -66,6 +73,7 @@ export interface FileRoutesByTo {
   '/admin': typeof LayoutAdminRoute
   '/items': typeof LayoutItemsRoute
   '/settings': typeof LayoutSettingsRoute
+  '/uncertainty': typeof LayoutUncertaintyRoute
   '/': typeof LayoutIndexRoute
 }
 export interface FileRoutesById {
@@ -76,13 +84,28 @@ export interface FileRoutesById {
   '/_layout/admin': typeof LayoutAdminRoute
   '/_layout/items': typeof LayoutItemsRoute
   '/_layout/settings': typeof LayoutSettingsRoute
+  '/_layout/uncertainty': typeof LayoutUncertaintyRoute
   '/_layout/': typeof LayoutIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/login' | '/signup' | '/admin' | '/items' | '/settings' | '/'
+  fullPaths:
+    | '/login'
+    | '/signup'
+    | '/admin'
+    | '/items'
+    | '/settings'
+    | '/uncertainty'
+    | '/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/signup' | '/admin' | '/items' | '/settings' | '/'
+  to:
+    | '/login'
+    | '/signup'
+    | '/admin'
+    | '/items'
+    | '/settings'
+    | '/uncertainty'
+    | '/'
   id:
     | '__root__'
     | '/_layout'
@@ -91,6 +114,7 @@ export interface FileRouteTypes {
     | '/_layout/admin'
     | '/_layout/items'
     | '/_layout/settings'
+    | '/_layout/uncertainty'
     | '/_layout/'
   fileRoutesById: FileRoutesById
 }
@@ -130,6 +154,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/uncertainty': {
+      id: '/_layout/uncertainty'
+      path: '/uncertainty'
+      fullPath: '/uncertainty'
+      preLoaderRoute: typeof LayoutUncertaintyRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/settings': {
       id: '/_layout/settings'
       path: '/settings'
@@ -158,6 +189,7 @@ interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRoute
   LayoutItemsRoute: typeof LayoutItemsRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
+  LayoutUncertaintyRoute: typeof LayoutUncertaintyRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
 }
 
@@ -165,6 +197,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminRoute: LayoutAdminRoute,
   LayoutItemsRoute: LayoutItemsRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
+  LayoutUncertaintyRoute: LayoutUncertaintyRoute,
   LayoutIndexRoute: LayoutIndexRoute,
 }
 

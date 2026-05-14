@@ -25,4 +25,14 @@ export default defineConfig({
       "~@ibm": path.resolve(__dirname, "node_modules/@ibm"),
     },
   },
+  build: {
+    // Enable cache busting with content hashes in filenames
+    rollupOptions: {
+      output: {
+        entryFileNames: `assets/[name].[hash].js`,
+        chunkFileNames: `assets/[name].[hash].js`,
+        assetFileNames: `assets/[name].[hash].[ext]`,
+      },
+    },
+  },
 });

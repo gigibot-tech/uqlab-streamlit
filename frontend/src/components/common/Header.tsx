@@ -30,7 +30,10 @@ export function Header() {
   const navItems: {
     title: string;
     path: string;
-  }[] = [{ title: "Items", path: "/items" }];
+  }[] = [
+    { title: "Items", path: "/items" },
+    { title: "Uncertainty Classification", path: "/uncertainty" },
+  ];
 
   if (currentUser?.is_superuser) {
     navItems.push({ title: "Admin", path: "/admin" });
