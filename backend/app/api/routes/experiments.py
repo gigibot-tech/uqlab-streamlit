@@ -90,14 +90,33 @@ class ExperimentResponse(BaseModel):
     results_path: str | None
 
 
+# In-memory storage for no-auth experiments (no database required)
+_mock_experiments: dict[str, dict] = {}
+
 @router.post("/no-auth", response_model=ExperimentResponse)
 async def create_experiment_no_auth(
     experiment: ExperimentCreate,
-    session: SessionDep,
 ) -> Any:
-    """Create experiment without authentication (for local testing)."""
-    user = get_or_create_test_user(session)
-    return await _create_experiment_impl(experiment, session, user)
+    """Create experiment without authentication or database (for local testing)."""
+    exp_id = str(uuid.uuid4())
+    now = datetime.utcnow()
+    
+    mock_exp = {
+        "id": exp_id,
+        "name": experiment.name,
+        "status": JobStatus.QUEUED,
+        "progress": 0.0,
+        "created_at": now.isoformat(),
+        "started_at": None,
+        "completed_at": None,
+        "error_message": None,
+        "aleatoric_auroc": None,
+        "epistemic_auroc": None,
+        "results_path": None,
+    }
+    
+    _mock_experiments[exp_id] = mock_exp
+    return mock_exp
 
 
 @router.post("", response_model=ExperimentResponse)
@@ -167,13 +186,12 @@ async def _create_experiment_impl(
 
 @router.get("/no-auth", response_model=list[ExperimentResponse])
 async def list_experiments_no_auth(
-    session: SessionDep,
     skip: int = 0,
     limit: int = 100,
 ) -> Any:
-    """List all experiments without authentication (for local testing)."""
-    user = get_or_create_test_user(session)
-    return await _list_experiments_impl(session, user, skip, limit)
+    """List all experiments without authentication or database (for local testing)."""
+    experiments = list(_mock_experiments.values())
+    return experiments[skip:skip+limit]
 
 
 @router.get("", response_model=list[ExperimentResponse])
