@@ -66,8 +66,9 @@ class Settings(BaseSettings):
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
         if self.USE_SQLITE:
-            # In-memory SQLite - fast, no setup needed
-            return "sqlite:///:memory:"
+            # File-based SQLite - persists across restarts
+            db_path = Path("/tmp/walaris_dev.db")
+            return f"sqlite:///{db_path}"
         else:
             # PostgreSQL for production persistence
             return f"postgresql+psycopg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"

@@ -35,6 +35,25 @@ class DirectExecutor(TrainingExecutor):
                 sys.path.insert(0, path)
         
         logger.info(f"Added to sys.path: {scripts_dir}, {project_root}")
+        
+        # Validate script exists
+        if not script_path.exists():
+            raise FileNotFoundError(f"ML script not found: {script_path}")
+        logger.info(f"✅ ML script found at: {script_path}")
+        
+        # Pre-flight check: verify imports work
+        self._verify_imports()
+    
+    def _verify_imports(self):
+        """Verify that all required modules can be imported."""
+        try:
+            # Test critical imports
+            import uq_classification
+            from src.data.cifar10n_loader import CIFAR10NDataset
+            logger.info("✅ Pre-flight check passed: All required modules can be imported")
+        except ImportError as e:
+            logger.error(f"❌ Pre-flight check failed: {e}", exc_info=True)
+            raise RuntimeError(f"Missing required dependencies: {e}") from e
 
     async def execute(
         self, config_path: Path, output_dir: Path, progress_callback: Callable[[ProgressUpdate], None]
@@ -92,12 +111,15 @@ class DirectExecutor(TrainingExecutor):
         self, config_path: Path, output_dir: Path, progress_callback: Callable[[ProgressUpdate], None]
     ) -> TrainingResult:
         """Run training synchronously (called in thread pool)."""
-        # Import the main function
-        from run_fast_uncertainty_classification import main
-        
         # Set up sys.argv to simulate command line args
         original_argv = sys.argv.copy()
+        original_stdout = sys.stdout
+        original_stderr = sys.stderr
+        
         try:
+            # Import the main function (do this inside try block to catch import errors)
+            from run_fast_uncertainty_classification import main
+            
             sys.argv = [
                 str(self.script_path),
                 "--config", str(config_path),
@@ -108,20 +130,37 @@ class DirectExecutor(TrainingExecutor):
             progress_callback(ProgressUpdate(
                 progress=0.1,
                 stage=TrainingStage.LOADING_DATA,
-                message="Loading data...",
+                message="Initializing training...",
                 epoch=None,
                 total_epochs=None
             ))
             
             # Call the main function
+            logger.info("Starting ML training script execution...")
             main()
+            logger.info("ML training script completed successfully")
+            
+            # Final progress update
+            progress_callback(ProgressUpdate(
+                progress=0.95,
+                stage=TrainingStage.SAVING_RESULTS,
+                message="Reading results...",
+                epoch=None,
+                total_epochs=None
+            ))
             
             # Read results
             return self._read_results(output_dir)
             
+        except ImportError as e:
+            error_msg = f"Failed to import training script: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            raise RuntimeError(error_msg) from e
         finally:
-            # Restore original sys.argv
+            # Always restore original state
             sys.argv = original_argv
+            sys.stdout = original_stdout
+            sys.stderr = original_stderr
 
     def _read_results(self, output_dir: Path) -> TrainingResult:
         """Read results from summary.json."""

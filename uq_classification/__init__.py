@@ -42,7 +42,11 @@ GROUP_NAMES = {
 
 # Import key components for easy access
 from .utils import set_seed, auto_device, dino_transform
-from .models import FeatureDataset, FeatureDropoutMLP
+from .models import EmbeddingDataset, EmbeddingDropoutMLP
+
+# Aliases for backward compatibility
+FeatureDataset = EmbeddingDataset
+FeatureDropoutMLP = EmbeddingDropoutMLP
 from .data_loader import (
     SplitSpec,
     sample_indices_for_fast_pilot,
