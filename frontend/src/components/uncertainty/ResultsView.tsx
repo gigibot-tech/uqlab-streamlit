@@ -7,16 +7,16 @@ interface ResultsViewProps {
 }
 
 export default function ResultsView({ experimentId }: ResultsViewProps) {
-  const { data: experiment, isLoading, refetch } = useQuery({
+  const { data: experiment, isLoading } = useQuery({
     queryKey: ["experiment", experimentId],
     queryFn: async () => {
       const response = await fetch(`/api/v1/experiments/${experimentId}`);
       if (!response.ok) throw new Error("Failed to fetch experiment");
       return response.json();
     },
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // Refetch every 2 seconds if running
-      return data?.status === "running" ? 2000 : false;
+      return query.state.data?.status === "running" ? 2000 : false;
     },
   });
 

@@ -135,7 +135,7 @@ export default function ExperimentConfig({ onExperimentCreated }: ExperimentConf
               id="epochs"
               label="Training Epochs"
               value={formData.epochs}
-              onChange={(e, { value }) => setFormData({ ...formData, epochs: value || 12 })}
+              onChange={(_, { value }) => setFormData({ ...formData, epochs: Number(value) || 12 })}
               min={1}
               max={100}
             />
@@ -144,7 +144,7 @@ export default function ExperimentConfig({ onExperimentCreated }: ExperimentConf
               id="under_train_per_class"
               label="Under-supported Samples/Class"
               value={formData.under_train_per_class}
-              onChange={(e, { value }) => setFormData({ ...formData, under_train_per_class: value || 50 })}
+              onChange={(_, { value }) => setFormData({ ...formData, under_train_per_class: Number(value) || 50 })}
               min={10}
               max={500}
             />
@@ -153,7 +153,7 @@ export default function ExperimentConfig({ onExperimentCreated }: ExperimentConf
               id="regular_train_per_class"
               label="Regular Samples/Class"
               value={formData.regular_train_per_class}
-              onChange={(e, { value }) => setFormData({ ...formData, regular_train_per_class: value || 300 })}
+              onChange={(_, { value }) => setFormData({ ...formData, regular_train_per_class: Number(value) || 300 })}
               min={50}
               max={1000}
             />
@@ -162,7 +162,7 @@ export default function ExperimentConfig({ onExperimentCreated }: ExperimentConf
               id="mc_passes"
               label="MC Dropout Passes"
               value={formData.mc_passes}
-              onChange={(e, { value }) => setFormData({ ...formData, mc_passes: value || 20 })}
+              onChange={(_, { value }) => setFormData({ ...formData, mc_passes: Number(value) || 20 })}
               min={5}
               max={100}
             />
