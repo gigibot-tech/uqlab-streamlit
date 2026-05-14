@@ -1,10 +1,13 @@
 """Training orchestrator - Facade for training workflow."""
 import asyncio
+import logging
 import uuid
 import yaml
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 from app.domain.models import TrainingConfig
 from app.domain.value_objects import ProgressUpdate
@@ -49,18 +52,28 @@ class TrainingOrchestrator:
             # Update status to running
             self.repository.update_status(experiment_id, JobStatus.RUNNING, 0.0)
 
+            # Get the event loop for scheduling tasks from thread
+            loop = asyncio.get_running_loop()
+
             # Execute training with WebSocket broadcasting
             def progress_callback(update: ProgressUpdate):
-                # Update database
+                # Update database (synchronous)
                 self.repository.update_status(experiment_id, JobStatus.RUNNING, update.progress, update.message)
-                # Broadcast via WebSocket (fire and forget)
-                asyncio.create_task(broadcast_progress(str(experiment_id), {
-                    "progress": update.progress,
-                    "stage": update.stage,
-                    "message": update.message,
-                    "epoch": update.epoch,
-                    "total_epochs": update.total_epochs
-                }))
+                # Broadcast via WebSocket (schedule on event loop from thread)
+                try:
+                    asyncio.run_coroutine_threadsafe(
+                        broadcast_progress(str(experiment_id), {
+                            "progress": update.progress,
+                            "stage": update.stage,
+                            "message": update.message,
+                            "epoch": update.epoch,
+                            "total_epochs": update.total_epochs
+                        }),
+                        loop
+                    )
+                except Exception as e:
+                    # Don't fail training if WebSocket broadcast fails
+                    logger.warning(f"Failed to broadcast progress: {e}")
 
             result = await self.executor.execute(config_path, output_dir, progress_callback)
 
