@@ -20,6 +20,9 @@ Modules:
     - attribution_signals: Attribution-based uncertainty signal computation
     - evaluation: Model evaluation metrics (AUROC, F1, confusion matrix)
     - utils: Helper functions (seed setting, device management, transforms)
+    - unified_tracker: Unified experiment tracking (MLflow/JSON)
+    - decision_boundary_viz: Decision boundary visualization tools
+    - streamlit_viz_app: Interactive Streamlit dashboard for visualizations
 
 Reused from src/:
     - src.metrics.mc_dropout_uq: Predictive uncertainty metrics
@@ -28,7 +31,7 @@ Reused from src/:
     - src.data.cifar10n_loader: CIFAR-10N dataset loading
 """
 
-__version__ = "2.0.0"
+__version__ = "2.1.0"
 
 # Group constants used throughout the package
 GROUP_CLEAN = 0
@@ -71,6 +74,17 @@ from .evaluation import (
     save_per_sample_csv,
 )
 
+# Visualization and tracking components
+from .unified_tracker import ExperimentTracker
+from .decision_boundary_viz import (
+    plot_decision_boundary,
+    visualize_checkpoint,
+    visualize_checkpoints_batch,
+    reduce_dimensions,
+    create_meshgrid,
+    load_checkpoint,
+)
+
 __all__ = [
     # Constants
     "GROUP_CLEAN",
@@ -104,6 +118,15 @@ __all__ = [
     "evaluate_three_way_classification",
     "build_results_markdown",
     "save_per_sample_csv",
+    # Experiment tracking
+    "ExperimentTracker",
+    # Visualization
+    "plot_decision_boundary",
+    "visualize_checkpoint",
+    "visualize_checkpoints_batch",
+    "reduce_dimensions",
+    "create_meshgrid",
+    "load_checkpoint",
 ]
 
 # Made with Bob
