@@ -147,7 +147,8 @@ def main():
             col1, col2 = st.columns(2)
             with col1:
                 st.markdown("**Available Classes:**")
-                st.write(", ".join([f"{i}:{name}" for i, name in enumerate(class_names)]))
+                # Display with consistent formatting (space after colon)
+                st.write(", ".join([f"{i}: {name}" for i, name in enumerate(class_names)]))
             with col2:
                 st.metric("Total Classes", "10")
             

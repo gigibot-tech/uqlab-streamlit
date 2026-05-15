@@ -146,7 +146,8 @@ def render_epistemic_config(
             help="These classes will have limited training samples, creating epistemic uncertainty"
         )
         if under_supported_list:
-            st.success(f"✅ Selected: {', '.join([f'{i}:{class_names[i]}' for i in under_supported_list])}")
+            # Display selected classes with consistent formatting (space after colon)
+            st.success(f"✅ Selected: {', '.join([f'{i}: {class_names[i]}' for i in under_supported_list])}")
             under_supported = ",".join(map(str, under_supported_list))
         else:
             st.warning("⚠️ Please select at least one class")
