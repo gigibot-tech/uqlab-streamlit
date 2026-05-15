@@ -146,10 +146,7 @@ def render_epistemic_config(
             help="These classes will have limited training samples, creating epistemic uncertainty",
             placeholder="Click to select classes..."
         )
-        st.caption("💡 Selection updates when you submit the form")
         if under_supported_list:
-            # Display selected classes with consistent formatting (space after colon)
-            st.success(f"✅ Selected: {', '.join([f'{i}: {class_names[i]}' for i in under_supported_list])}")
             under_supported = ",".join(map(str, under_supported_list))
         else:
             st.warning("⚠️ Please select at least one class")
@@ -232,8 +229,6 @@ def render_aleatoric_config(
     
     if noise_source == "Use CIFAR-10N noise":
         # Use noise_type from top section
-        st.success(f"✅ Using pre-defined noise: **{noise_type}**")
-        st.caption("(Selected in Dataset Overview above)")
         custom_noise_rate = 0
         
         # Fetch stats for the selected noise type
@@ -541,8 +536,6 @@ def render_evaluation_config(
             st.warning("⚠️ Please select at least one signal")
             # Default to all signals if none selected
             selected_signals = [s for signals in available_signals.values() for s in signals]
-        
-        st.caption(f"✅ Selected {len(selected_signals)} signal(s)")
     
     eval_per_group = st.number_input(
         "Evaluation samples per group",
