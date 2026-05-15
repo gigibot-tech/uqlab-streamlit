@@ -328,6 +328,64 @@ scorer = UncertaintyScorer(
     uncertainty_signals=['msp_uncertainty', 'predictive_entropy', 'mutual_info']
 )
 
+# ============================================================================
+# EXAMPLE: DualXDA Attribution Integration
+# ============================================================================
+#
+# This example shows how to integrate DualXDA attribution signals with the
+# custom scorer for watsonx.ai deployment.
+#
+# Usage:
+#   from src.triage.dualxda_axioms import DualXDATracer
+#   from uq_classification.attribution_signals import compute_attribution_structure_signals
+#
+#   # 1. Create DualXDA tracer
+#   tracer = DualXDATracer(
+#       model=model,
+#       train_dataset=train_dataset,
+#       layer_name="classifier",
+#       cache_dir="./cache",
+#       device=device
+#   )
+#
+#   # 2. Create attribution function wrapper
+#   def dualxda_attribution_fn(embeddings, logits):
+#       #Wrapper for DualXDA attribution signals.
+#       predictions = torch.softmax(logits, dim=1)
+#
+#       signals = compute_attribution_structure_signals(
+#           tracer=tracer,
+#           model=model,
+#           eval_features=embeddings,
+#           mean_predictions=predictions,
+#           train_dataset=train_dataset,
+#           device=device,
+#           batch_size=32,
+#           top_k=10,
+#           num_classes=10
+#       )
+#
+#       # Convert to uncertainty format (higher = more uncertain)
+#       return {
+#           'inverse_mass': 1.0 / (signals['mass'] + 1e-6),
+#           'inverse_coherence': 1.0 / (signals['coherence'] + 1e-6),
+#           'dominance': signals['dominance'],
+#           'label_disagreement': signals['label_disagreement'],
+#           'noisy_support_ratio': signals['noisy_support_ratio'],
+#           'attribution_concentration': signals['attribution_concentration'],
+#           'cross_class_support': signals['cross_class_support'],
+#       }
+#
+#   # 3. Create scorer with DualXDA attribution
+#   scorer = UncertaintyScorer(
+#       model=model,
+#       mc_passes=20,
+#       attribution_fn=dualxda_attribution_fn  # Plug in DualXDA!
+#   )
+#
+#   # 4. Deploy to watsonx.ai - scorer computes all signals in single API call
+# ============================================================================
+
 def score(input_data: List[List[float]]) -> Dict[str, Any]:
     '''
     Main scoring function called by watsonx.ai.
