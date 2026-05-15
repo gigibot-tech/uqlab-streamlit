@@ -286,10 +286,10 @@ def main():
             st.markdown("---")
             
             # ========== PHASE 3: EVALUATION DATASET EXPLANATION ==========
-            render_evaluation_strategy(eval_per_group)
+            render_evaluation_strategy(eval_per_group, under_supported, class_names)
             
             # ========== PHASE 3: ROC CALCULATION EXAMPLE ==========
-            render_roc_explanation()
+            render_roc_explanation(under_supported, class_names, noise_source, custom_noise_rate)
             
             st.markdown("---")
             submitted = st.form_submit_button("🚀 Create Experiment", type="primary", use_container_width=True)

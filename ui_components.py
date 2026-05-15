@@ -567,12 +567,18 @@ def render_evaluation_config() -> Tuple[int, List[str], int]:
     return mc_passes, selected_signals, eval_per_group
 
 
-def render_evaluation_strategy(eval_per_group: int) -> None:
+def render_evaluation_strategy(
+    eval_per_group: int,
+    under_supported: str,
+    class_names: list[str]
+) -> None:
     """
-    Render evaluation dataset strategy explanation.
+    Render evaluation dataset strategy explanation with dynamic configuration.
     
     Args:
         eval_per_group: Number of samples per evaluation group
+        under_supported: Under-supported classes configuration (e.g., "0,1" or "random:2")
+        class_names: List of class names for display
     """
     st.markdown("### 🎯 Evaluation Dataset Strategy")
     
@@ -582,12 +588,20 @@ def render_evaluation_strategy(eval_per_group: int) -> None:
     The evaluation dataset is **separate from training** and consists of three balanced groups:
     """)
     
+    # Parse under-supported classes for display
+    if under_supported.startswith("random:"):
+        num_under = int(under_supported.split(":")[1])
+        under_classes_display = f"Random {num_under} classes (selected at runtime)"
+    else:
+        under_indices = [int(idx.strip()) for idx in under_supported.split(",") if idx.strip()]
+        under_classes_display = ", ".join([f"{idx} ({class_names[idx]})" for idx in under_indices])
+    
     col1, col2, col3 = st.columns(3)
     
     with col1:
         st.markdown("#### 🟢 Clean Group")
         st.markdown(f"""
-        - **{eval_per_group}** samples
+        - **{eval_per_group} samples**
         - From **well-supported** classes
         - **Clean labels** (no noise)
         - Purpose: Baseline performance
@@ -596,7 +610,7 @@ def render_evaluation_strategy(eval_per_group: int) -> None:
     with col2:
         st.markdown("#### 🟡 Aleatoric Group")
         st.markdown(f"""
-        - **{eval_per_group}** samples
+        - **{eval_per_group} samples**
         - From **well-supported** classes
         - **Noisy labels** (data uncertainty)
         - Purpose: Test noise detection
@@ -605,8 +619,9 @@ def render_evaluation_strategy(eval_per_group: int) -> None:
     with col3:
         st.markdown("#### 🔴 Epistemic Group")
         st.markdown(f"""
-        - **{eval_per_group}** samples
-        - From **under-supported** classes
+        - **{eval_per_group} samples**
+        - From **under-supported** classes:
+          - {under_classes_display}
         - **Clean labels** (model uncertainty)
         - Purpose: Test OOD detection
         """)
@@ -616,17 +631,61 @@ def render_evaluation_strategy(eval_per_group: int) -> None:
     """)
 
 
-def render_roc_explanation() -> None:
+def render_roc_explanation(
+    under_supported: str,
+    class_names: list[str],
+    noise_source: str,
+    custom_noise_rate: float
+) -> None:
     """
-    Render ROC calculation walkthrough in collapsible expander.
+    Render ROC calculation walkthrough in collapsible expander with configuration context.
+    
+    Args:
+        under_supported: Under-supported classes configuration
+        class_names: List of class names for display
+        noise_source: Noise source selection ("Use CIFAR-10N noise" or "Random noise")
+        custom_noise_rate: Custom noise rate if random noise is used
     """
     with st.expander("📐 Understanding ROC Calculation (Click to Expand)"):
         st.markdown("### How We Calculate AUROC Scores")
         
-        st.markdown("""
+        # Configuration context
+        st.info("""
         **ROC (Receiver Operating Characteristic)** measures how well uncertainty signals
-        distinguish between different sample groups.
+        distinguish between different sample groups **based on your configuration**.
         """)
+        
+        # Parse under-supported classes for display
+        if under_supported.startswith("random:"):
+            num_under = int(under_supported.split(":")[1])
+            under_classes_display = f"random {num_under} classes"
+        else:
+            under_indices = [int(idx.strip()) for idx in under_supported.split(",") if idx.strip()]
+            under_classes_display = ", ".join([f"{class_names[idx]}" for idx in under_indices])
+        
+        # Display configuration context
+        st.markdown("#### 🎯 Your Configuration")
+        config_col1, config_col2 = st.columns(2)
+        with config_col1:
+            st.markdown(f"""
+            **Epistemic (OOD) Detection:**
+            - Under-supported classes: {under_classes_display}
+            - These classes will have fewer training samples
+            """)
+        with config_col2:
+            noise_desc = "CIFAR-10N synthetic noise" if noise_source == "Use CIFAR-10N noise" else f"{custom_noise_rate}% random label flipping"
+            st.markdown(f"""
+            **Aleatoric (Noise) Detection:**
+            - Noise type: {noise_desc}
+            - Applied to well-supported classes
+            """)
+        
+        st.warning("""
+        ⚠️ **Important**: AUROC scores are computed based on the epistemic (under-supported classes)
+        and aleatoric (noise) settings you configured above. Different configurations will yield different results.
+        """)
+        
+        st.markdown("---")
         
         # Step-by-step explanation
         st.markdown("#### Step 1: Collect Uncertainty Scores")
