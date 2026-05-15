@@ -223,14 +223,6 @@ def main():
             ```
             """)
             
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("Total Training", f"{total_train_preview:,}")
-            with col2:
-                st.metric("Under-supported", f"{under_samples_preview:,}", f"{num_under_preview} classes")
-            with col3:
-                st.metric("Regular (Clean+Noisy)", f"{regular_samples_preview:,}", f"{num_regular_preview} classes")
-            
             st.markdown("---")
             
             # ========== MODEL & TRAINING CONFIGURATION ==========
