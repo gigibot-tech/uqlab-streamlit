@@ -249,23 +249,6 @@ def main():
             
             mc_passes, selected_signals, eval_per_group = render_evaluation_config()
             
-            # ========== COMPLETE DATASET COMPARISON (now that eval_per_group is defined) ==========
-            st.markdown("---")
-            st.markdown("### 📊 Complete Dataset Configuration")
-            st.info("Full dataset breakdown including evaluation groups")
-            
-            render_dataset_comparison(
-                under_supported,
-                under_train_per_class,
-                regular_train_per_class,
-                noise_source,
-                stats,
-                noise_type,
-                custom_noise_rate,
-                class_names,
-                eval_per_group
-            )
-            
             # Update evaluation progress
             st.session_state.config_progress['evaluation'] = mc_passes > 0
             
