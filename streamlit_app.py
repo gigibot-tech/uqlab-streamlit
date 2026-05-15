@@ -185,10 +185,91 @@ def main():
             st.markdown("""
             <div class='connection-box'>
                 <div class='connection-text'>
-                    💡 Epistemic settings above directly affect the training data distribution below
+                    💡 Epistemic & Aleatoric settings above directly affect the training data distribution below
                 </div>
             </div>
             """, unsafe_allow_html=True)
+            
+            # Get noise rate for dataset comparison
+            if noise_source == "Use CIFAR-10N noise" and stats:
+                noise_rate_for_comparison = stats.get('noise_rate', 0)
+            else:
+                noise_rate_for_comparison = custom_noise_rate / 100.0
+            
+            # Note: We'll show a preview here, but full details come after eval_per_group is defined
+            col_title, col_refresh = st.columns([4, 1])
+            with col_title:
+                st.markdown("### 📊 Dataset Configuration Preview")
+            with col_refresh:
+                if st.button("🔄 Refresh", key="refresh_preview", help="Update preview with current form values"):
+                    st.rerun()
+            
+            # Parse under-supported classes for preview
+            if under_supported.startswith("random:"):
+                num_under_preview = int(under_supported.split(":")[1])
+            else:
+                num_under_preview = len(under_supported.split(",")) if under_supported else 2
+            
+            num_regular_preview = 10 - num_under_preview
+            under_samples_preview = num_under_preview * under_train_per_class
+            regular_samples_preview = num_regular_preview * regular_train_per_class
+            total_train_preview = under_samples_preview + regular_samples_preview
+            
+            st.markdown(f"""
+            **Training Dataset Preview:**
+            ```
+            Under-supported: {num_under_preview} classes × {under_train_per_class} samples = {under_samples_preview:,} samples
+            Regular classes: {num_regular_preview} classes × {regular_train_per_class} samples = {regular_samples_preview:,} samples
+              ├─ Clean: {regular_samples_preview:,} × {(1-noise_rate_for_comparison):.1%} = {int(regular_samples_preview * (1-noise_rate_for_comparison)):,} samples
+              └─ Noisy: {regular_samples_preview:,} × {noise_rate_for_comparison:.1%} = {int(regular_samples_preview * noise_rate_for_comparison):,} samples
+            
+            Total Training = {under_samples_preview:,} + {regular_samples_preview:,} = {total_train_preview:,} samples
+            ```
+            """)
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Total Training", f"{total_train_preview:,}")
+            with col2:
+                st.metric("Under-supported", f"{under_samples_preview:,}", f"{num_under_preview} classes")
+            with col3:
+                st.metric("Regular (Clean+Noisy)", f"{regular_samples_preview:,}", f"{num_regular_preview} classes")
+            
+            st.markdown("---")
+            
+            # ========== MODEL & TRAINING CONFIGURATION ==========
+            st.markdown("### 🧠 Model & Training Configuration")
+            st.markdown("""
+            <div style="background-color: rgba(76, 175, 80, 0.05); padding: 8px; border-radius: 4px; margin-bottom: 10px;">
+                <small>📊 Training data shaped by dataset configuration above</small>
+            </div>
+            """, unsafe_allow_html=True)
+        
+            st.markdown("**Model Architecture**")
+            dinov2_model, hidden_dim, dropout = render_model_config()
+            
+            epochs, learning_rate, weight_decay, train_batch_size = render_training_config()
+            
+            # Update model progress
+            st.session_state.config_progress['model'] = True  # Complete if model selected
+            
+            st.markdown("---")
+            
+            # ========== EVALUATION CONFIGURATION ==========
+            st.markdown("### 📊 Evaluation Configuration")
+            st.info("💡 Configure how uncertainty is measured and evaluated")
+            
+            mc_passes, selected_signals, eval_per_group = render_evaluation_config()
+            
+            # ========== COMPLETE DATASET COMPARISON (now that eval_per_group is defined) ==========
+            st.markdown("---")
+            col_title2, col_refresh2 = st.columns([4, 1])
+            with col_title2:
+                st.markdown("### 📊 Complete Dataset Configuration")
+            with col_refresh2:
+                if st.button("🔄 Refresh", key="refresh_complete", help="Update configuration with current form values"):
+                    st.rerun()
+            st.info("Full dataset breakdown including evaluation groups")
             
             render_dataset_comparison(
                 under_supported,
@@ -198,87 +279,9 @@ def main():
                 stats,
                 noise_type,
                 custom_noise_rate,
-                class_names
+                class_names,
+                eval_per_group
             )
-            
-            st.markdown("---")
-            
-            # ========== MODEL & TRAINING + DATASET OVERVIEW (SIDE BY SIDE) ==========
-            col_training, col_overview = st.columns([2, 1])
-            
-            # Left column: Model & Training Configuration
-            with col_training:
-                st.markdown("### 🧠 Model & Training Configuration")
-                st.markdown("""
-                <div style="background-color: rgba(76, 175, 80, 0.05); padding: 8px; border-radius: 4px; margin-bottom: 10px;">
-                    <small>📊 Training data shaped by epistemic configuration above</small>
-                </div>
-                """, unsafe_allow_html=True)
-            
-                st.markdown("**Model Architecture**")
-                dinov2_model, hidden_dim, dropout = render_model_config()
-                
-                epochs, learning_rate, weight_decay, train_batch_size = render_training_config()
-                
-                # Update model progress
-                st.session_state.config_progress['model'] = True  # Complete if model selected
-            
-            # Right column: Dataset Overview
-            with col_overview:
-                st.markdown("### 📈 Dataset Overview")
-                st.caption("Real-time sync with settings")
-                
-                # Calculate expected dataset sizes based on form inputs
-                # Parse under_supported to get the count
-                if under_supported.startswith("random:"):
-                    num_under = int(under_supported.split(":")[1])
-                else:
-                    num_under = len(under_supported.split(",")) if under_supported else 2
-                
-                expected_under_samples = num_under * under_train_per_class
-                expected_regular_samples = (10 - num_under) * regular_train_per_class
-                expected_total_train = expected_under_samples + expected_regular_samples
-                
-                # Display metrics in compact format
-                st.metric(
-                    label="Expected Train Samples",
-                    value=f"{expected_total_train:,}",
-                    help="Total training samples"
-                )
-                
-                st.metric(
-                    label="Under-supported",
-                    value=f"{expected_under_samples:,}",
-                    help="Epistemic uncertainty samples"
-                )
-                
-                st.metric(
-                    label="Regular Samples",
-                    value=f"{expected_regular_samples:,}",
-                    help="Well-supported classes"
-                )
-                
-                if noise_source == "Use CIFAR-10N noise" and stats:
-                    noise_rate = stats.get('noise_rate', 0) * 100
-                    st.metric(
-                        label="Noise Rate",
-                        value=f"{noise_rate:.1f}%",
-                        help=f"From CIFAR-10N {noise_type}"
-                    )
-                else:
-                    st.metric(
-                        label="Noise Rate",
-                        value=f"{custom_noise_rate}%",
-                        help="Random label flipping"
-                    )
-            
-            st.markdown("---")
-            
-            # ========== EVALUATION CONFIGURATION ==========
-            st.markdown("### 📊 Evaluation Configuration")
-            st.info("💡 Configure how uncertainty is measured and evaluated")
-            
-            mc_passes, selected_signals, eval_per_group = render_evaluation_config()
             
             # Update evaluation progress
             st.session_state.config_progress['evaluation'] = mc_passes > 0
