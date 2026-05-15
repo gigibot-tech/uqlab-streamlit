@@ -194,38 +194,9 @@ def render_epistemic_strength(
         under_train_per_class: Samples per under-supported class
         regular_train_per_class: Samples per regular class
     """
-    st.markdown("**📊 Epistemic Strength Analysis**")
-    
-    num_under = len(under_supported_list)
-    baseline_samples = regular_train_per_class
-    under_samples = under_train_per_class
-    
-    # Calculate strength (scarcity ratio)
-    scarcity_ratio = 1 - (under_samples / baseline_samples)
-    strength_pct = scarcity_ratio * 100
-    
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        st.markdown(f"**Strength: {strength_pct:.0f}%**")
-        st.progress(strength_pct / 100)
-        
-        strength_label = (
-            "Very High" if strength_pct > 80 else
-            "High" if strength_pct > 60 else
-            "Moderate" if strength_pct > 40 else
-            "Low"
-        )
-        st.caption(
-            f"🎯 {strength_label} epistemic uncertainty "
-            f"({under_samples} vs {baseline_samples} samples)"
-        )
-    
-    with col2:
-        st.metric(
-            "Selected Classes",
-            f"{num_under}/10",
-            delta=f"{num_under} under-supported"
-        )
+    # This function is now deprecated - strength info shown in Dataset Configuration
+    # Keeping function signature for backward compatibility but not rendering anything
+    pass
 
 
 def render_aleatoric_config(
@@ -321,56 +292,9 @@ def render_aleatoric_strength(
         noise_type: Type of noise pattern
         custom_noise_rate: Custom noise rate if applicable
     """
-    st.markdown("**📊 Aleatoric Strength Analysis**")
-    
-    if noise_source == "Use CIFAR-10N noise" and stats:
-        noise_rate = stats.get('noise_rate', 0) * 100
-        
-        col1, col2 = st.columns([2, 1])
-        with col1:
-            st.markdown(f"**Average Noise Rate: {noise_rate:.1f}%**")
-            st.progress(noise_rate / 100)
-            
-            pattern_type = "2-label confusion" if "worse" in noise_type or "aggre" in noise_type else "all-label random"
-            st.caption(
-                f"📊 Pattern: {pattern_type}\n"
-                f"Source: CIFAR-10N {noise_type}"
-            )
-        
-        with col2:
-            st.metric(
-                "Noise Strength",
-                f"{noise_rate:.1f}%",
-                delta="Fixed (dataset)"
-            )
-        
-        # Noise pattern explanation
-        with st.expander("ℹ️ Understanding Noise Patterns"):
-            st.markdown("""
-            **2-Label Confusion** (worse_label, aggre_label):
-            - Labels confused between similar classes
-            - Example: cat ↔ dog, truck ↔ automobile
-            - More realistic, harder to detect
-            
-            **All-Label Random** (random_label1/2/3):
-            - Labels randomly flipped to any class
-            - Less realistic, easier to detect
-            - Useful for baseline comparisons
-            """)
-    
-    else:  # Custom noise
-        col1, col2 = st.columns([2, 1])
-        with col1:
-            st.markdown(f"**Custom Noise Rate: {custom_noise_rate}%**")
-            st.progress(custom_noise_rate / 100)
-            st.caption("⚠️ Random label flipping (all-label pattern)")
-        
-        with col2:
-            st.metric(
-                "Noise Strength",
-                f"{custom_noise_rate}%",
-                delta="Custom"
-            )
+    # This function is now deprecated - strength info shown in Dataset Configuration
+    # Keeping function signature for backward compatibility but not rendering anything
+    pass
 
 
 def render_dataset_comparison(
@@ -381,94 +305,141 @@ def render_dataset_comparison(
     stats: Optional[Dict],
     noise_type: str,
     custom_noise_rate: float,
-    class_names: List[str]
+    class_names: List[str],
+    eval_per_group: int
 ) -> None:
     """
-    Render side-by-side training vs ground truth dataset comparison.
+    Render dynamic dataset calculations based on user configuration.
+    All values are computed from actual configuration parameters - no hardcoded examples.
     
     Args:
         under_supported: Under-supported classes specification
         under_train_per_class: Samples per under-supported class
         regular_train_per_class: Samples per regular class
         noise_source: Source of noise
-        stats: Dataset statistics
+        stats: Dataset statistics (only for total dataset info)
         noise_type: Type of noise pattern
         custom_noise_rate: Custom noise rate
         class_names: List of class names
+        eval_per_group: Samples per evaluation group
     """
     st.markdown("---")
-    st.markdown("### 📈 Dataset Comparison: Training vs Ground Truth")
+    st.markdown("### 📊 Dataset Configuration (Fully Dynamic)")
     
-    # Calculate stats
+    # Parse under-supported classes and get actual indices
     if under_supported.startswith("random:"):
         num_under = int(under_supported.split(":")[1])
+        under_supported_list = []  # Random selection, indices not yet determined
+        under_classes_display = f"{num_under} randomly selected classes"
     else:
-        num_under = len(under_supported.split(",")) if under_supported else 2
-    
-    expected_under_samples = num_under * under_train_per_class
-    expected_regular_samples = (10 - num_under) * regular_train_per_class
-    expected_total_train = expected_under_samples + expected_regular_samples
-    
-    col_training, col_ground_truth = st.columns(2)
-    
-    # Training Dataset (Configured)
-    with col_training:
-        st.markdown("#### 🎯 Training Dataset (Configured)")
-        st.markdown("""
-        <div style='background: linear-gradient(135deg, rgba(255,152,0,0.1), rgba(255,152,0,0.05));
-                    padding: 20px; border-radius: 8px; border-left: 4px solid #FF9800;'>
-        """, unsafe_allow_html=True)
-        
-        st.metric("Total Samples", f"{expected_total_train:,}")
-        st.metric("Under-supported", f"{expected_under_samples:,}",
-                  delta=f"{num_under} classes")
-        st.metric("Regular Samples", f"{expected_regular_samples:,}",
-                  delta=f"{10-num_under} classes")
-        
-        if noise_source == "Use CIFAR-10N noise" and stats:
-            noise_rate = stats.get('noise_rate', 0) * 100
-            st.metric("Noise Rate", f"{noise_rate:.1f}%",
-                     delta="From CIFAR-10N")
+        under_supported_list = [int(x.strip()) for x in under_supported.split(",") if x.strip()]
+        num_under = len(under_supported_list)
+        # Show actual class names
+        if under_supported_list:
+            class_display = ", ".join([f"{i} ({class_names[i]})" for i in under_supported_list])
+            under_classes_display = class_display
         else:
-            st.metric("Noise Rate", f"{custom_noise_rate}%",
-                     delta="Custom flipping")
-        
-        st.markdown("</div>", unsafe_allow_html=True)
+            under_classes_display = "None selected"
     
-    # Ground Truth Dataset (Clean)
-    with col_ground_truth:
-        st.markdown("#### ✨ Ground Truth (Clean CIFAR-10)")
-        st.markdown("""
-        <div style='background: linear-gradient(135deg, rgba(76,175,80,0.1), rgba(76,175,80,0.05));
-                    padding: 20px; border-radius: 8px; border-left: 4px solid #4CAF50;'>
-        """, unsafe_allow_html=True)
-        
-        st.metric("Total Samples", "50,000")
-        st.metric("Per Class", "5,000", delta="Uniform")
-        st.metric("Distribution", "Balanced", delta="All classes")
-        st.metric("Noise Rate", "0%", delta="Clean labels")
-        
-        st.markdown("</div>", unsafe_allow_html=True)
+    num_regular = 10 - num_under
     
-    # Differences Summary
-    st.markdown("#### 🔍 Key Differences")
-    reduction_pct = (1 - expected_total_train / 50000) * 100
-    
-    # Get noise rate for differences
+    # Get actual noise rate from configuration
     if noise_source == "Use CIFAR-10N noise" and stats:
-        diff_noise_rate = stats.get('noise_rate', 0) * 100
+        noise_rate = stats.get('noise_rate', 0)
+        noise_source_display = f"CIFAR-10N {noise_type}"
     else:
-        diff_noise_rate = custom_noise_rate
+        noise_rate = custom_noise_rate / 100.0
+        noise_source_display = f"Random label flipping at {custom_noise_rate}%"
     
-    differences = [
-        f"📉 **{reduction_pct:.1f}% reduction** in dataset size ({expected_total_train:,} vs 50,000)",
-        f"⚖️ **{num_under} classes under-represented** (epistemic uncertainty)",
-        f"🎲 **{diff_noise_rate:.1f}% label noise** added (aleatoric uncertainty)",
-        f"🎯 **Training uses configured data**, evaluation uses separate clean samples"
-    ]
+    # Calculate training dataset sizes dynamically
+    under_samples = num_under * under_train_per_class
+    regular_clean_samples = int(num_regular * regular_train_per_class * (1 - noise_rate))
+    regular_noisy_samples = int(num_regular * regular_train_per_class * noise_rate)
+    total_regular_samples = num_regular * regular_train_per_class
+    total_train = under_samples + total_regular_samples
     
-    for diff in differences:
-        st.markdown(f"- {diff}")
+    # Calculate evaluation dataset sizes dynamically
+    total_eval = 3 * eval_per_group
+    
+    st.info("""
+    **CIFAR-10 Base Dataset:**
+    - Training: 50,000 samples (5,000 per class)
+    - Test: 10,000 samples (1,000 per class)
+    
+    Your configuration creates custom training and evaluation splits from this base.
+    """)
+    
+    # Show selected classes
+    st.markdown("#### 🎯 Class Distribution")
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.markdown(f"""
+        **Under-supported Classes ({num_under}):**
+        {under_classes_display}
+        """)
+    with col_b:
+        st.markdown(f"""
+        **Regular Classes ({num_regular}):**
+        All remaining classes
+        """)
+    
+    # Training Dataset Section
+    st.markdown("#### 🎯 Training Dataset (Based on Your Configuration)")
+    st.markdown(f"""
+    **Formula:** `Total = (Under-supported samples) + (Regular samples)`
+    
+    **Calculation:**
+    ```
+    Under-supported: {num_under} classes × {under_train_per_class} samples = {under_samples:,} samples
+    Regular classes: {num_regular} classes × {regular_train_per_class} samples = {total_regular_samples:,} samples
+      ├─ Clean: {total_regular_samples:,} × {(1-noise_rate):.1%} = {regular_clean_samples:,} samples
+      └─ Noisy: {total_regular_samples:,} × {noise_rate:.1%} = {regular_noisy_samples:,} samples
+    
+    Total Training = {under_samples:,} + {total_regular_samples:,} = {total_train:,} samples
+    ```
+    
+    **Noise Source:** {noise_source_display}
+    """)
+    
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Total Training", f"{total_train:,}")
+    with col2:
+        st.metric("Under-supported", f"{under_samples:,}",
+                  delta=f"{num_under} classes")
+    with col3:
+        st.metric("Regular (Clean+Noisy)", f"{total_regular_samples:,}",
+                  delta=f"{num_regular} classes")
+    
+    # Evaluation Dataset Section
+    st.markdown("#### 📊 Evaluation Dataset (3 Groups)")
+    st.markdown(f"""
+    **Formula:** `Total = 3 × {eval_per_group:,} samples per group`
+    
+    **Group Assignment:**
+    ```
+    🟢 Clean Group:      {eval_per_group:,} samples from regular classes (clean labels)
+    🟡 Aleatoric Group:  {eval_per_group:,} samples from regular classes (noisy labels)
+    🔴 Epistemic Group:  {eval_per_group:,} samples from under-supported classes (clean labels)
+    
+    Total Evaluation = 3 × {eval_per_group:,} = {total_eval:,} samples
+    ```
+    """)
+    
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Total Evaluation", f"{total_eval:,}")
+    with col2:
+        st.metric("🟢 Clean", f"{eval_per_group:,}")
+    with col3:
+        st.metric("🟡 Aleatoric", f"{eval_per_group:,}")
+    with col4:
+        st.metric("🔴 Epistemic", f"{eval_per_group:,}")
+    
+    st.warning("""
+    ⚠️ **Important**: Evaluation samples are **separate from training** and never overlap.
+    This ensures unbiased measurement of uncertainty detection capabilities.
+    """)
 
 
 def render_model_config() -> Tuple[str, int, float]:
@@ -573,7 +544,7 @@ def render_evaluation_strategy(
     class_names: list[str]
 ) -> None:
     """
-    Render evaluation dataset strategy explanation with dynamic configuration.
+    Render evaluation dataset strategy explanation with crystal-clear group assignment logic.
     
     Args:
         eval_per_group: Number of samples per evaluation group
@@ -582,52 +553,105 @@ def render_evaluation_strategy(
     """
     st.markdown("### 🎯 Evaluation Dataset Strategy")
     
-    st.info("""
-    **How Evaluation Works:**
-    
-    The evaluation dataset is **separate from training** and consists of three balanced groups:
-    """)
-    
     # Parse under-supported classes for display
     if under_supported.startswith("random:"):
         num_under = int(under_supported.split(":")[1])
         under_classes_display = f"Random {num_under} classes (selected at runtime)"
+        under_indices = []
     else:
         under_indices = [int(idx.strip()) for idx in under_supported.split(",") if idx.strip()]
+        num_under = len(under_indices)
         under_classes_display = ", ".join([f"{idx} ({class_names[idx]})" for idx in under_indices])
+    
+    num_regular = 10 - num_under
+    regular_classes_display = f"{num_regular} well-supported classes"
+    
+    st.info(f"""
+    **Evaluation Dataset Structure:**
+    
+    Total: **{3 * eval_per_group:,} samples** = 3 groups × {eval_per_group} samples each
+    
+    The evaluation dataset is **completely separate from training** and tests the model's
+    ability to detect different types of uncertainty.
+    """)
     
     col1, col2, col3 = st.columns(3)
     
     with col1:
         st.markdown("#### 🟢 Clean Group")
         st.markdown(f"""
-        - **{eval_per_group} samples**
-        - From **well-supported** classes
-        - **Clean labels** (no noise)
-        - Purpose: Baseline performance
+        **{eval_per_group} samples**
+        
+        **Source:**
+        - From **regular (well-supported)** classes
+        - These are the {regular_classes_display} that received full training
+        
+        **Labels:**
+        - ✅ **Clean** (no noise applied)
+        
+        **Purpose:**
+        - Baseline - model should be **confident**
+        - Low uncertainty expected
         """)
     
     with col2:
         st.markdown("#### 🟡 Aleatoric Group")
         st.markdown(f"""
-        - **{eval_per_group} samples**
-        - From **well-supported** classes
-        - **Noisy labels** (data uncertainty)
-        - Purpose: Test noise detection
+        **{eval_per_group} samples**
+        
+        **Source:**
+        - From **regular (well-supported)** classes
+        - Same classes as Clean group
+        
+        **Labels:**
+        - ⚠️ **Noisy** (noise applied)
+        - Intentionally mislabeled
+        
+        **Purpose:**
+        - Test if uncertainty signals detect **mislabeled data**
+        - High uncertainty expected (data quality issue)
         """)
     
     with col3:
         st.markdown("#### 🔴 Epistemic Group")
         st.markdown(f"""
-        - **{eval_per_group} samples**
+        **{eval_per_group} samples**
+        
+        **Source:**
         - From **under-supported** classes:
-          - {under_classes_display}
-        - **Clean labels** (model uncertainty)
-        - Purpose: Test OOD detection
+        - {under_classes_display}
+        
+        **Labels:**
+        - ✅ **Clean** (no noise)
+        - But model undertrained on these
+        
+        **Purpose:**
+        - Test if uncertainty signals detect **unfamiliar classes**
+        - High uncertainty expected (knowledge gap)
+        """)
+    
+    st.markdown("---")
+    st.markdown("#### 🔍 Key Insight: Two Types of Uncertainty")
+    
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.success("""
+        **🟡 Aleatoric (Data Uncertainty)**
+        - Regular classes + noisy labels
+        - Model knows the class but data is corrupted
+        - Question: Can we detect bad labels?
+        """)
+    with col_b:
+        st.error("""
+        **🔴 Epistemic (Model Uncertainty)**
+        - Under-supported classes + clean labels
+        - Data is correct but model hasn't learned enough
+        - Question: Can we detect knowledge gaps?
         """)
     
     st.warning("""
-    ⚠️ **Important**: Evaluation samples are **never used in training**. This ensures unbiased measurement of the model's uncertainty detection capabilities.
+    ⚠️ **Critical**: All evaluation samples are **held out from training**.
+    This ensures we measure true uncertainty detection, not memorization.
     """)
 
 
@@ -638,7 +662,7 @@ def render_roc_explanation(
     custom_noise_rate: float
 ) -> None:
     """
-    Render ROC calculation walkthrough in collapsible expander with configuration context.
+    Render ROC calculation walkthrough with crystal-clear configuration-based explanation.
     
     Args:
         under_supported: Under-supported classes configuration
@@ -646,98 +670,155 @@ def render_roc_explanation(
         noise_source: Noise source selection ("Use CIFAR-10N noise" or "Random noise")
         custom_noise_rate: Custom noise rate if random noise is used
     """
-    with st.expander("📐 Understanding ROC Calculation (Click to Expand)"):
-        st.markdown("### How We Calculate AUROC Scores")
-        
-        # Configuration context
-        st.info("""
-        **ROC (Receiver Operating Characteristic)** measures how well uncertainty signals
-        distinguish between different sample groups **based on your configuration**.
-        """)
+    with st.expander("📐 Understanding AUROC Calculation (Click to Expand)"):
+        st.markdown("### How AUROC Measures Uncertainty Detection")
         
         # Parse under-supported classes for display
         if under_supported.startswith("random:"):
             num_under = int(under_supported.split(":")[1])
             under_classes_display = f"random {num_under} classes"
+            under_indices = []
         else:
             under_indices = [int(idx.strip()) for idx in under_supported.split(",") if idx.strip()]
+            num_under = len(under_indices)
             under_classes_display = ", ".join([f"{class_names[idx]}" for idx in under_indices])
         
+        num_regular = 10 - num_under
+        
+        # Configuration context
+        st.info("""
+        **AUROC (Area Under ROC Curve)** measures how well uncertainty signals can
+        **rank samples by their uncertainty** based on your specific configuration.
+        """)
+        
         # Display configuration context
-        st.markdown("#### 🎯 Your Configuration")
-        config_col1, config_col2 = st.columns(2)
-        with config_col1:
+        st.markdown("#### 🎯 AUROC Calculation Based on Your Configuration")
+        
+        noise_desc = "CIFAR-10N synthetic noise" if noise_source == "Use CIFAR-10N noise" else f"{custom_noise_rate}% random label flipping"
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
             st.markdown(f"""
-            **Epistemic (OOD) Detection:**
-            - Under-supported classes: {under_classes_display}
-            - These classes will have fewer training samples
+            **🟡 Aleatoric AUROC** (Detecting Noisy Labels)
+            
+            **Positive Class (should have HIGH uncertainty):**
+            - 🟡 Aleatoric group
+            - Regular classes + noisy labels
+            - {num_regular} well-supported classes with {noise_desc}
+            
+            **Negative Class (should have LOW uncertainty):**
+            - 🟢 Clean group (regular classes, clean labels)
+            - 🔴 Epistemic group (under-supported classes, clean labels)
+            
+            **Question:** Can we detect mislabeled data in well-supported classes?
             """)
-        with config_col2:
-            noise_desc = "CIFAR-10N synthetic noise" if noise_source == "Use CIFAR-10N noise" else f"{custom_noise_rate}% random label flipping"
+        
+        with col2:
             st.markdown(f"""
-            **Aleatoric (Noise) Detection:**
-            - Noise type: {noise_desc}
-            - Applied to well-supported classes
+            **🔴 Epistemic AUROC** (Detecting Unfamiliar Classes)
+            
+            **Positive Class (should have HIGH uncertainty):**
+            - 🔴 Epistemic group
+            - Under-supported classes: {under_classes_display}
+            - Clean labels but model undertrained
+            
+            **Negative Class (should have LOW uncertainty):**
+            - 🟢 Clean group (regular classes, clean labels)
+            - 🟡 Aleatoric group (regular classes, noisy labels)
+            
+            **Question:** Can we detect samples from undertrained classes?
             """)
         
         st.warning("""
-        ⚠️ **Important**: AUROC scores are computed based on the epistemic (under-supported classes)
-        and aleatoric (noise) settings you configured above. Different configurations will yield different results.
+        ⚠️ **Key Point**: AUROC scores depend entirely on your configuration.
+        Different under-supported classes or noise rates will produce different results.
         """)
         
         st.markdown("---")
         
         # Step-by-step explanation
-        st.markdown("#### Step 1: Collect Uncertainty Scores")
+        st.markdown("#### 📊 How AUROC is Calculated")
+        
+        st.markdown("**Step 1: Compute Uncertainty Scores**")
         st.code("""
 # For each evaluation sample, compute uncertainty signal
-uncertainty_scores = model.predict_uncertainty(eval_samples)
-
-# Example scores (higher = more uncertain):
-sample_1: 0.85  # High uncertainty (likely noisy or OOD)
-sample_2: 0.23  # Low uncertainty (likely clean)
-sample_3: 0.67  # Medium uncertainty
+for sample in evaluation_dataset:
+    uncertainty_score = model.compute_uncertainty(sample)
+    
+# Higher score = more uncertain
+# Example:
+#   Clean sample (regular class):     0.15 (low uncertainty)
+#   Aleatoric sample (noisy label):   0.82 (high uncertainty)
+#   Epistemic sample (under-trained): 0.91 (high uncertainty)
         """, language="python")
         
-        st.markdown("#### Step 2: Compare to Ground Truth Groups")
+        st.markdown("**Step 2: Rank Samples by Uncertainty**")
         
         # Sample data preview
         sample_data = pd.DataFrame({
-            'Sample': ['img_001', 'img_002', 'img_003', 'img_004', 'img_005'],
-            'True Group': ['Clean', 'Aleatoric', 'Epistemic', 'Clean', 'Aleatoric'],
-            'Uncertainty Score': [0.23, 0.85, 0.67, 0.19, 0.91],
-            'Predicted Label': ['cat', 'dog', 'bird', 'cat', 'dog'],
-            'Ground Truth': ['cat', 'cat', 'bird', 'cat', 'dog']
+            'Sample': ['img_001', 'img_002', 'img_003', 'img_004', 'img_005', 'img_006'],
+            'True Group': ['🟢 Clean', '🟡 Aleatoric', '🔴 Epistemic', '🟢 Clean', '🟡 Aleatoric', '🔴 Epistemic'],
+            'Uncertainty': [0.15, 0.82, 0.91, 0.19, 0.78, 0.88],
+            'Rank': [1, 4, 6, 2, 3, 5]
         })
         
         st.dataframe(sample_data, use_container_width=True)
         
-        st.markdown("#### Step 3: Calculate AUROC")
+        st.markdown("**Step 3: Calculate AUROC**")
+        
         st.markdown("""
-        **Aleatoric AUROC** (Detecting Noisy Labels):
-        - Positive class: Aleatoric group (noisy samples)
-        - Negative class: Clean + Epistemic groups
-        - Question: Can we detect mislabeled data?
+        AUROC measures: **"What fraction of positive samples are ranked higher than negative samples?"**
         
-        **Epistemic AUROC** (Detecting OOD Samples):
-        - Positive class: Epistemic group (under-supported)
-        - Negative class: Clean + Aleatoric groups
-        - Question: Can we detect unfamiliar classes?
+        For **Aleatoric AUROC**:
+        - Positive = 🟡 Aleatoric (should rank high)
+        - Negative = 🟢 Clean + 🔴 Epistemic (should rank low)
+        - Perfect score: All aleatoric samples ranked above all clean/epistemic
+        
+        For **Epistemic AUROC**:
+        - Positive = 🔴 Epistemic (should rank high)
+        - Negative = 🟢 Clean + 🟡 Aleatoric (should rank low)
+        - Perfect score: All epistemic samples ranked above all clean/aleatoric
         """)
         
-        st.markdown("#### Interpretation")
-        st.success("""
-        **AUROC = 1.0**: Perfect separation (all uncertain samples detected)
-        **AUROC = 0.9**: Excellent (90% of uncertain samples ranked higher)
-        **AUROC = 0.7**: Good (70% correct ranking)
-        **AUROC = 0.5**: Random guessing (no discrimination)
-        """)
+        st.markdown("#### 📈 Interpretation")
         
-        st.info("""
-        💡 **In Practice**: We compute AUROC for each uncertainty signal
-        (e.g., predictive entropy, inverse coherence) to find which signals
-        best detect aleatoric vs epistemic uncertainty.
-        """)
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.success("""
+            **AUROC Scores:**
+            - **1.0**: Perfect detection
+            - **0.9**: Excellent (90% correct ranking)
+            - **0.7**: Good (70% correct ranking)
+            - **0.5**: Random guessing (no signal)
+            """)
+        with col_b:
+            st.info("""
+            **What This Means:**
+            - High Aleatoric AUROC → Can detect bad labels
+            - High Epistemic AUROC → Can detect knowledge gaps
+            - Compare signals to find best uncertainty measure
+            """)
+        
+        st.markdown("---")
+        st.markdown("#### 💡 Practical Example")
+        st.code("""
+# Your configuration creates these groups:
+Clean:      600 samples from regular classes (clean)
+Aleatoric:  600 samples from regular classes (noisy)
+Epistemic:  600 samples from under-supported classes (clean)
+
+# Model computes uncertainty for all 1800 samples
+# AUROC tells us: "Can uncertainty scores separate the groups?"
+
+# Good Aleatoric AUROC (0.85):
+#   → 85% of noisy samples ranked higher than clean samples
+#   → Uncertainty signal detects mislabeled data well
+
+# Good Epistemic AUROC (0.92):
+#   → 92% of under-supported samples ranked higher
+#   → Uncertainty signal detects unfamiliar classes well
+        """, language="python")
 
 
 def render_experiment_results(
