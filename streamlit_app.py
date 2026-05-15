@@ -24,6 +24,9 @@ from ui_components import (
     render_experiment_results
 )
 
+# Import watsonx.ai cloud mode components
+from uq_classification.watsonx_streamlit import render_cloud_mode_toggle
+
 # Custom CSS for glowing arrow animation
 st.markdown("""
 <style>
@@ -98,10 +101,30 @@ def main():
     # ========== DATASET SELECTION & OVERVIEW (TOP OF PAGE) ==========
     st.markdown("### 📊 Dataset Selection & Overview")
     dataset_name, noise_type, stats = render_dataset_selection(
-        "cifar10n", 
-        "worse_label", 
+        "cifar10n",
+        "worse_label",
         fetch_dataset_stats
     )
+    
+    st.markdown("---")
+    
+    # ========== CLOUD MODE TOGGLE ==========
+    cloud_enabled, cloud_config = render_cloud_mode_toggle()
+    
+    # Store cloud configuration in session state
+    st.session_state['cloud_enabled'] = cloud_enabled
+    st.session_state['cloud_config'] = cloud_config
+    
+    # Display note about cloud mode usage
+    if cloud_enabled:
+        if cloud_config:
+            st.success("✅ **Cloud mode enabled**: watsonx.ai will be used for model inference during evaluation")
+        else:
+            st.warning("⚠️ **Cloud mode enabled but not configured**: Please provide watsonx.ai credentials above")
+    else:
+        st.info("💻 **Local mode**: Inference will run on your local machine")
+    
+    st.markdown("---")
     
     # Sidebar configuration
     with st.sidebar:
