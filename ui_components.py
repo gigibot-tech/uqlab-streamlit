@@ -143,8 +143,10 @@ def render_epistemic_config(
             options=list(range(10)),
             format_func=lambda x: f"{x}: {class_names[x]}",
             default=[3, 5],
-            help="These classes will have limited training samples, creating epistemic uncertainty"
+            help="These classes will have limited training samples, creating epistemic uncertainty",
+            placeholder="Click to select classes..."
         )
+        st.caption("💡 Selection updates when you submit the form")
         if under_supported_list:
             # Display selected classes with consistent formatting (space after colon)
             st.success(f"✅ Selected: {', '.join([f'{i}: {class_names[i]}' for i in under_supported_list])}")
@@ -518,22 +520,32 @@ def render_evaluation_config() -> Tuple[int, List[str], int]:
         # Expandable sections for each signal category
         selected_signals = []
         for category, signals in available_signals.items():
-            with st.expander(f"📊 {category}", expanded=(category == "Attribution-Based (DualXDA)")):
+            with st.expander(f"📊 {category}", expanded=True):  # Expand all by default
                 for signal in signals:
-                    if st.checkbox(signal, value=(signal in ["inverse_coherence", "inverse_mass"]), key=f"signal_{signal}"):
+                    # Select all signals by default
+                    if st.checkbox(signal, value=True, key=f"signal_{signal}"):
                         selected_signals.append(signal)
         
         if not selected_signals:
             st.warning("⚠️ Please select at least one signal")
-            selected_signals = ["inverse_coherence", "inverse_mass"]  # Defaults
+            # Default to all signals if none selected
+            selected_signals = [s for signals in available_signals.values() for s in signals]
         
         st.caption(f"✅ Selected {len(selected_signals)} signal(s)")
     
     eval_per_group = st.number_input(
         "Evaluation samples per group",
-        min_value=100, max_value=2000, value=600,
-        help="Number of samples for each evaluation group (clean, noisy, under-supported)"
+        min_value=100, max_value=2000, value=100, step=100,
+        help="Number of samples for each evaluation group (clean, noisy, under-supported). Default: 100 for faster evaluation. Increase for more robust AUROC estimates."
     )
+    
+    st.info("""
+    💡 **Why 100 samples per group?**
+    - **Fast evaluation**: 300 total samples (3 groups × 100) processes quickly
+    - **Sufficient for AUROC**: 100 samples per group provides reliable uncertainty ranking
+    - **Balanced trade-off**: Good statistical power without excessive computation
+    - **Increase if needed**: Use 500-1000 for publication-quality results
+    """)
     
     return mc_passes, selected_signals, eval_per_group
 
