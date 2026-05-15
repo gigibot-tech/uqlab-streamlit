@@ -47,6 +47,49 @@ This document outlines the integration strategy for exporting UQ classification 
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+## 🎯 Full Uncertainty Classification Pipeline
+
+**watsonx.ai supports the COMPLETE Streamlit evaluation pipeline:**
+
+```python
+from uq_classification.watsonx_uncertainty import evaluate_watsonx_deployment
+
+# Deploy model to watsonx.ai, then run full evaluation
+results = evaluate_watsonx_deployment(
+    client=watsonx_client,
+    embeddings=eval_embeddings,
+    ground_truth=labels,
+    group_labels=groups,
+    mc_passes=20
+)
+
+# Get all 7 uncertainty signals (same as Streamlit!)
+signals = results['signals']
+# - msp_uncertainty (aleatoric)
+# - predictive_entropy (aleatoric)
+# - mutual_info (epistemic)
+# - inverse_coherence (epistemic)
+# - dominance (epistemic)
+# - inverse_mass (hybrid)
+# - inverse_logit_magnitude (hybrid)
+# - compound_uncertainty (combined)
+
+# Get AUROC results
+auroc_results = results['auroc_results']
+# [(signal_name, aleatoric_auroc, epistemic_auroc), ...]
+
+# Get accuracy metrics
+accuracy = results['accuracy']
+group_accuracies = results['group_accuracies']
+```
+
+**Key modules:**
+- `watsonx_export.py` - Generate deployment package
+- `watsonx_scoring.py` - API client for inference
+- `watsonx_uncertainty.py` - Compute all 7 UQ signals from predictions
+
+---
+
 ## 📦 Export File Specifications
 
 ### 1. **model_checkpoint.pt** (~500 KB)

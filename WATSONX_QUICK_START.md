@@ -63,6 +63,7 @@ In Streamlit after training:
 
 ## Test It
 
+### **Basic Inference:**
 ```python
 import torch
 from uq_classification.watsonx_scoring import WatsonxScoringClient
@@ -83,11 +84,35 @@ predictions, confidences = client.score_batch(embeddings)
 print(f"✅ Predictions: {predictions}")
 ```
 
+### **Full Uncertainty Classification:**
+```python
+from uq_classification.watsonx_uncertainty import evaluate_watsonx_deployment
+
+# Full evaluation with all 7 UQ signals
+results = evaluate_watsonx_deployment(
+    client=client,
+    embeddings=eval_data['embeddings'],
+    ground_truth=eval_data['clean_labels'],
+    group_labels=eval_data['group_labels'],
+    mc_passes=20
+)
+
+# Get all 7 signals (same as Streamlit!)
+signals = results['signals']
+print(f"✅ Epistemic: {signals['mutual_info'].mean():.3f}")
+print(f"✅ Aleatoric: {signals['msp_uncertainty'].mean():.3f}")
+print(f"✅ AUROC results: {results['auroc_results']}")
+```
+
 ---
 
 ## Done!
 
-Your model is now live at: `your-endpoint-url`
+Your model is now live with **full uncertainty classification**:
+- ✅ Basic predictions
+- ✅ All 7 UQ signals (epistemic, aleatoric, hybrid)
+- ✅ AUROC evaluation
+- ✅ Same results as Streamlit
 
 **Docs:** https://ibm.com/docs/watsonx-as-a-service
 

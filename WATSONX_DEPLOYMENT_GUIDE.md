@@ -185,15 +185,14 @@ Now make your model accessible via REST API.
 
 #### 6.2 Test with eval_embeddings.pt
 
-Use the Python client from `watsonx_scoring.py`:
-
+**Basic Inference:**
 ```python
 import torch
 from uq_classification.watsonx_scoring import WatsonxScoringClient
 
 # Load evaluation embeddings
 eval_data = torch.load("eval_embeddings.pt")
-embeddings = eval_data['embeddings'][:10]  # Test with 10 samples
+embeddings = eval_data['embeddings'][:10]
 
 # Create client
 client = WatsonxScoringClient(
@@ -208,6 +207,45 @@ predictions, confidences = client.parse_scoring_response(response)
 
 print(f"Predictions: {predictions}")
 print(f"Confidences: {confidences}")
+```
+
+**Full Uncertainty Classification (All 7 Signals):**
+```python
+from uq_classification.watsonx_uncertainty import evaluate_watsonx_deployment
+
+# Complete evaluation pipeline
+results = evaluate_watsonx_deployment(
+    client=client,
+    embeddings=eval_data['embeddings'],
+    ground_truth=eval_data['clean_labels'],
+    group_labels=eval_data['group_labels'],
+    mc_passes=20,
+    batch_size=32
+)
+
+# Access all signals
+signals = results['signals']
+print(f"Epistemic signals:")
+print(f"  - Mutual info: {signals['mutual_info'].mean():.3f}")
+print(f"  - Inverse coherence: {signals['inverse_coherence'].mean():.3f}")
+print(f"  - Dominance: {signals['dominance'].mean():.3f}")
+
+print(f"\nAleatoric signals:")
+print(f"  - MSP uncertainty: {signals['msp_uncertainty'].mean():.3f}")
+print(f"  - Predictive entropy: {signals['predictive_entropy'].mean():.3f}")
+
+print(f"\nHybrid signals:")
+print(f"  - Inverse mass: {signals['inverse_mass'].mean():.3f}")
+print(f"  - Inverse logit magnitude: {signals['inverse_logit_magnitude'].mean():.3f}")
+
+# AUROC results
+print(f"\nAUROC Results:")
+for signal_name, alea_auc, epis_auc in results['auroc_results']:
+    print(f"  {signal_name}: Aleatoric={alea_auc:.3f}, Epistemic={epis_auc:.3f}")
+
+# Accuracy metrics
+print(f"\nAccuracy: {results['accuracy']:.2%}")
+print(f"Group accuracies: {results['group_accuracies']}")
 ```
 
 #### 6.3 Test with curl
