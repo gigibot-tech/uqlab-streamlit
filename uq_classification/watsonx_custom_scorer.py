@@ -29,9 +29,17 @@ class UncertaintyScorer:
     Modular design: Works with any model that has:
     - A forward() method returning logits
     - Optional: An embedding layer before final classifier
+    - Optional: Attribution method (DualXDA or custom)
     
     Usage in watsonx.ai:
+        # Without attribution
         scorer = UncertaintyScorer(model, mc_passes=20)
+        
+        # With DualXDA attribution
+        from attribution_signals import DualXDAAttribution
+        attribution_fn = DualXDAAttribution(train_embeddings, train_labels)
+        scorer = UncertaintyScorer(model, mc_passes=20, attribution_fn=attribution_fn)
+        
         results = scorer.score(inputs)
         # Returns: predictions, confidences, uncertainty_scores
     """
@@ -41,6 +49,7 @@ class UncertaintyScorer:
         model: nn.Module,
         mc_passes: int = 20,
         uncertainty_signals: Optional[List[str]] = None,
+        attribution_fn: Optional[Callable] = None,
     ):
         """
         Initialize uncertainty scorer.
@@ -50,11 +59,15 @@ class UncertaintyScorer:
             mc_passes: Number of MC Dropout passes
             uncertainty_signals: Which signals to compute
                 Default: ['msp', 'entropy', 'mutual_info', 'logit_magnitude']
+            attribution_fn: Optional attribution function (e.g., DualXDA)
+                Should take (embeddings, logits) and return attribution dict
         """
         self.model = model
         self.mc_passes = mc_passes
+        self.attribution_fn = attribution_fn
         
         if uncertainty_signals is None:
+            # Default: predictive signals only
             self.uncertainty_signals = [
                 'msp_uncertainty',
                 'predictive_entropy',
@@ -73,12 +86,15 @@ class UncertaintyScorer:
     def forward_with_uncertainty(
         self,
         inputs: torch.Tensor,
+        embeddings: Optional[torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor, Dict[str, torch.Tensor]]:
         """
         Forward pass with uncertainty quantification.
         
         Args:
             inputs: Input tensor [batch_size, ...] (any shape)
+            embeddings: Optional pre-computed embeddings for attribution
+                If None and attribution_fn provided, will extract from model
             
         Returns:
             Tuple of:
@@ -116,6 +132,7 @@ class UncertaintyScorer:
             all_probs=all_probs,
             mean_probs=mean_probs,
             mean_logits=mean_logits,
+            embeddings=embeddings if embeddings is not None else inputs,
         )
         
         return predictions, confidences, uncertainties
@@ -125,6 +142,7 @@ class UncertaintyScorer:
         all_probs: torch.Tensor,
         mean_probs: torch.Tensor,
         mean_logits: torch.Tensor,
+        embeddings: torch.Tensor,
     ) -> Dict[str, torch.Tensor]:
         """
         Compute requested uncertainty signals.
@@ -133,6 +151,7 @@ class UncertaintyScorer:
             all_probs: MC Dropout probabilities [mc_passes, batch_size, num_classes]
             mean_probs: Mean probabilities [batch_size, num_classes]
             mean_logits: Mean logits [batch_size, num_classes]
+            embeddings: Input embeddings for attribution [batch_size, embed_dim]
             
         Returns:
             Dictionary of uncertainty signals
@@ -163,6 +182,11 @@ class UncertaintyScorer:
         if 'inverse_logit_magnitude' in self.uncertainty_signals:
             logit_norms = torch.norm(mean_logits, dim=1)
             uncertainties['inverse_logit_magnitude'] = 1.0 / (logit_norms + eps)
+        
+        # Attribution-based signals (if attribution function provided)
+        if self.attribution_fn is not None:
+            attribution_signals = self.attribution_fn(embeddings, mean_logits)
+            uncertainties.update(attribution_signals)
         
         # Compound uncertainty (weighted average)
         if len(uncertainties) > 0:
