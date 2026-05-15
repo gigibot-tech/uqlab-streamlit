@@ -541,10 +541,13 @@ def render_evaluation_config() -> Tuple[int, List[str], int]:
     
     st.info("""
     💡 **Why 100 samples per group?**
+    - **3 evaluation groups**: 🟢 Clean, 🟡 Aleatoric (noisy), 🔴 Epistemic (under-supported)
     - **Fast evaluation**: 300 total samples (3 groups × 100) processes quickly
     - **Sufficient for AUROC**: 100 samples per group provides reliable uncertainty ranking
     - **Balanced trade-off**: Good statistical power without excessive computation
     - **Increase if needed**: Use 500-1000 for publication-quality results
+    
+    Note: The "3" is always 3 groups (Clean/Aleatoric/Epistemic), not the number of under-supported classes.
     """)
     
     return mc_passes, selected_signals, eval_per_group
