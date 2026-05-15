@@ -197,12 +197,8 @@ def main():
                 noise_rate_for_comparison = custom_noise_rate / 100.0
             
             # Note: We'll show a preview here, but full details come after eval_per_group is defined
-            col_title, col_refresh = st.columns([4, 1])
-            with col_title:
-                st.markdown("### 📊 Dataset Configuration Preview")
-            with col_refresh:
-                if st.button("🔄 Refresh", key="refresh_preview", help="Update preview with current form values"):
-                    st.rerun()
+            st.markdown("### 📊 Dataset Configuration Preview")
+            st.caption("💡 Values update when you submit the form")
             
             # Parse under-supported classes for preview
             if under_supported.startswith("random:"):
@@ -263,12 +259,7 @@ def main():
             
             # ========== COMPLETE DATASET COMPARISON (now that eval_per_group is defined) ==========
             st.markdown("---")
-            col_title2, col_refresh2 = st.columns([4, 1])
-            with col_title2:
-                st.markdown("### 📊 Complete Dataset Configuration")
-            with col_refresh2:
-                if st.button("🔄 Refresh", key="refresh_complete", help="Update configuration with current form values"):
-                    st.rerun()
+            st.markdown("### 📊 Complete Dataset Configuration")
             st.info("Full dataset breakdown including evaluation groups")
             
             render_dataset_comparison(
