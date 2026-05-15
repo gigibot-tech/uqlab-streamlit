@@ -483,9 +483,20 @@ def render_training_config() -> Tuple[int, float, float, int]:
     return epochs, learning_rate, weight_decay, train_batch_size
 
 
-def render_evaluation_config() -> Tuple[int, List[str], int]:
+def render_evaluation_config(
+    under_supported_list: Optional[List[int]] = None,
+    under_train_per_class: int = 50,
+    regular_train_per_class: int = 300,
+    noise_rate: float = 0.0
+) -> Tuple[int, List[str], int]:
     """
-    Render evaluation configuration section.
+    Render evaluation configuration section with dynamic sampling explanation.
+    
+    Args:
+        under_supported_list: List of under-supported class indices (optional, for display)
+        under_train_per_class: Samples per under-supported class
+        regular_train_per_class: Samples per regular class
+        noise_rate: Noise rate for aleatoric pool estimation
     
     Returns:
         Tuple of (mc_passes, selected_signals, eval_per_group)
@@ -549,6 +560,49 @@ def render_evaluation_config() -> Tuple[int, List[str], int]:
     
     Note: The "3" is always 3 groups (Clean/Aleatoric/Epistemic), not the number of under-supported classes.
     """)
+    
+    # Add dynamic sampling explanation if configuration is provided
+    if under_supported_list is not None:
+        num_under = len(under_supported_list)
+        num_regular = 10 - num_under
+        
+        # Calculate training samples
+        under_train_total = num_under * under_train_per_class
+        regular_train_total = num_regular * regular_train_per_class
+        total_train = under_train_total + regular_train_total
+        
+        # Estimate evaluation pools (from remaining 50,000 - total_train samples)
+        remaining_samples = 50000 - total_train
+        
+        # Estimate pool sizes (approximate)
+        samples_per_class = 5000
+        regular_remaining_per_class = samples_per_class - regular_train_per_class
+        under_remaining_per_class = samples_per_class - under_train_per_class
+        
+        clean_pool_estimate = int(num_regular * regular_remaining_per_class * (1 - noise_rate))
+        aleatoric_pool_estimate = int(num_regular * regular_remaining_per_class * noise_rate)
+        epistemic_pool_estimate = int(num_under * under_remaining_per_class)
+        
+        with st.expander("📊 Evaluation Sampling Details (Based on Your Configuration)", expanded=False):
+            st.markdown(f"""
+            **Training Dataset:**
+            - Under-supported: {num_under} classes × {under_train_per_class} samples = **{under_train_total:,}** training
+            - Regular: {num_regular} classes × {regular_train_per_class} samples = **{regular_train_total:,}** training
+            - **Total training: {total_train:,} samples**
+            
+            **Evaluation Pools** (from remaining {remaining_samples:,} samples):
+            - 🟢 **Clean pool**: ~{clean_pool_estimate:,} clean samples from {num_regular} regular classes
+            - 🟡 **Aleatoric pool**: ~{aleatoric_pool_estimate:,} noisy samples from {num_regular} regular classes
+            - 🔴 **Epistemic pool**: ~{epistemic_pool_estimate:,} clean samples from {num_under} under-supported classes
+            
+            **Sampled for Evaluation:**
+            - {eval_per_group} from clean pool → 🟢 Clean group
+            - {eval_per_group} from aleatoric pool → 🟡 Aleatoric group
+            - {eval_per_group} from epistemic pool → 🔴 Epistemic group
+            - **Total: {3 * eval_per_group:,} evaluation samples**
+            
+            ⚠️ **Note**: All evaluation samples are held out from training. If requested samples exceed pool size, you'll get fewer samples.
+            """)
     
     return mc_passes, selected_signals, eval_per_group
 

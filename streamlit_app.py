@@ -247,7 +247,24 @@ def main():
             st.markdown("### 📊 Evaluation Configuration")
             st.info("💡 Configure how uncertainty is measured and evaluated")
             
-            mc_passes, selected_signals, eval_per_group = render_evaluation_config()
+            # Parse under_supported for evaluation config display
+            if under_supported.startswith("random:"):
+                under_supported_list_for_eval = None  # Can't show details for random selection
+            else:
+                under_supported_list_for_eval = [int(x.strip()) for x in under_supported.split(",") if x.strip()]
+            
+            # Get noise rate for evaluation pool estimation
+            if noise_source == "Use CIFAR-10N noise" and stats:
+                noise_rate_for_eval = stats.get('noise_rate', 0)
+            else:
+                noise_rate_for_eval = custom_noise_rate / 100.0
+            
+            mc_passes, selected_signals, eval_per_group = render_evaluation_config(
+                under_supported_list=under_supported_list_for_eval,
+                under_train_per_class=under_train_per_class,
+                regular_train_per_class=regular_train_per_class,
+                noise_rate=noise_rate_for_eval
+            )
             
             # Update evaluation progress
             st.session_state.config_progress['evaluation'] = mc_passes > 0
