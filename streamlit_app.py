@@ -254,9 +254,6 @@ def main():
             
             st.markdown("---")
             
-            # ========== PHASE 3: EVALUATION DATASET EXPLANATION ==========
-            render_evaluation_strategy(eval_per_group, under_supported, class_names)
-            
             # ========== PHASE 3: ROC CALCULATION EXAMPLE ==========
             render_roc_explanation(under_supported, class_names, noise_source, custom_noise_rate)
             
