@@ -544,8 +544,10 @@ Examples:
         json.dump(summary, f, indent=2)
 
     # Save model checkpoint for watsonx.ai export
+    # Save the full model object (not just state_dict) for easy loading
     checkpoint = {
-        'model': model.state_dict(),
+        'model': model,  # Full model object
+        'model_state_dict': model.state_dict(),  # Also save state_dict for flexibility
         'epoch': epochs,
         'loss': 0.0,  # Final loss not tracked in this script
         'config': {
