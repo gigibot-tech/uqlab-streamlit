@@ -140,6 +140,8 @@ class BatchExperimentService:
         """Run all generated experiments sequentially."""
         logger.info(f"🚀 Starting batch execution for {batch_id}")
         try:
+            # Get run IDs (not objects) to avoid detached instance issues
+            run_ids = []
             with Session(engine) as session:
                 repository = BatchExperimentRepository(session)
                 batch = repository.get_batch(batch_id)
@@ -159,30 +161,43 @@ class BatchExperimentService:
                     )
                     return
                 
+                # Extract run IDs before session closes
+                run_ids = [run.id for run in runs]
+                
                 repository.update_batch_status(
                     batch_id,
                     JobStatus.RUNNING,
                     progress=0.0,
-                    current_run_index=1 if runs else None,
+                    current_run_index=1,
                 )
 
-            total_runs = len(runs)
+            total_runs = len(run_ids)
             logger.info(f"▶️ Beginning execution of {total_runs} experiments")
 
-            for position, run in enumerate(runs, start=1):
-                logger.info(f"🔄 Starting run {position}/{total_runs}: {run.run_name}")
+            for position, run_id in enumerate(run_ids, start=1):
                 with Session(engine) as session:
                     repository = BatchExperimentRepository(session)
+                    run = repository.get_run(run_id)
+                    if not run:
+                        logger.error(f"❌ Run {run_id} not found, skipping")
+                        continue
+                    
+                    logger.info(f"🔄 Starting run {position}/{total_runs}: {run.run_name}")
                     repository.update_batch_status(
                         batch_id,
                         JobStatus.RUNNING,
                         progress=(position - 1) / total_runs if total_runs else 1.0,
                         current_run_index=position,
                     )
-                    repository.update_run_status(run.id, JobStatus.RUNNING, 0.0)
+                    repository.update_run_status(run_id, JobStatus.RUNNING, 0.0)
 
-                await self._run_single_batch_experiment(batch_id, run.id, position, total_runs)
-                logger.info(f"✅ Completed run {position}/{total_runs}: {run.run_name}")
+                await self._run_single_batch_experiment(batch_id, run_id, position, total_runs)
+                
+                with Session(engine) as session:
+                    repository = BatchExperimentRepository(session)
+                    run = repository.get_run(run_id)
+                    if run:
+                        logger.info(f"✅ Completed run {position}/{total_runs}: {run.run_name}")
                 self._aggregate_batch_results(batch_id)
 
             with Session(engine) as session:
