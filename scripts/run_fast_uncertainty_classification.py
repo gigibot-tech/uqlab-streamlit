@@ -591,9 +591,9 @@ Examples:
         'eval_is_noisy': eval_is_noisy,
         'eval_group_labels': eval_group_labels,
         'eval_indices': torch.cat([
-            clean_eval_pack["indices"],
-            aleatoric_eval_pack["indices"],
-            epistemic_eval_pack["indices"],
+            clean_eval_pack["original_indices"],
+            aleatoric_eval_pack["original_indices"],
+            epistemic_eval_pack["original_indices"],
         ], dim=0),
         
         # Uncertainty signals
