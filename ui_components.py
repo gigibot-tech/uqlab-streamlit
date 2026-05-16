@@ -940,6 +940,81 @@ def _render_experiment_detail(
             st.warning("⚠️ Results files not found. Check results_path.")
             st.code(f"Expected: {summary_file}")
         
+        # Export to watsonx.ai button (only for completed experiments)
+        if exp['status'] == 'completed':
+            st.markdown("---")
+            st.markdown("### 🚀 Export to watsonx.ai")
+            st.info("Export this trained model for deployment to IBM watsonx.ai cloud platform.")
+            
+            if st.button(f"📦 Export to watsonx.ai", key=f"export_{exp['id']}", type="primary"):
+                try:
+                    # Import here to avoid circular dependencies
+                    from uq_classification.watsonx_export import export_all_for_watsonx
+                    import torch
+                    
+                    # Load checkpoint and results
+                    checkpoint_path = Path(f"{results_path}/checkpoint.pt")
+                    if not checkpoint_path.exists():
+                        st.error(f"❌ Checkpoint not found: {checkpoint_path}")
+                    else:
+                        with st.spinner("Exporting model package..."):
+                            # Load checkpoint
+                            checkpoint = torch.load(checkpoint_path, map_location='cpu')
+                            
+                            # Load results data
+                            results_file = Path(f"{results_path}/results.pt")
+                            if not results_file.exists():
+                                st.error(f"❌ Results file not found: {results_file}")
+                            else:
+                                results = torch.load(results_file, map_location='cpu')
+                                
+                                # Export
+                                output_dir = Path(f"{results_path}/watsonx_exports")
+                                export_dir, zip_path = export_all_for_watsonx(
+                                    model=checkpoint['model'],
+                                    optimizer=None,  # Not needed for deployment
+                                    epoch=checkpoint.get('epoch', 0),
+                                    loss=checkpoint.get('loss', 0.0),
+                                    train_embeddings=results['train_embeddings'],
+                                    train_labels=results['train_labels'],
+                                    train_noisy_labels=results['train_noisy_labels'],
+                                    train_is_noisy=results['train_is_noisy'],
+                                    train_indices=results['train_indices'],
+                                    eval_embeddings=results['eval_embeddings'],
+                                    eval_clean_labels=results['eval_clean_labels'],
+                                    eval_noisy_labels=results['eval_noisy_labels'],
+                                    eval_is_noisy=results['eval_is_noisy'],
+                                    eval_group_labels=results['eval_group_labels'],
+                                    eval_indices=results['eval_indices'],
+                                    signal_table=results['signal_table'],
+                                    predictions=results['predictions'],
+                                    confidences=results['confidences'],
+                                    auroc_rows=results.get('auroc_rows', []),
+                                    config=exp.get('config_yaml', {}),
+                                    output_base_dir=output_dir,
+                                )
+                                
+                                st.success(f"✅ Export complete!")
+                                st.markdown(f"**Export directory:** `{export_dir}`")
+                                st.markdown(f"**ZIP package:** `{zip_path}`")
+                                
+                                # Provide download link
+                                with open(zip_path, 'rb') as f:
+                                    st.download_button(
+                                        label="⬇️ Download ZIP Package",
+                                        data=f.read(),
+                                        file_name=zip_path.name,
+                                        mime="application/zip",
+                                        key=f"download_{exp['id']}"
+                                    )
+                                
+                                st.info("📖 See `WATSONX_EXPORT_GUIDE.md` for deployment instructions.")
+                                
+                except Exception as e:
+                    st.error(f"❌ Export failed: {str(e)}")
+                    import traceback
+                    st.code(traceback.format_exc())
+        
         # Delete button
         st.markdown("---")
         if st.button(f"🗑️ Delete Experiment", key=f"delete_{exp['id']}", type="secondary"):
