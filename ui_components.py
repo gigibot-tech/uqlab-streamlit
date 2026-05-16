@@ -1516,6 +1516,16 @@ def render_batch_results(
         st.info("No batch experiments found. Create one using the batch form above.")
         return
 
+    # Filter out invalid completed batches (completed with 0 runs = database inconsistency)
+    valid_batches = [
+        b for b in batches
+        if not (b["status"] == "completed" and b.get("completed_runs", 0) == 0)
+    ]
+    
+    if not valid_batches:
+        st.info("No valid batch experiments found. Create one using the batch form above.")
+        return
+
     batch_df = pd.DataFrame(
         [
             {
@@ -1527,22 +1537,22 @@ def render_batch_results(
                 "Completed": batch.get("completed_runs", 0),
                 "Failed": batch.get("failed_runs", 0),
             }
-            for batch in batches
+            for batch in valid_batches
         ]
     )
     st.dataframe(batch_df, use_container_width=True, hide_index=True)
 
     selected_batch_id = st.selectbox(
         "Inspect Batch",
-        options=[batch["id"] for batch in batches],
+        options=[batch["id"] for batch in valid_batches],
         format_func=lambda batch_id: next(
-            (f"{batch['name']} ({batch['status']})" for batch in batches if batch["id"] == batch_id),
+            (f"{batch['name']} ({batch['status']})" for batch in valid_batches if batch["id"] == batch_id),
             batch_id,
         ),
     )
 
     # Add start button for queued batches
-    selected_batch = next((b for b in batches if b["id"] == selected_batch_id), None)
+    selected_batch = next((b for b in valid_batches if b["id"] == selected_batch_id), None)
     if selected_batch and selected_batch["status"] == "queued":
         if st.button("▶️ Start Batch Execution", type="primary", use_container_width=True):
             try:
@@ -1578,13 +1588,21 @@ def render_batch_results(
 
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("Status", results.get("status", "unknown"))
+        status = results.get("status", "unknown")
+        st.metric("Status", status)
     with col2:
         st.metric("Runs", len(comparison_table))
     with col3:
-        st.metric("Best Epistemic", _format_best_metric(summary, "best_epistemic_run", "epistemic_auroc"))
+        # Show "In Progress" for running batches, actual metric for completed
+        if status in ["running", "queued"]:
+            st.metric("Best Epistemic", "In Progress...")
+        else:
+            st.metric("Best Epistemic", _format_best_metric(summary, "best_epistemic_run", "epistemic_auroc"))
     with col4:
-        st.metric("Best Aleatoric", _format_best_metric(summary, "best_aleatoric_run", "aleatoric_auroc"))
+        if status in ["running", "queued"]:
+            st.metric("Best Aleatoric", "In Progress...")
+        else:
+            st.metric("Best Aleatoric", _format_best_metric(summary, "best_aleatoric_run", "aleatoric_auroc"))
 
     series = results.get("series", [])
     if series:
