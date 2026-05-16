@@ -237,6 +237,11 @@ class BatchExperimentService:
         self, batch_id: uuid.UUID, run_id: uuid.UUID, position: int, total_runs: int
     ) -> None:
         """Execute one child experiment and persist its results."""
+        # Extract data before session closes to avoid detached instance errors
+        run_name = None
+        config_path = None
+        output_dir = None
+        
         with Session(engine) as session:
             batch_repository = BatchExperimentRepository(session)
             run = batch_repository.get_run(run_id)
@@ -244,8 +249,11 @@ class BatchExperimentService:
             if not run or not batch:
                 raise ValueError("Batch run or batch experiment not found")
 
+            # Extract run_name before session closes
+            run_name = run.run_name
+            
             experiment = UncertaintyExperiment(
-                name=f"{batch.name}_{run.run_name}",
+                name=f"{batch.name}_{run_name}",
                 config_yaml=run.resolved_config_yaml,
                 created_by_id=batch.created_by_id,
             )
@@ -260,7 +268,7 @@ class BatchExperimentService:
 
             config_payload = yaml.safe_load(run.resolved_config_yaml)
             training_config = TrainingConfig(**config_payload)
-            config_path, output_dir = self._prepare_run_paths(batch_id, run.run_name, training_config)
+            config_path, output_dir = self._prepare_run_paths(batch_id, run_name, training_config)
 
             experiment_repository = ExperimentRepository(session)
             experiment_repository.update_status(experiment.id, JobStatus.RUNNING, 0.0)
@@ -294,7 +302,7 @@ class BatchExperimentService:
             _ = loop
 
         try:
-            logger.info(f"🎯 Executing training for run {position}/{total_runs}: {run.run_name}")
+            logger.info(f"🎯 Executing training for run {position}/{total_runs}: {run_name}")
             logger.info(f"   Config: {config_path}")
             logger.info(f"   Output: {output_dir}")
             result = await self.executor.execute(config_path, output_dir, progress_callback)
