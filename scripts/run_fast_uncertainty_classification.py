@@ -543,6 +543,59 @@ Examples:
     with (results_dir / "summary.json").open("w") as f:
         json.dump(summary, f, indent=2)
 
+    # Save model checkpoint for watsonx.ai export
+    checkpoint = {
+        'model': model.state_dict(),
+        'epoch': epochs,
+        'loss': 0.0,  # Final loss not tracked in this script
+        'config': {
+            'hidden_dim': hidden_dim,
+            'dropout': dropout,
+            'num_classes': 10,
+            'dinov2_model': dinov2_model,
+        }
+    }
+    torch.save(checkpoint, results_dir / "checkpoint.pt")
+    print(f"✅ Saved model checkpoint to {results_dir / 'checkpoint.pt'}")
+
+    # Save complete results for watsonx.ai export
+    results_data = {
+        # Model outputs
+        'predictions': mean_pred.argmax(dim=1),
+        'confidences': mean_pred.max(dim=1).values,
+        
+        # Training data
+        'train_embeddings': train_dataset.features,
+        'train_labels': train_dataset.clean_labels,
+        'train_noisy_labels': train_dataset.targets,
+        'train_is_noisy': train_dataset.is_noisy,
+        'train_indices': train_dataset.original_indices,
+        
+        # Evaluation data
+        'eval_embeddings': eval_features,
+        'eval_clean_labels': eval_clean_labels,
+        'eval_noisy_labels': torch.cat([
+            clean_eval_pack["noisy_labels"],
+            aleatoric_eval_pack["noisy_labels"],
+            epistemic_eval_pack["noisy_labels"],
+        ], dim=0),
+        'eval_is_noisy': eval_is_noisy,
+        'eval_group_labels': eval_group_labels,
+        'eval_indices': torch.cat([
+            clean_eval_pack["indices"],
+            aleatoric_eval_pack["indices"],
+            epistemic_eval_pack["indices"],
+        ], dim=0),
+        
+        # Uncertainty signals
+        'signal_table': signal_table,
+        
+        # AUROC results
+        'auroc_rows': auroc_rows,
+    }
+    torch.save(results_data, results_dir / "results.pt")
+    print(f"✅ Saved results data to {results_dir / 'results.pt'}")
+
     # Create a namespace object for backward compatibility with build_results_markdown
     config_ns = argparse.Namespace(
         noise_type=noise_type,
