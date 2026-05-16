@@ -15,22 +15,18 @@ Functions:
 from __future__ import annotations
 
 import json
-import logging
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
 
-# Set up logging following IBM best practices
-logger = logging.getLogger(__name__)
-
 try:
     import requests
     REQUESTS_AVAILABLE = True
 except ImportError:
     REQUESTS_AVAILABLE = False
-    logger.warning("requests library not available. Install with: pip install requests")
+    print("Warning: requests library not available. Install with: pip install requests")
 
 
 class WatsonxScoringClient:
@@ -156,14 +152,10 @@ class WatsonxScoringClient:
                 
                 result = response.json()
                 all_predictions.append(result)
-                logger.debug(f"Successfully scored batch {i//batch_size + 1}/{(n_samples + batch_size - 1)//batch_size}")
                 
             except requests.exceptions.RequestException as e:
-                error_msg = f"Error scoring batch {i//batch_size + 1}: {e}"
-                if hasattr(e, 'response') and e.response is not None:
-                    error_msg += f" | Status: {e.response.status_code} | Response: {e.response.text[:200]}"
-                logger.error(error_msg)
-                raise RuntimeError(error_msg) from e
+                print(f"Error scoring batch {i//batch_size + 1}: {e}")
+                raise
         
         # Combine results
         combined = {
@@ -387,15 +379,11 @@ class WatsonxGovernanceLogger:
                 timeout=30,
             )
             response.raise_for_status()
-            logger.info(f"Successfully logged {len(predictions)} predictions to governance")
             return response.json()
             
         except requests.exceptions.RequestException as e:
-            error_msg = f"Error logging to governance: {e}"
-            if hasattr(e, 'response') and e.response is not None:
-                error_msg += f" | Status: {e.response.status_code}"
-            logger.error(error_msg)
-            raise RuntimeError(error_msg) from e
+            print(f"Error logging to governance: {e}")
+            raise
     
     def log_metrics(
         self,
@@ -432,15 +420,11 @@ class WatsonxGovernanceLogger:
                 timeout=30,
             )
             response.raise_for_status()
-            logger.info(f"Successfully logged metrics to governance: {list(metrics.keys())}")
             return response.json()
             
         except requests.exceptions.RequestException as e:
-            error_msg = f"Error logging metrics: {e}"
-            if hasattr(e, 'response') and e.response is not None:
-                error_msg += f" | Status: {e.response.status_code}"
-            logger.error(error_msg)
-            raise RuntimeError(error_msg) from e
+            print(f"Error logging metrics: {e}")
+            raise
 
 
 def create_mock_scoring_client(

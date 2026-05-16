@@ -482,7 +482,8 @@ def render_evaluation_config(
     under_supported_list: Optional[List[int]] = None,
     under_train_per_class: int = 50,
     regular_train_per_class: int = 300,
-    noise_rate: float = 0.0
+    noise_rate: float = 0.0,
+    key_prefix: str = "default"
 ) -> Tuple[int, List[str], int]:
     """
     Render evaluation configuration section with dynamic sampling explanation.
@@ -492,6 +493,7 @@ def render_evaluation_config(
         under_train_per_class: Samples per under-supported class
         regular_train_per_class: Samples per regular class
         noise_rate: Noise rate for aleatoric pool estimation
+        key_prefix: Prefix for widget keys to avoid duplicates (e.g., "single", "batch")
     
     Returns:
         Tuple of (mc_passes, selected_signals, eval_per_group)
@@ -517,7 +519,8 @@ def render_evaluation_config(
         mc_passes = st.number_input(
             "MC Dropout Passes",
             min_value=5, max_value=100, value=20,
-            help="Number of forward passes with dropout enabled to estimate epistemic uncertainty. Range: 5-100 (Quick: 10-20, Thorough: 50-100)"
+            help="Number of forward passes with dropout enabled to estimate epistemic uncertainty. Range: 5-100 (Quick: 10-20, Thorough: 50-100)",
+            key=f"{key_prefix}_mc_passes"
         )
     with col2:
         st.markdown("**Attribution Signals**")
@@ -529,7 +532,7 @@ def render_evaluation_config(
             with st.expander(f"📊 {category}", expanded=True):  # Expand all by default
                 for signal in signals:
                     # Select all signals by default
-                    if st.checkbox(signal, value=True, key=f"signal_{signal}"):
+                    if st.checkbox(signal, value=True, key=f"{key_prefix}_signal_{signal}"):
                         selected_signals.append(signal)
         
         if not selected_signals:
@@ -540,7 +543,8 @@ def render_evaluation_config(
     eval_per_group = st.number_input(
         "Evaluation samples per group",
         min_value=100, max_value=2000, value=100, step=100,
-        help="Number of samples for each evaluation group (clean, noisy, under-supported). Default: 100 for faster evaluation. Increase for more robust AUROC estimates."
+        help="Number of samples for each evaluation group (clean, noisy, under-supported). Default: 100 for faster evaluation. Increase for more robust AUROC estimates.",
+        key=f"{key_prefix}_eval_per_group"
     )
     
     st.info("""
@@ -1128,3 +1132,528 @@ def _render_start_training_buttons(
                     st.error(f"Failed to start training: {str(e)}")
 
 # Made with Bob
+
+
+
+def build_base_experiment_config(
+    noise_type: str,
+    under_supported: str,
+    under_train_per_class: int,
+    regular_train_per_class: int,
+    dinov2_model: str,
+    hidden_dim: int,
+    dropout: float,
+    epochs: int,
+    learning_rate: float,
+    weight_decay: float,
+    train_batch_size: int,
+    eval_per_group: int,
+    mc_passes: int,
+) -> Dict[str, Any]:
+    """
+    Build the API-ready base config shared by single and batch experiments.
+    """
+    return {
+        "noise_type": noise_type,
+        "under_supported_classes": under_supported,
+        "under_train_per_class": under_train_per_class,
+        "regular_train_per_class": regular_train_per_class,
+        "eval_per_group": eval_per_group,
+        "dinov2_model": dinov2_model,
+        "hidden_dim": hidden_dim,
+        "dropout": dropout,
+        "epochs": epochs,
+        "learning_rate": learning_rate,
+        "weight_decay": weight_decay,
+        "train_batch_size": train_batch_size,
+        "mc_passes": mc_passes,
+        "attribution_method": "dualxda",
+    }
+
+
+def render_batch_sweep_config() -> Tuple[str, str, float, float, float, List[float]]:
+    """
+    Render controls for configuring a single-parameter numeric sweep.
+    
+    IMPROVED UX: Simplified approach that clearly separates sweep configuration
+    from base configuration, following best practices for parameter sweeps.
+
+    Returns:
+        Tuple of (parameter, value_type, start, end, step, generated_values)
+    """
+    st.markdown("### 🔁 Parameter Sweep Configuration")
+    st.info("""
+    💡 **Best Practice**: Sweep one parameter at a time while keeping all others constant.
+    This allows you to isolate the effect of each parameter on model performance.
+    """)
+
+    parameter_options = {
+        "under_train_per_class": "Epistemic: under-supported samples/class",
+        "regular_train_per_class": "Epistemic: regular samples/class",
+        "eval_per_group": "Evaluation: samples/group",
+        "hidden_dim": "Model: hidden dimension",
+        "dropout": "Model: dropout rate",
+        "epochs": "Training: epochs",
+        "learning_rate": "Training: learning rate",
+        "weight_decay": "Training: weight decay",
+        "train_batch_size": "Training: batch size",
+        "mc_passes": "Evaluation: MC dropout passes",
+    }
+
+    parameter = st.selectbox(
+        "Parameter to Sweep",
+        options=list(parameter_options.keys()),
+        format_func=lambda key: f"{key} — {parameter_options[key]}",
+        help="This parameter will vary across experiments. All other parameters will use base configuration values.",
+    )
+
+    integer_parameters = {
+        "under_train_per_class",
+        "regular_train_per_class",
+        "eval_per_group",
+        "hidden_dim",
+        "epochs",
+        "train_batch_size",
+        "mc_passes",
+    }
+    value_type = "int" if parameter in integer_parameters else "float"
+
+    # Smart defaults based on parameter type
+    sweep_defaults = {
+        "under_train_per_class": (5, 50, 5),
+        "regular_train_per_class": (100, 500, 100),
+        "eval_per_group": (100, 500, 100),
+        "hidden_dim": (64, 512, 64),
+        "dropout": (0.1, 0.5, 0.1),
+        "epochs": (5, 20, 5),
+        "learning_rate": (0.0005, 0.005, 0.0005),
+        "weight_decay": (0.0001, 0.001, 0.0001),
+        "train_batch_size": (64, 512, 64),
+        "mc_passes": (10, 50, 10),
+    }
+    
+    default_start, default_end, default_step = sweep_defaults.get(parameter, (1, 10, 1))
+
+    col1, col2, col3 = st.columns(3)
+    if value_type == "int":
+        with col1:
+            start = float(st.number_input("Start Value", min_value=1, value=int(default_start), step=1,
+                                         help="First value in the sweep range"))
+        with col2:
+            end = float(st.number_input("End Value", min_value=1, value=int(default_end), step=1,
+                                       help="Last value in the sweep range (inclusive)"))
+        with col3:
+            step = float(st.number_input("Step Size", min_value=1, value=int(default_step), step=1,
+                                        help="Increment between values"))
+    else:
+        with col1:
+            start = float(st.number_input("Start Value", min_value=0.0, value=default_start, format="%.4f",
+                                         help="First value in the sweep range"))
+        with col2:
+            end = float(st.number_input("End Value", min_value=0.0, value=default_end, format="%.4f",
+                                       help="Last value in the sweep range (inclusive)"))
+        with col3:
+            step = float(st.number_input("Step Size", min_value=0.0001, value=default_step, format="%.4f",
+                                        help="Increment between values"))
+
+    generated_values = _generate_sweep_preview(start, end, step, value_type)
+
+    if generated_values:
+        st.success(f"✅ **{len(generated_values)} experiments** will be created with values: {', '.join(str(v) for v in generated_values)}")
+        if len(generated_values) > 20:
+            st.warning("⚠️ This batch has more than 20 runs and may take a long time to complete.")
+        if len(generated_values) > 100:
+            st.error("❌ Sweep exceeds the V1 limit of 100 generated runs. Please reduce the range or increase the step size.")
+    else:
+        st.error("❌ Sweep produced no values. Check start/end/step inputs.")
+
+    return parameter, value_type, start, end, step, generated_values
+
+
+def render_batch_base_config(
+    swept_parameter: str,
+    noise_type: str,
+    stats: Optional[Dict],
+    dataset_name: str,
+    class_names: List[str],
+    fetch_dataset_stats: Callable[[str, str], Optional[Dict]]
+) -> Dict[str, Any]:
+    """
+    Render base configuration section for batch experiments.
+    Only shows parameters that are NOT being swept.
+    
+    Args:
+        swept_parameter: The parameter being swept (will be hidden from base config)
+        noise_type: Selected noise type
+        stats: Dataset statistics
+        dataset_name: Name of the dataset
+        class_names: List of class names
+        fetch_dataset_stats: Function to fetch dataset stats
+    
+    Returns:
+        Dictionary with all base configuration values
+    """
+    st.markdown("### ⚙️ Base Configuration")
+    st.info("""
+    💡 **Base Configuration**: These values will be used for all experiments in the batch.
+    Only the swept parameter will vary across experiments.
+    """)
+    
+    config = {}
+    
+    # Use expander for advanced configuration
+    with st.expander("🔧 Configure Base Parameters", expanded=True):
+        
+        # Epistemic Configuration (if not being swept)
+        if swept_parameter not in ["under_train_per_class", "regular_train_per_class"]:
+            st.markdown("#### 📊 Epistemic Uncertainty Configuration")
+            
+            if swept_parameter == "under_train_per_class":
+                # Only need under_supported selection, not the samples/class
+                config["under_supported"] = st.selectbox(
+                    "Under-supported Classes",
+                    ["0,1", "random:2", "random:3"],
+                    help="Classes with limited training data (samples/class will be swept)",
+                    key="batch_base_under_supported"
+                )
+                config["under_train_per_class"] = None  # Will use sweep values
+                config["regular_train_per_class"] = st.number_input(
+                    "Regular samples/class",
+                    min_value=50,
+                    max_value=500,
+                    value=300,
+                    step=50,
+                    help="Training samples for well-supported classes",
+                    key="batch_base_regular_train"
+                )
+            elif swept_parameter == "regular_train_per_class":
+                # Get under_supported and under_train, but not regular_train
+                config["under_supported"], config["under_train_per_class"], _, _ = render_epistemic_config(
+                    class_names,
+                    default_under_train=50,
+                    default_regular_train=300
+                )
+                config["regular_train_per_class"] = None  # Will use sweep values
+            else:
+                # Get all epistemic config
+                config["under_supported"], config["under_train_per_class"], config["regular_train_per_class"], _ = render_epistemic_config(
+                    class_names,
+                    default_under_train=50,
+                    default_regular_train=300
+                )
+        else:
+            # Both epistemic parameters are being swept - just get under_supported
+            config["under_supported"] = st.selectbox(
+                "Under-supported Classes",
+                ["0,1", "random:2", "random:3"],
+                help="Classes with limited training data",
+                key="batch_base_under_supported_only"
+            )
+            config["under_train_per_class"] = None
+            config["regular_train_per_class"] = None
+        
+        # Aleatoric Configuration
+        st.markdown("#### 🎲 Aleatoric Uncertainty Configuration")
+        config["noise_source"], config["custom_noise_rate"] = render_aleatoric_config(
+            stats,
+            noise_type,
+            class_names,
+            fetch_dataset_stats,
+            dataset_name
+        )
+        
+        st.markdown("---")
+        
+        # Model Configuration (if not being swept)
+        if swept_parameter not in ["hidden_dim", "dropout"]:
+            st.markdown("#### 🧠 Model Architecture")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                config["dinov2_model"] = st.selectbox(
+                    "DINOv2 Backbone",
+                    ["small", "base", "large"],
+                    index=0,
+                    key="batch_base_dinov2"
+                )
+            with col2:
+                if swept_parameter != "hidden_dim":
+                    config["hidden_dim"] = st.number_input(
+                        "Hidden Dimension",
+                        min_value=64,
+                        max_value=1024,
+                        value=256,
+                        step=64,
+                        key="batch_base_hidden_dim"
+                    )
+                else:
+                    config["hidden_dim"] = None  # Will use sweep values
+            with col3:
+                if swept_parameter != "dropout":
+                    config["dropout"] = st.number_input(
+                        "Dropout Rate",
+                        min_value=0.0,
+                        max_value=0.9,
+                        value=0.2,
+                        step=0.1,
+                        key="batch_base_dropout"
+                    )
+                else:
+                    config["dropout"] = None  # Will use sweep values
+        
+        st.markdown("---")
+        
+        # Training Configuration (if not being swept)
+        if swept_parameter not in ["epochs", "learning_rate", "weight_decay", "train_batch_size"]:
+            st.markdown("#### 🎯 Training Hyperparameters")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                if swept_parameter != "epochs":
+                    config["epochs"] = st.number_input(
+                        "Training Epochs",
+                        min_value=1,
+                        max_value=100,
+                        value=12,
+                        key="batch_base_epochs"
+                    )
+                else:
+                    config["epochs"] = None  # Will use sweep values
+            with col2:
+                if swept_parameter != "learning_rate":
+                    config["learning_rate"] = st.number_input(
+                        "Learning Rate",
+                        min_value=0.0001,
+                        max_value=0.1,
+                        value=0.001,
+                        format="%.4f",
+                        key="batch_base_lr"
+                    )
+                else:
+                    config["learning_rate"] = None  # Will use sweep values
+            with col3:
+                if swept_parameter != "weight_decay":
+                    config["weight_decay"] = st.number_input(
+                        "Weight Decay",
+                        min_value=0.0,
+                        max_value=0.01,
+                        value=0.0001,
+                        format="%.5f",
+                        key="batch_base_wd"
+                    )
+                else:
+                    config["weight_decay"] = None  # Will use sweep values
+            
+            if swept_parameter != "train_batch_size":
+                config["train_batch_size"] = st.number_input(
+                    "Batch Size",
+                    min_value=16,
+                    max_value=512,
+                    value=256,
+                    step=16,
+                    key="batch_base_batch_size"
+                )
+            else:
+                config["train_batch_size"] = None  # Will use sweep values
+        
+        st.markdown("---")
+        
+        # Evaluation Configuration (if not being swept)
+        if swept_parameter not in ["mc_passes", "eval_per_group"]:
+            st.markdown("#### 📊 Evaluation Configuration")
+            col1, col2 = st.columns(2)
+            with col1:
+                if swept_parameter != "mc_passes":
+                    config["mc_passes"] = st.number_input(
+                        "MC Dropout Passes",
+                        min_value=5,
+                        max_value=100,
+                        value=20,
+                        help="Number of forward passes for uncertainty estimation",
+                        key="batch_base_mc_passes"
+                    )
+                else:
+                    config["mc_passes"] = None  # Will use sweep values
+            with col2:
+                if swept_parameter != "eval_per_group":
+                    config["eval_per_group"] = st.number_input(
+                        "Evaluation samples per group",
+                        min_value=100,
+                        max_value=2000,
+                        value=100,
+                        step=100,
+                        help="Samples for each evaluation group (clean, noisy, under-supported)",
+                        key="batch_base_eval_per_group"
+                    )
+                else:
+                    config["eval_per_group"] = None  # Will use sweep values
+    
+    return config
+
+
+def render_batch_results(
+    api_base_url: str,
+    get_headers_func: Callable[[], Dict],
+) -> None:
+    """
+    Render batch experiment status, charts, and aggregated results.
+    """
+    st.subheader("📈 Batch Experiment Results")
+
+    try:
+        response = requests.get(
+            f"{api_base_url}/api/v1/batch-experiments",
+            headers=get_headers_func(),
+            timeout=10,
+        )
+        response.raise_for_status()
+        batches = response.json()
+    except requests.exceptions.RequestException as exc:
+        st.error(f"Failed to fetch batch experiments: {str(exc)}")
+        if hasattr(exc, "response") and exc.response is not None:
+            st.error(f"Response: {exc.response.text}")
+        return
+
+    if not batches:
+        st.info("No batch experiments found. Create one using the batch form above.")
+        return
+
+    batch_df = pd.DataFrame(
+        [
+            {
+                "ID": batch["id"],
+                "Name": batch["name"],
+                "Status": batch["status"],
+                "Progress": f"{batch.get('progress', 0):.1%}",
+                "Runs": batch.get("total_runs", 0),
+                "Completed": batch.get("completed_runs", 0),
+                "Failed": batch.get("failed_runs", 0),
+            }
+            for batch in batches
+        ]
+    )
+    st.dataframe(batch_df, use_container_width=True, hide_index=True)
+
+    selected_batch_id = st.selectbox(
+        "Inspect Batch",
+        options=[batch["id"] for batch in batches],
+        format_func=lambda batch_id: next(
+            (f"{batch['name']} ({batch['status']})" for batch in batches if batch["id"] == batch_id),
+            batch_id,
+        ),
+    )
+
+    # Add start button for queued batches
+    selected_batch = next((b for b in batches if b["id"] == selected_batch_id), None)
+    if selected_batch and selected_batch["status"] == "queued":
+        if st.button("▶️ Start Batch Execution", type="primary", use_container_width=True):
+            try:
+                start_response = requests.post(
+                    f"{api_base_url}/api/v1/batch-experiments/{selected_batch_id}/start",
+                    headers=get_headers_func(),
+                    timeout=10,
+                )
+                start_response.raise_for_status()
+                st.success(f"✅ Batch '{selected_batch['name']}' started successfully!")
+                st.rerun()
+            except requests.exceptions.RequestException as exc:
+                st.error(f"Failed to start batch: {str(exc)}")
+                if hasattr(exc, "response") and exc.response is not None:
+                    st.error(f"Response: {exc.response.text}")
+
+    try:
+        result_response = requests.get(
+            f"{api_base_url}/api/v1/batch-experiments/{selected_batch_id}/results",
+            headers=get_headers_func(),
+            timeout=10,
+        )
+        result_response.raise_for_status()
+        results = result_response.json()
+    except requests.exceptions.RequestException as exc:
+        st.error(f"Failed to fetch batch results: {str(exc)}")
+        if hasattr(exc, "response") and exc.response is not None:
+            st.error(f"Response: {exc.response.text}")
+        return
+
+    comparison_table = results.get("comparison_table", [])
+    summary = results.get("summary", {})
+
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Status", results.get("status", "unknown"))
+    with col2:
+        st.metric("Runs", len(comparison_table))
+    with col3:
+        st.metric("Best Epistemic", _format_best_metric(summary, "best_epistemic_run", "epistemic_auroc"))
+    with col4:
+        st.metric("Best Aleatoric", _format_best_metric(summary, "best_aleatoric_run", "aleatoric_auroc"))
+
+    series = results.get("series", [])
+    if series:
+        import plotly.graph_objects as go
+
+        figure = go.Figure()
+        for item in series:
+            points = item.get("points", [])
+            if not points:
+                continue
+            figure.add_trace(
+                go.Scatter(
+                    x=[point["x"] for point in points],
+                    y=[point["y"] for point in points],
+                    mode="lines+markers",
+                    name=item.get("display_name", item.get("metric", "metric")),
+                )
+            )
+
+        figure.update_layout(
+            title=f"AUROC vs {results.get('x_axis_label', 'parameter')}",
+            xaxis_title=results.get("x_axis_label", "parameter"),
+            yaxis_title="AUROC",
+            yaxis=dict(range=[0, 1]),
+            legend_title="Metric",
+        )
+        st.plotly_chart(figure, use_container_width=True)
+
+    if comparison_table:
+        st.markdown("#### Comparison Table")
+        st.dataframe(pd.DataFrame(comparison_table), use_container_width=True, hide_index=True)
+
+    artifacts = results.get("artifacts", {})
+    if artifacts:
+        st.markdown("#### Artifacts")
+        st.json(artifacts)
+
+
+def _generate_sweep_preview(
+    start: float,
+    end: float,
+    step: float,
+    value_type: str,
+) -> List[float]:
+    """
+    Generate preview values for the batch sweep UI.
+    """
+    if step <= 0 or end < start:
+        return []
+
+    values: List[float] = []
+    current = start
+    epsilon = abs(step) / 1000.0
+
+    while current <= end + epsilon and len(values) <= 101:
+        if value_type == "int":
+            values.append(int(round(current)))
+        else:
+            values.append(round(current, 10))
+        current += step
+
+    return values
+
+
+def _format_best_metric(summary: Dict[str, Any], key: str, metric: str) -> str:
+    """
+    Format a best-run metric from batch summary data.
+    """
+    best = summary.get(key)
+    if not best or best.get(metric) is None:
+        return "N/A"
+    return f"{best[metric]:.3f}"

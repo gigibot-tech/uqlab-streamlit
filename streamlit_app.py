@@ -11,6 +11,10 @@ from typing import Optional
 
 # Import UI components
 from ui_components import (
+    build_base_experiment_config,
+    render_batch_results,
+    render_batch_sweep_config,
+    render_batch_base_config,
     render_dataset_selection,
     render_configuration_progress,
     render_epistemic_config,
@@ -154,12 +158,15 @@ def main():
     
     # Experiment section
     st.header("🧪 Experiments")
-    
-    st.subheader("Create New Experiment")
-    
-    with st.form("experiment_form"):
+
+    single_tab, batch_tab = st.tabs(["Single Experiment", "Batch Experiments"])
+
+    with single_tab:
+        st.subheader("Create New Experiment")
+
+        with st.form("experiment_form"):
             exp_name = st.text_input("Experiment Name", value=f"exp_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}")
-            
+
             # CIFAR-10 class names
             class_names = ["airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"]
             
@@ -286,7 +293,8 @@ def main():
                 under_supported_list=under_supported_list_for_eval,
                 under_train_per_class=under_train_per_class,
                 regular_train_per_class=regular_train_per_class,
-                noise_rate=noise_rate_for_eval
+                noise_rate=noise_rate_for_eval,
+                key_prefix="single"
             )
             
             # Update evaluation progress
@@ -306,36 +314,21 @@ def main():
                         # Prepare experiment data with organized sections
                         experiment_data = {
                             "name": exp_name,
-                            "config": {
-                                # Dataset configuration
-                                "dataset": "cifar10n",
-                                "noise_type": noise_type,
-                                
-                                # Epistemic uncertainty configuration
-                                "under_supported_classes": under_supported,
-                                "under_train_per_class": under_train_per_class,
-                                "regular_train_per_class": regular_train_per_class,
-                                
-                                # Aleatoric uncertainty configuration
-                                "noise_source": noise_source,
-                                "custom_noise_rate": custom_noise_rate,
-                                
-                                # Model configuration
-                                "dinov2_model": dinov2_model,
-                                "hidden_dim": hidden_dim,
-                                "dropout": dropout,
-                                
-                                # Training configuration
-                                "epochs": epochs,
-                                "learning_rate": learning_rate,
-                                "weight_decay": weight_decay,
-                                "train_batch_size": train_batch_size,
-                                
-                                # Evaluation configuration
-                                "eval_per_group": eval_per_group,
-                                "mc_passes": mc_passes,
-                                "attribution_signals": selected_signals,
-                            }
+                            "config": build_base_experiment_config(
+                                noise_type=noise_type,
+                                under_supported=under_supported,
+                                under_train_per_class=under_train_per_class,
+                                regular_train_per_class=regular_train_per_class,
+                                dinov2_model=dinov2_model,
+                                hidden_dim=hidden_dim,
+                                dropout=dropout,
+                                epochs=epochs,
+                                learning_rate=learning_rate,
+                                weight_decay=weight_decay,
+                                train_batch_size=train_batch_size,
+                                eval_per_group=eval_per_group,
+                                mc_passes=mc_passes,
+                            )
                         }
                         
                         # Create experiment (using no-auth endpoint)
@@ -358,20 +351,147 @@ def main():
                         if hasattr(e, 'response') and e.response is not None:
                             st.error(f"Response: {e.response.text}")
     
-    # Display experiment results below the form
-    st.markdown("---")
-    st.subheader("📋 Experiment Results")
-    
-    # Auto-polling controls with session state
-    if 'auto_refresh' not in st.session_state:
-        st.session_state.auto_refresh = False
-    
-    # Render experiment results with auto-refresh
-    st.session_state.auto_refresh = render_experiment_results(
-        API_BASE_URL,
-        get_headers,
-        st.session_state.auto_refresh
-    )
+        # Display experiment results below the form
+        st.markdown("---")
+        st.subheader("📋 Experiment Results")
+
+        # Auto-polling controls with session state
+        if 'auto_refresh' not in st.session_state:
+            st.session_state.auto_refresh = False
+
+        # Render experiment results with auto-refresh
+        st.session_state.auto_refresh = render_experiment_results(
+            API_BASE_URL,
+            get_headers,
+            st.session_state.auto_refresh
+        )
+
+    with batch_tab:
+        st.subheader("🔬 Create Batch Experiment")
+        st.markdown("""
+        **Batch experiments** allow you to sweep a single parameter while keeping all others constant.
+        This helps you understand how each parameter affects model performance.
+        """)
+
+        with st.form("batch_experiment_form"):
+            # Basic Info
+            batch_name = st.text_input(
+                "Batch Name",
+                value=f"batch_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}",
+                help="Descriptive name for this batch experiment"
+            )
+            batch_description = st.text_area(
+                "Description",
+                value="Parameter sweep batch experiment",
+                help="Optional description of what you're testing"
+            )
+
+            class_names = ["airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"]
+
+            st.markdown("---")
+            
+            # STEP 1: Sweep Configuration
+            swept_parameter, value_type, sweep_start, sweep_end, sweep_step, preview_values = render_batch_sweep_config()
+            
+            if not preview_values:
+                st.error("❌ Cannot create batch: sweep configuration is invalid")
+                st.stop()
+            
+            st.markdown("---")
+            
+            # STEP 2: Base Configuration (only non-swept parameters)
+            base_config = render_batch_base_config(
+                swept_parameter=swept_parameter,
+                noise_type=noise_type,
+                stats=stats,
+                dataset_name=dataset_name,
+                class_names=class_names,
+                fetch_dataset_stats=fetch_dataset_stats
+            )
+            
+            st.markdown("---")
+            
+            # Auto-start option
+            auto_start_batch = st.checkbox(
+                "Start immediately after creation",
+                value=True,
+                help="If checked, experiments will start running automatically"
+            )
+
+            batch_submitted = st.form_submit_button(
+                "🚀 Create Batch Experiment",
+                type="primary",
+                use_container_width=True
+            )
+
+            if batch_submitted:
+                with st.spinner("Creating batch experiment..."):
+                    try:
+                        # Build base config with proper defaults for swept parameters
+                        # Swept parameters will be None in base_config and filled by sweep
+                        batch_base_config = build_base_experiment_config(
+                            noise_type=noise_type,
+                            under_supported=base_config.get("under_supported", "random:2"),
+                            under_train_per_class=base_config.get("under_train_per_class", 50),
+                            regular_train_per_class=base_config.get("regular_train_per_class", 300),
+                            dinov2_model=base_config.get("dinov2_model", "small"),
+                            hidden_dim=base_config.get("hidden_dim", 256),
+                            dropout=base_config.get("dropout", 0.2),
+                            epochs=base_config.get("epochs", 12),
+                            learning_rate=base_config.get("learning_rate", 0.001),
+                            weight_decay=base_config.get("weight_decay", 0.0001),
+                            train_batch_size=base_config.get("train_batch_size", 256),
+                            eval_per_group=base_config.get("eval_per_group", 100),
+                            mc_passes=base_config.get("mc_passes", 20),
+                        )
+                        
+                        batch_payload = {
+                            "name": batch_name,
+                            "description": batch_description,
+                            "base_config": batch_base_config,
+                            "sweep_definitions": [
+                                {
+                                    "parameter": swept_parameter,
+                                    "value_type": value_type,
+                                    "range": {
+                                        "start": sweep_start,
+                                        "end": sweep_end,
+                                        "step": sweep_step,
+                                    }
+                                }
+                            ],
+                            "auto_start": auto_start_batch,
+                        }
+
+                        response = requests.post(
+                            f"{API_BASE_URL}/api/v1/batch-experiments",
+                            json=batch_payload,
+                            headers=get_headers(),
+                            timeout=30
+                        )
+                        response.raise_for_status()
+                        result = response.json()
+
+                        st.success(f"✅ Batch experiment created: {result['name']}")
+                        st.info(f"📊 Batch ID: {result['id']}")
+                        st.info(f"🔢 Generated {result['total_runs']} experiments")
+                        st.caption(f"📈 Sweep values: {', '.join(str(v) for v in preview_values)}")
+                        
+                        # Show what's being swept vs what's fixed
+                        with st.expander("📋 Configuration Summary"):
+                            st.markdown(f"**Swept Parameter:** `{swept_parameter}` = {', '.join(str(v) for v in preview_values)}")
+                            st.markdown("**Fixed Parameters:**")
+                            for key, value in batch_base_config.items():
+                                if key != swept_parameter and value is not None:
+                                    st.text(f"  • {key}: {value}")
+                                    
+                    except requests.exceptions.RequestException as e:
+                        st.error(f"❌ Failed to create batch experiment: {str(e)}")
+                        if hasattr(e, 'response') and e.response is not None:
+                            st.error(f"Response: {e.response.text}")
+
+        st.markdown("---")
+        render_batch_results(API_BASE_URL, get_headers)
     
     # Footer
     st.markdown("---")

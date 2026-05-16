@@ -22,10 +22,30 @@ def init_db(session: Session) -> None:
     # For PostgreSQL, use Alembic migrations
     if settings.USE_SQLITE:
         # Import all models to ensure they're registered
-        from app.tables import Item, UncertaintyExperiment  # noqa: F401
+        from app.tables import (  # noqa: F401
+            BatchExperiment,
+            BatchExperimentRun,
+            Item,
+            UncertaintyExperiment,
+        )
         
         # Create all tables
         SQLModel.metadata.create_all(engine)
+        
+        # Validate critical tables exist
+        from sqlalchemy import inspect
+        inspector = inspect(engine)
+        required_tables = ["batchexperiment", "batchexperimentrun", "uncertaintyexperiment"]
+        existing_tables = inspector.get_table_names()
+        
+        missing_tables = [t for t in required_tables if t not in existing_tables]
+        if missing_tables:
+            raise RuntimeError(
+                f"❌ CRITICAL: Required database tables missing: {missing_tables}\n"
+                f"   Existing tables: {existing_tables}\n"
+                f"   This indicates a database initialization failure.\n"
+                f"   Please delete app.db and restart the server."
+            )
 
     user = session.exec(
         select(User).where(User.email == settings.FIRST_SUPERUSER)

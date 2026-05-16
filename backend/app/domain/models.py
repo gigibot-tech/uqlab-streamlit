@@ -6,28 +6,32 @@ from pydantic import BaseModel, Field
 
 
 class TrainingConfig(BaseModel):
-    """Training configuration value object."""
+    """Training configuration value object.
+    
+    Parameters being swept in batch experiments should be set to None.
+    The batch service will fill in the swept values for each run.
+    """
 
     # Data parameters
     noise_type: str = Field(default="worse_label", description="CIFAR-10N noise type")
-    under_supported_classes: str = Field(default="3,5", description="Comma-separated class IDs")
-    under_train_per_class: int = Field(default=50, ge=10, le=500)
-    regular_train_per_class: int = Field(default=300, ge=50, le=1000)
-    eval_per_group: int = Field(default=600, ge=100, le=2000)
+    under_supported_classes: Optional[str] = Field(default="3,5", description="Comma-separated class IDs")
+    under_train_per_class: Optional[int] = Field(default=50, ge=1, le=5000)
+    regular_train_per_class: Optional[int] = Field(default=300, ge=1, le=5000)
+    eval_per_group: Optional[int] = Field(default=600, ge=1, le=10000)
 
     # Model parameters
     dinov2_model: str = Field(default="small", description="DINOv2 model size")
-    hidden_dim: int = Field(default=256, ge=64, le=1024)
-    dropout: float = Field(default=0.2, ge=0.0, le=0.9)
+    hidden_dim: Optional[int] = Field(default=256, ge=1, le=2048)
+    dropout: Optional[float] = Field(default=0.2, ge=0.0, le=1.0)
 
     # Training parameters
-    epochs: int = Field(default=12, ge=1, le=100)
-    learning_rate: float = Field(default=0.001, ge=0.0001, le=0.1)
-    weight_decay: float = Field(default=0.0001, ge=0.0, le=0.01)
-    train_batch_size: int = Field(default=256, ge=16, le=512)
+    epochs: Optional[int] = Field(default=12, ge=1, le=1000)
+    learning_rate: Optional[float] = Field(default=0.001, ge=0.0, le=1.0)
+    weight_decay: Optional[float] = Field(default=0.0001, ge=0.0, le=1.0)
+    train_batch_size: Optional[int] = Field(default=256, ge=1, le=1024)
 
     # Evaluation parameters
-    mc_passes: int = Field(default=20, ge=5, le=100)
+    mc_passes: Optional[int] = Field(default=20, ge=1, le=1000)
     attribution_method: str = Field(default="dualxda", description="Attribution method")
 
     def to_yaml_dict(self) -> Dict[str, Any]:

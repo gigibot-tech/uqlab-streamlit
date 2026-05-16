@@ -12,10 +12,14 @@ Functions:
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 import torch
 import torch.nn.functional as F
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 
 def compute_predictive_signals(
@@ -387,7 +391,7 @@ def compare_local_vs_watsonx(
         comparison[signal_name] = matches
         
         if not matches:
-            print(f"⚠️  {signal_name}: max diff = {max_diff:.6f} (tolerance = {tolerance})")
+            logger.warning(f"{signal_name}: max diff = {max_diff:.6f} (tolerance = {tolerance})")
     
     return comparison
 
