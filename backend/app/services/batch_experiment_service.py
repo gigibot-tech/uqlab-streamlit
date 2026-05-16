@@ -175,6 +175,8 @@ class BatchExperimentService:
             logger.info(f"▶️ Beginning execution of {total_runs} experiments")
 
             for position, run_id in enumerate(run_ids, start=1):
+                # Get run name for logging (extract before session closes)
+                run_name = None
                 with Session(engine) as session:
                     repository = BatchExperimentRepository(session)
                     run = repository.get_run(run_id)
@@ -182,7 +184,8 @@ class BatchExperimentService:
                         logger.error(f"❌ Run {run_id} not found, skipping")
                         continue
                     
-                    logger.info(f"🔄 Starting run {position}/{total_runs}: {run.run_name}")
+                    run_name = run.run_name  # Extract as string
+                    logger.info(f"🔄 Starting run {position}/{total_runs}: {run_name}")
                     repository.update_batch_status(
                         batch_id,
                         JobStatus.RUNNING,
@@ -192,12 +195,7 @@ class BatchExperimentService:
                     repository.update_run_status(run_id, JobStatus.RUNNING, 0.0)
 
                 await self._run_single_batch_experiment(batch_id, run_id, position, total_runs)
-                
-                with Session(engine) as session:
-                    repository = BatchExperimentRepository(session)
-                    run = repository.get_run(run_id)
-                    if run:
-                        logger.info(f"✅ Completed run {position}/{total_runs}: {run.run_name}")
+                logger.info(f"✅ Completed run {position}/{total_runs}: {run_name}")
                 self._aggregate_batch_results(batch_id)
 
             with Session(engine) as session:

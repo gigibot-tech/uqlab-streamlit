@@ -1551,23 +1551,41 @@ def render_batch_results(
         ),
     )
 
-    # Add start button for queued batches
+    # Add start/retry buttons based on batch status
     selected_batch = next((b for b in valid_batches if b["id"] == selected_batch_id), None)
-    if selected_batch and selected_batch["status"] == "queued":
-        if st.button("▶️ Start Batch Execution", type="primary", use_container_width=True):
-            try:
-                start_response = requests.post(
-                    f"{api_base_url}/api/v1/batch-experiments/{selected_batch_id}/start",
-                    headers=get_headers_func(),
-                    timeout=10,
-                )
-                start_response.raise_for_status()
-                st.success(f"✅ Batch '{selected_batch['name']}' started successfully!")
-                st.rerun()
-            except requests.exceptions.RequestException as exc:
-                st.error(f"Failed to start batch: {str(exc)}")
-                if hasattr(exc, "response") and exc.response is not None:
-                    st.error(f"Response: {exc.response.text}")
+    if selected_batch:
+        if selected_batch["status"] == "queued":
+            if st.button("▶️ Start Batch Execution", type="primary", use_container_width=True):
+                try:
+                    start_response = requests.post(
+                        f"{api_base_url}/api/v1/batch-experiments/{selected_batch_id}/start",
+                        headers=get_headers_func(),
+                        timeout=10,
+                    )
+                    start_response.raise_for_status()
+                    st.success(f"✅ Batch '{selected_batch['name']}' started successfully!")
+                    st.rerun()
+                except requests.exceptions.RequestException as exc:
+                    st.error(f"Failed to start batch: {str(exc)}")
+                    if hasattr(exc, "response") and exc.response is not None:
+                        st.error(f"Response: {exc.response.text}")
+        
+        elif selected_batch["status"] in ["failed", "completed_with_errors"]:
+            if st.button("🔄 Retry Failed Runs", type="secondary", use_container_width=True):
+                try:
+                    retry_response = requests.post(
+                        f"{api_base_url}/api/v1/batch-experiments/{selected_batch_id}/retry",
+                        headers=get_headers_func(),
+                        timeout=10,
+                    )
+                    retry_response.raise_for_status()
+                    result = retry_response.json()
+                    st.success(f"✅ {result.get('message', 'Retry started')}")
+                    st.rerun()
+                except requests.exceptions.RequestException as exc:
+                    st.error(f"Failed to retry batch: {str(exc)}")
+                    if hasattr(exc, "response") and exc.response is not None:
+                        st.error(f"Response: {exc.response.text}")
 
     try:
         result_response = requests.get(

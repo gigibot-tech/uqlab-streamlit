@@ -1,9 +1,9 @@
 """Batch experiment management endpoints."""
 
 import uuid
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
@@ -11,6 +11,7 @@ from app.api.deps import SessionDep
 from app.core.db import engine
 from app.core.security import get_password_hash
 from app.domain.models import TrainingConfig
+from app.repositories.batch_experiment_repository import BatchExperimentRepository
 from app.services.batch_experiment_service import (
     BatchExperimentService,
     SweepDefinition,
@@ -32,6 +33,9 @@ def get_batch_service() -> BatchExperimentService:
     if _batch_service is None:
         _batch_service = BatchExperimentService(DirectExecutor(ML_SCRIPT))
     return _batch_service
+
+# Type alias for dependency injection
+BatchExperimentServiceDep = Annotated[BatchExperimentService, Depends(get_batch_service)]
 
 
 def get_or_create_test_user(session: Session) -> User:
@@ -207,6 +211,41 @@ async def get_batch_results(batch_id: uuid.UUID, session: SessionDep) -> dict[st
         raise HTTPException(status_code=404, detail="Batch experiment not found")
 
     service = get_batch_service()
+
+@router.post("/{batch_id}/retry")
+async def retry_batch_experiment(
+    batch_id: uuid.UUID,
+    session: SessionDep,
+    service: BatchExperimentServiceDep,
+) -> dict[str, str]:
+    """Retry failed runs in a batch experiment."""
+    batch = session.get(BatchExperiment, batch_id)
+    if not batch:
+        raise HTTPException(status_code=404, detail="Batch experiment not found")
+    
+    if batch.status not in [JobStatus.FAILED, JobStatus.COMPLETED_WITH_ERRORS]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Can only retry failed or partially completed batches. Current status: {batch.status}"
+        )
+    
+    # Reset failed runs to queued
+    repo = BatchExperimentRepository(session)
+    runs = repo.get_runs(batch_id)
+    failed_count = 0
+    for run in runs:
+        if run.status == JobStatus.FAILED:
+            repo.update_run_status(run.id, JobStatus.QUEUED, 0.0, error_message=None)
+            failed_count += 1
+    
+    # Reset batch status
+    repo.update_batch_status(batch_id, JobStatus.QUEUED, 0.0, error_message=None)
+    session.commit()
+    
+    # Start execution
+    await service.start_batch(batch_id)
+    
+    return {"message": f"Retrying {failed_count} failed runs"}
     try:
         return service.get_batch_results(batch_id)
     except ValueError as exc:
