@@ -279,7 +279,11 @@ class BatchExperimentService:
             _ = loop
 
         try:
+            logger.info(f"🎯 Executing training for run {position}/{total_runs}: {run.run_name}")
+            logger.info(f"   Config: {config_path}")
+            logger.info(f"   Output: {output_dir}")
             result = await self.executor.execute(config_path, output_dir, progress_callback)
+            logger.info(f"✅ Training completed for run {position}/{total_runs}")
 
             summary_payload = {
                 "aleatoric_auroc": result.aleatoric_auroc,
@@ -309,6 +313,8 @@ class BatchExperimentService:
                     experiment_repository = ExperimentRepository(session)
                     experiment_repository.save_results(run.experiment_id, result)
         except Exception as exc:
+            logger.error(f"❌ Training failed for run {position}/{total_runs}: {str(exc)}")
+            logger.exception("Full traceback:")
             with Session(engine) as session:
                 batch_repository = BatchExperimentRepository(session)
                 run = batch_repository.get_run(run_id)
