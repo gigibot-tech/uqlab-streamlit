@@ -130,6 +130,10 @@ class DirectExecutor(TrainingExecutor):
         
         try:
             # Import the main function (do this inside try block to catch import errors)
+            import importlib
+            import run_fast_uncertainty_classification
+            # Force reload to pick up any changes to the script
+            importlib.reload(run_fast_uncertainty_classification)
             from run_fast_uncertainty_classification import main
             
             # Set the global progress callback so ML script can use it
