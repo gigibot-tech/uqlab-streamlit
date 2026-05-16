@@ -544,9 +544,16 @@ Examples:
         json.dump(summary, f, indent=2)
 
     # Save model checkpoint for watsonx.ai export
-    # Save the full model object (not just state_dict) for easy loading
+    # Remove any forward hooks before saving (DualXDA adds hooks that can't be pickled)
+    model.eval()
+    # Remove hooks from all modules
+    for module in model.modules():
+        module._forward_hooks.clear()
+        module._forward_pre_hooks.clear()
+        module._backward_hooks.clear()
+    
     checkpoint = {
-        'model': model,  # Full model object
+        'model': model,  # Full model object (hooks removed)
         'model_state_dict': model.state_dict(),  # Also save state_dict for flexibility
         'epoch': epochs,
         'loss': 0.0,  # Final loss not tracked in this script
