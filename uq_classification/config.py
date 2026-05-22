@@ -18,6 +18,7 @@ class DataConfig:
     under_train_per_class: int = 10
     regular_train_per_class: int = 500
     eval_per_group: int = 600
+    aleatoric_noise_percentage: float = 0.0  # 0-100, custom noise injection
     
     def __post_init__(self):
         if self.under_supported_classes is None:
@@ -30,6 +31,7 @@ class ModelConfig:
     dinov2_model: str = "dinov2_vitb14"
     hidden_dim: int = 256
     dropout: float = 0.2
+    use_untrained_resnet: bool = False  # If True, use untrained ResNet-50 instead of DINOv2
 
 
 @dataclass
@@ -96,6 +98,7 @@ class ExperimentConfig:
             under_train_per_class=data_dict.get("under_train_per_class", 10),
             regular_train_per_class=data_dict.get("regular_train_per_class", 500),
             eval_per_group=data_dict.get("eval_per_group", 600),
+            aleatoric_noise_percentage=data_dict.get("aleatoric_noise_percentage", 0.0),
         )
         
         # Parse model config
@@ -104,6 +107,7 @@ class ExperimentConfig:
             dinov2_model=model_dict.get("dinov2_model", "dinov2_vitb14"),
             hidden_dim=model_dict.get("hidden_dim", 256),
             dropout=model_dict.get("dropout", 0.2),
+            use_untrained_resnet=model_dict.get("use_untrained_resnet", False),
         )
         
         # Parse training config

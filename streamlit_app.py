@@ -25,7 +25,15 @@ from ui_components import (
     render_evaluation_config,
     render_evaluation_strategy,
     render_roc_explanation,
-    render_experiment_results
+    render_experiment_results,
+    render_2d_sweep_config,
+    render_2d_results_analysis,
+    render_model_selector,
+    render_model_inference_panel,
+    render_data_overlap_analysis,
+    render_experiment_type_validation,
+    render_validation_summary,
+    validate_sweep_configuration,
 )
 
 # Import watsonx.ai cloud mode components
@@ -159,7 +167,12 @@ def main():
     # Experiment section
     st.header("🧪 Experiments")
 
-    single_tab, batch_tab = st.tabs(["Single Experiment", "Batch Experiments"])
+    single_tab, batch_tab, batch_2d_tab, model_tab = st.tabs([
+        "Single Experiment",
+        "Batch Experiments (1D)",
+        "Batch Experiments (2D Grid)",
+        "🎯 Model Selector"
+    ])
 
     with single_tab:
         st.subheader("Create New Experiment")
@@ -264,7 +277,7 @@ def main():
             """, unsafe_allow_html=True)
         
             st.markdown("**Model Architecture**")
-            dinov2_model, hidden_dim, dropout = render_model_config()
+            dinov2_model, hidden_dim, dropout, use_untrained_resnet = render_model_config()
             
             epochs, learning_rate, weight_decay, train_batch_size = render_training_config()
             
@@ -302,6 +315,22 @@ def main():
             
             st.markdown("---")
             
+            # ========== EXPERIMENT TYPE VALIDATION ==========
+            validation_config = render_experiment_type_validation(key_prefix="single")
+            
+            # Show validation summary if enabled
+            if validation_config.get('validation_enabled', False):
+                # Build a preview config for validation
+                preview_config = {
+                    'under_train_per_class': under_train_per_class,
+                    'regular_train_per_class': regular_train_per_class,
+                    'aleatoric_noise_percentage': custom_noise_rate,
+                    'noise_source': noise_source
+                }
+                render_validation_summary(validation_config, preview_config)
+            
+            st.markdown("---")
+            
             # ========== PHASE 3: ROC CALCULATION EXAMPLE ==========
             render_roc_explanation(under_supported, class_names, noise_source, custom_noise_rate)
             
@@ -312,23 +341,31 @@ def main():
                 with st.spinner("Creating experiment..."):
                     try:
                         # Prepare experiment data with organized sections
+                        base_config = build_base_experiment_config(
+                            noise_type=noise_type,
+                            under_supported=under_supported,
+                            under_train_per_class=under_train_per_class,
+                            regular_train_per_class=regular_train_per_class,
+                            dinov2_model=dinov2_model,
+                            hidden_dim=hidden_dim,
+                            dropout=dropout,
+                            epochs=epochs,
+                            learning_rate=learning_rate,
+                            weight_decay=weight_decay,
+                            train_batch_size=train_batch_size,
+                            eval_per_group=eval_per_group,
+                            mc_passes=mc_passes,
+                            use_untrained_resnet=use_untrained_resnet,
+                            aleatoric_noise_percentage=custom_noise_rate,
+                        )
+                        
+                        # Add validation metadata if enabled
+                        if validation_config.get('validation_enabled', False):
+                            base_config['validation_metadata'] = validation_config
+                        
                         experiment_data = {
                             "name": exp_name,
-                            "config": build_base_experiment_config(
-                                noise_type=noise_type,
-                                under_supported=under_supported,
-                                under_train_per_class=under_train_per_class,
-                                regular_train_per_class=regular_train_per_class,
-                                dinov2_model=dinov2_model,
-                                hidden_dim=hidden_dim,
-                                dropout=dropout,
-                                epochs=epochs,
-                                learning_rate=learning_rate,
-                                weight_decay=weight_decay,
-                                train_batch_size=train_batch_size,
-                                eval_per_group=eval_per_group,
-                                mc_passes=mc_passes,
-                            )
+                            "config": base_config
                         }
                         
                         # Create experiment (using no-auth endpoint)
@@ -411,6 +448,28 @@ def main():
             
             st.markdown("---")
             
+            # ========== EXPERIMENT TYPE VALIDATION (AUTO-DETECT) ==========
+            # Auto-detect validation type based on swept parameter
+            validation_config_batch = {
+                'validation_enabled': True,
+                'is_epistemic_sweep': swept_parameter in ['under_train_per_class', 'regular_train_per_class'],
+                'is_aleatoric_sweep': swept_parameter == 'aleatoric_noise_percentage',
+                'epistemic_parameter': swept_parameter if swept_parameter in ['under_train_per_class', 'regular_train_per_class'] else None,
+                'aleatoric_parameter': swept_parameter if swept_parameter == 'aleatoric_noise_percentage' else None
+            }
+            
+            # Show auto-detected validation info
+            if validation_config_batch['is_epistemic_sweep']:
+                st.success(f"✅ **Auto-detected**: Epistemic Sweep (varying `{swept_parameter}`)")
+                st.caption("Will validate: C2 (ue ∼∝ Ue) and O1 (ua ⊥ Ue)")
+            elif validation_config_batch['is_aleatoric_sweep']:
+                st.success(f"✅ **Auto-detected**: Aleatoric Sweep (varying `{swept_parameter}`)")
+                st.caption("Will validate: C1 (ua ∼∝ Ua) and O2 (ue ⊥ Ua)")
+            else:
+                st.info(f"ℹ️ Sweeping `{swept_parameter}` - not a standard uncertainty validation parameter")
+            
+            st.markdown("---")
+            
             # Auto-start option
             auto_start_batch = st.checkbox(
                 "Start immediately after creation",
@@ -427,6 +486,10 @@ def main():
             if batch_submitted:
                 with st.spinner("Creating batch experiment..."):
                     try:
+                        # Map custom_noise_rate to aleatoric_noise_percentage
+                        # custom_noise_rate comes from render_aleatoric_config()
+                        aleatoric_noise_pct = base_config.get("custom_noise_rate", 0.0)
+                        
                         # Build base config with proper defaults for swept parameters
                         # Swept parameters will be None in base_config and filled by sweep
                         batch_base_config = build_base_experiment_config(
@@ -443,7 +506,13 @@ def main():
                             train_batch_size=base_config.get("train_batch_size", 256),
                             eval_per_group=base_config.get("eval_per_group", 100),
                             mc_passes=base_config.get("mc_passes", 20),
+                            use_untrained_resnet=base_config.get("use_untrained_resnet", False),
+                            aleatoric_noise_percentage=aleatoric_noise_pct,
                         )
+                        
+                        # Add validation metadata to base config
+                        if validation_config_batch.get('validation_enabled', False):
+                            batch_base_config['validation_metadata'] = validation_config_batch
                         
                         batch_payload = {
                             "name": batch_name,
@@ -492,6 +561,367 @@ def main():
 
         st.markdown("---")
         render_batch_results(API_BASE_URL, get_headers)
+    with batch_2d_tab:
+        st.subheader("🔬 Create 2D Grid Sweep (Epistemic × Aleatoric)")
+        st.markdown("""
+        **2D Grid Search** allows you to explore the interaction between epistemic and aleatoric uncertainty.
+        This creates a comprehensive experiment matrix similar to the watsonx deployment notebook.
+        """)
+        
+        with st.form("batch_2d_experiment_form"):
+            # Basic Info
+            batch_2d_name = st.text_input(
+                "Batch Name",
+                value=f"grid_sweep_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}",
+                help="Descriptive name for this 2D grid sweep"
+            )
+            batch_2d_description = st.text_area(
+                "Description",
+                value="2D grid sweep: Epistemic × Aleatoric",
+                help="Optional description of the experiment"
+            )
+            
+            st.markdown("---")
+            
+            # 2D Sweep Configuration
+            param1, param2, epis_values, alea_values, sweep_valid = render_2d_sweep_config()
+            
+            if not sweep_valid:
+                st.error("❌ Cannot create 2D sweep: configuration is invalid")
+                st.stop()
+            
+            # Auto-detect 2D validation (always epistemic × aleatoric)
+            st.success("""
+            ✅ **Auto-detected**: 2D Grid Sweep (Epistemic × Aleatoric)
+            
+            This experiment will validate the full uncertainty disentanglement framework:
+            - **C1**: Aleatoric signal (ua) correlates with noise level
+            - **C2**: Epistemic signal (ue) correlates with training size
+            - **O1**: Aleatoric signal (ua) independent of training size
+            - **O2**: Epistemic signal (ue) independent of noise level
+            """)
+            
+            validation_config_2d = {
+                'validation_enabled': True,
+                'is_epistemic_sweep': True,
+                'is_aleatoric_sweep': True,
+                'epistemic_parameter': param1,
+                'aleatoric_parameter': param2
+            }
+            
+            st.markdown("---")
+            
+            # Base Configuration (non-swept parameters)
+            st.markdown("### ⚙️ Base Configuration")
+            st.info("These parameters will be constant across all experiments in the grid")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("**Model Configuration**")
+                dinov2_model_2d = st.selectbox(
+                    "DINOv2 Model", 
+                    ["small", "base", "large"],
+                    index=0,
+                    key="dinov2_2d"
+                )
+                hidden_dim_2d = st.number_input(
+                    "Hidden Dimension", 
+                    min_value=64, 
+                    max_value=1024, 
+                    value=256, 
+                    step=64,
+                    key="hidden_2d"
+                )
+                dropout_2d = st.slider(
+                    "Dropout Rate", 
+                    0.0, 
+                    0.5, 
+                    0.2, 
+                    0.05,
+                    key="dropout_2d"
+                )
+            
+            with col2:
+                st.markdown("**Training Configuration**")
+                epochs_2d = st.number_input(
+                    "Epochs", 
+                    min_value=1, 
+                    max_value=50, 
+                    value=12,
+                    key="epochs_2d"
+                )
+                learning_rate_2d = st.number_input(
+                    "Learning Rate", 
+                    min_value=0.0001, 
+                    max_value=0.01, 
+                    value=0.001, 
+                    format="%.4f",
+                    key="lr_2d"
+                )
+                train_batch_size_2d = st.selectbox(
+                    "Batch Size", 
+                    [64, 128, 256, 512],
+                    index=2,
+                    key="batch_2d"
+                )
+            
+            st.markdown("**Evaluation Configuration**")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                regular_train_2d = st.number_input(
+                    "Regular samples/class",
+                    min_value=100,
+                    max_value=1000,
+                    value=300,
+                    step=50,
+                    key="regular_2d"
+                )
+            with col2:
+                eval_per_group_2d = st.number_input(
+                    "Eval samples/group",
+                    min_value=100,
+                    max_value=1000,
+                    value=600,
+                    step=100,
+                    key="eval_2d"
+                )
+            with col3:
+                mc_passes_2d = st.number_input(
+                    "MC Dropout Passes",
+                    min_value=10,
+                    max_value=100,
+                    value=20,
+                    step=10,
+                    key="mc_2d"
+                )
+            
+            # Auto-start option
+            auto_start_2d = st.checkbox(
+                "Start immediately after creation",
+                value=True,
+                help="If checked, all experiments will start running automatically",
+                key="autostart_2d"
+            )
+            
+            batch_2d_submitted = st.form_submit_button(
+                "🚀 Create 2D Grid Sweep",
+                type="primary",
+                use_container_width=True
+            )
+            
+            if batch_2d_submitted:
+                with st.spinner(f"Creating {len(epis_values) * len(alea_values)} experiments..."):
+                    try:
+                        # Create individual experiments for each grid point
+                        created_experiments = []
+                        
+                        for epis_val in epis_values:
+                            for alea_val in alea_values:
+                                exp_name = f"{batch_2d_name}_e{int(epis_val)}_a{int(alea_val)}"
+                                
+                                # Build config with validation metadata
+                                exp_config = build_base_experiment_config(
+                                    noise_type=noise_type,
+                                    under_supported="random:2",
+                                    under_train_per_class=int(epis_val),
+                                    regular_train_per_class=regular_train_2d,
+                                    dinov2_model=dinov2_model_2d,
+                                    hidden_dim=hidden_dim_2d,
+                                    dropout=dropout_2d,
+                                    epochs=epochs_2d,
+                                    learning_rate=learning_rate_2d,
+                                    weight_decay=0.0001,
+                                    train_batch_size=train_batch_size_2d,
+                                    eval_per_group=eval_per_group_2d,
+                                    mc_passes=mc_passes_2d,
+                                    use_untrained_resnet=False,
+                                    aleatoric_noise_percentage=alea_val,
+                                )
+                                
+                                # Add validation metadata
+                                exp_config['validation_metadata'] = validation_config_2d
+                                
+                                experiment_data = {
+                                    "name": exp_name,
+                                    "config": exp_config
+                                }
+                                
+                                response = requests.post(
+                                    f"{API_BASE_URL}/api/v1/experiments/no-auth",
+                                    json=experiment_data,
+                                    headers=get_headers(),
+                                    timeout=30
+                                )
+                                response.raise_for_status()
+                                result = response.json()
+                                created_experiments.append({
+                                    "id": result["id"],
+                                    "name": result["name"],
+                                    "epistemic": epis_val,
+                                    "aleatoric": alea_val,
+                                })
+                        
+                        st.success(f"✅ Created {len(created_experiments)} experiments in 2D grid!")
+                        st.info(f"📊 Grid: {len(epis_values)} epistemic × {len(alea_values)} aleatoric = {len(created_experiments)} total")
+                        
+                        # Store grid info in session state for visualization
+                        st.session_state['grid_sweep_info'] = {
+                            'batch_name': batch_2d_name,
+                            'experiments': created_experiments,
+                            'epis_values': epis_values,
+                            'alea_values': alea_values,
+                        }
+                        
+                        # Auto-start experiments if requested
+                        if auto_start_2d:
+                            started_count = 0
+                            for exp in created_experiments:
+                                try:
+                                    start_response = requests.post(
+                                        f"{API_BASE_URL}/api/v1/experiments/no-auth/{exp['id']}/start",
+                                        headers=get_headers(),
+                                        timeout=10
+                                    )
+                                    if start_response.status_code == 200:
+                                        started_count += 1
+                                except Exception as e:
+                                    st.warning(f"Failed to start {exp['name']}: {str(e)}")
+                            
+                            if started_count > 0:
+                                st.success(f"🚀 Started {started_count}/{len(created_experiments)} experiments")
+                        
+                        with st.expander("📋 Created Experiments"):
+                            for exp in created_experiments:
+                                st.text(f"  • {exp['name']} (ID: {exp['id']})")
+                        
+                    except requests.exceptions.RequestException as e:
+                        st.error(f"❌ Failed to create 2D grid sweep: {str(e)}")
+                        if hasattr(e, 'response') and e.response is not None:
+                            st.error(f"Response: {e.response.text}")
+        
+        # Display 2D results if available
+        st.markdown("---")
+        st.subheader("📊 2D Grid Sweep Results")
+        
+        if 'grid_sweep_info' in st.session_state:
+            grid_info = st.session_state['grid_sweep_info']
+            
+            # Add control buttons
+            col1, col2, col3 = st.columns([2, 1, 1])
+            with col1:
+                st.markdown(f"**Grid:** {grid_info['batch_name']}")
+            with col2:
+                if st.button("🔄 Refresh Results", use_container_width=True):
+                    st.rerun()
+            with col3:
+                if st.button("🚀 Start All", use_container_width=True):
+                    started = 0
+                    for exp in grid_info['experiments']:
+                        try:
+                            response = requests.post(
+                                f"{API_BASE_URL}/api/v1/experiments/no-auth/{exp['id']}/start",
+                                headers=get_headers(),
+                                timeout=10
+                            )
+                            if response.status_code == 200:
+                                started += 1
+                        except:
+                            pass
+                    st.success(f"Started {started} experiments")
+                    st.rerun()
+            
+            # Fetch results for all experiments in the grid
+            try:
+                # Fetch all experiments (no-auth endpoint)
+                response = requests.get(
+                    f"{API_BASE_URL}/api/v1/experiments/no-auth",
+                    headers=get_headers(),
+                    timeout=10
+                )
+                
+                if response.status_code == 200:
+                    all_experiments = response.json()
+                    exp_dict = {exp['id']: exp for exp in all_experiments}
+                    
+                    grid_results = []
+                    for exp in grid_info['experiments']:
+                        if exp['id'] in exp_dict:
+                            result = exp_dict[exp['id']]
+                            grid_results.append({
+                                'epistemic_value': exp['epistemic'],
+                                'aleatoric_value': exp['aleatoric'],
+                                'status': result.get('status', 'unknown'),
+                                'auroc_results': result.get('results', {}).get('one_vs_rest_auroc', []),
+                            })
+                else:
+                    st.error(f"Failed to fetch experiments: {response.status_code}")
+                    grid_results = []
+                
+                if grid_results:
+                    # Create output directory for heatmaps
+                    from pathlib import Path
+                    output_dir = Path("results") / "grid_sweeps" / grid_info['batch_name']
+                    output_dir.mkdir(parents=True, exist_ok=True)
+                    
+                    render_2d_results_analysis(
+                        batch_id=grid_info['batch_name'],
+                        results=grid_results,
+                        epis_values=grid_info['epis_values'],
+                        alea_values=grid_info['alea_values'],
+                        output_dir=output_dir
+                    )
+                    
+                    # Show saved heatmap images
+                    saved_files = list(output_dir.glob("*.png"))
+                    if saved_files:
+                        st.markdown("---")
+                        st.markdown("### 🖼️ Saved Heatmap Images")
+                        
+                        # Group by signal
+                        from collections import defaultdict
+                        by_signal = defaultdict(list)
+                        for file in saved_files:
+                            # Extract signal name (everything before last underscore + metric type)
+                            parts = file.stem.rsplit('_', 1)
+                            if len(parts) == 2:
+                                signal_name, metric_type = parts
+                                by_signal[signal_name].append((metric_type, file))
+                        
+                        # Display images grouped by signal
+                        for signal_name in sorted(by_signal.keys()):
+                            with st.expander(f"📊 {signal_name}", expanded=False):
+                                files = sorted(by_signal[signal_name])
+                                cols = st.columns(len(files))
+                                for idx, (metric_type, file_path) in enumerate(files):
+                                    with cols[idx]:
+                                        st.markdown(f"**{metric_type.title()}**")
+                                        st.image(str(file_path), use_container_width=True)
+                                        st.caption(f"{file_path.name}")
+                        
+                        st.caption(f"📁 Location: {output_dir}")
+                else:
+                    st.info("⏳ No results available yet. Experiments are still running.")
+                    
+            except Exception as e:
+                st.error(f"Failed to fetch grid results: {str(e)}")
+        else:
+            st.info("💡 Create a 2D grid sweep above to see results visualization here")
+    
+    with model_tab:
+        st.subheader("🎯 Model Selector & Inference")
+        st.markdown("""
+        **Load and use trained models** from completed experiments.
+        Select a model, view its performance, and run inference.
+        """)
+        
+        # Model selector
+        render_model_selector(API_BASE_URL, get_headers)
+        
+        st.markdown("---")
+        
+        # Inference panel (only shows if model is loaded)
+        render_model_inference_panel(API_BASE_URL, get_headers)
     
     # Footer
     st.markdown("---")

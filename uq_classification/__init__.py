@@ -11,6 +11,7 @@ This package provides modular components for uncertainty classification experime
 using CIFAR-10/CIFAR-10N datasets with DINOv2 features and DualXDA attribution analysis.
 
 Modules:
+    - config_schema: Type-safe configuration with validation (NEW - optional)
     - lightning_module: PyTorch Lightning training (Layer 2)
     - data_module: PyTorch Lightning data loading (Layer 2)
     - tracking: MLflow/TensorBoard/CSV logging (Layer 3)
@@ -29,9 +30,15 @@ Reused from src/:
     - src.models.dinov2_backbone: DINOv2 feature extraction
     - src.triage.dualxda_axioms: DualXDA attribution tracing
     - src.data.cifar10n_loader: CIFAR-10N dataset loading
+
+New Features (Optional):
+    - Configuration validation with dataclasses (see config_schema.py)
+    - Unit tests with pytest (see tests/)
+    - Type checking with mypy (see mypy.ini)
+    - See IMPROVEMENTS_GUIDE.md for details
 """
 
-__version__ = "2.1.0"
+__version__ = "2.2.0"  # Bumped for new optional features
 
 # Group constants used throughout the package
 GROUP_CLEAN = 0
@@ -57,6 +64,7 @@ from .data_loader import (
     maybe_load_or_compute_feature_cache,
     build_feature_cache_path,
     train_feature_model,
+    EmbeddingOrganizer,
 )
 from .attribution_signals import (
     normalized_entropy_from_labels,
@@ -105,6 +113,7 @@ __all__ = [
     "maybe_load_or_compute_feature_cache",
     "build_feature_cache_path",
     "train_feature_model",
+    "EmbeddingOrganizer",
     # Attribution signals
     "normalized_entropy_from_labels",
     "compute_attribution_structure_signals",

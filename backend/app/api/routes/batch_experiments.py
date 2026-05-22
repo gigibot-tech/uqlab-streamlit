@@ -1,9 +1,11 @@
 """Batch experiment management endpoints."""
 
 import uuid
+from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
@@ -211,6 +213,8 @@ async def get_batch_results(batch_id: uuid.UUID, session: SessionDep) -> dict[st
         raise HTTPException(status_code=404, detail="Batch experiment not found")
 
     service = get_batch_service()
+    results = service.get_batch_results(batch_id)
+    return results
 
 @router.post("/{batch_id}/retry")
 async def retry_batch_experiment(
@@ -246,10 +250,97 @@ async def retry_batch_experiment(
     await service.start_batch(batch_id)
     
     return {"message": f"Retrying {failed_count} failed runs"}
-    try:
-        return service.get_batch_results(batch_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/grid-sweeps/{batch_name}/heatmaps/{filename}")
+async def get_grid_sweep_heatmap(batch_name: str, filename: str) -> FileResponse:
+    """
+    Serve heatmap images for 2D grid sweeps.
+    
+    Args:
+        batch_name: Name of the grid sweep batch
+        filename: Heatmap filename (e.g., "msp_uncertainty_epistemic.png")
+    
+    Returns:
+        FileResponse with the heatmap image
+    """
+    # Validate filename to prevent directory traversal
+    if ".." in filename or "/" in filename or "\\" in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    
+    # Construct file path
+    file_path = Path("results") / "grid_sweeps" / batch_name / filename
+    
+    # Check if file exists
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Heatmap not found: {filename} for batch {batch_name}"
+        )
+    
+    # Determine media type
+    media_type = "image/png" if filename.endswith(".png") else "text/html"
+    
+    return FileResponse(
+        path=str(file_path),
+        media_type=media_type,
+        filename=filename
+    )
+
+
+@router.get("/grid-sweeps/{batch_name}/heatmaps")
+async def list_grid_sweep_heatmaps(batch_name: str) -> dict[str, Any]:
+    """
+    List all available heatmaps for a grid sweep batch.
+    
+    Args:
+        batch_name: Name of the grid sweep batch
+    
+    Returns:
+        Dictionary with list of available heatmaps
+    """
+    # Construct directory path
+    dir_path = Path("results") / "grid_sweeps" / batch_name
+    
+    if not dir_path.exists():
+        return {"batch_name": batch_name, "heatmaps": []}
+    
+    # List all PNG and HTML files
+    heatmaps = []
+    for file_path in dir_path.glob("*"):
+        if file_path.suffix in [".png", ".html"]:
+            heatmaps.append({
+                "filename": file_path.name,
+                "type": file_path.suffix[1:],  # Remove the dot
+                "size_bytes": file_path.stat().st_size,
+                "url": f"/api/v1/batch-experiments/grid-sweeps/{batch_name}/heatmaps/{file_path.name}"
+            })
+    
+    return {
+        "batch_name": batch_name,
+        "heatmaps": heatmaps,
+        "total_count": len(heatmaps)
+    }
+
+
+@router.delete("/{batch_id}")
+async def delete_batch_experiment(
+    batch_id: uuid.UUID,
+    session: SessionDep,
+) -> dict[str, str]:
+    """Delete a batch experiment and all its runs."""
+    batch = session.get(BatchExperiment, batch_id)
+    if not batch:
+        raise HTTPException(status_code=404, detail="Batch experiment not found")
+    
+    # Use repository to delete (handles cascade deletion of runs)
+    repo = BatchExperimentRepository(session)
+    deleted = repo.delete_batch(batch_id)
+    
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Batch experiment not found")
+    
+    return {"message": "Batch experiment deleted successfully", "id": str(batch_id)}
 
 
 def _to_batch_response(batch: BatchExperiment) -> BatchExperimentResponse:

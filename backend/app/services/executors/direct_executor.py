@@ -192,12 +192,24 @@ class DirectExecutor(TrainingExecutor):
         with open(summary_file) as f:
             data = json.load(f)
         
-        aurocs = data.get("one_vs_rest_auroc", [])
+        # Extract per-signal AUROC data (7 signals × 2 uncertainty types)
+        one_vs_rest_auroc = data.get("one_vs_rest_auroc", [])
+        
+        # Build best_signals dict with complete per-signal AUROC structure
+        best_signals = {
+            "one_vs_rest_auroc": one_vs_rest_auroc  # Pass through complete 7×2 structure
+        }
+        
+        # Compute aggregated max values for backward compatibility
+        aleatoric_auroc = max((s.get("aleatoric_like_auroc", 0.0) for s in one_vs_rest_auroc), default=0.0)
+        epistemic_auroc = max((s.get("epistemic_like_auroc", 0.0) for s in one_vs_rest_auroc), default=0.0)
+        
         return TrainingResult(
-            aleatoric_auroc=max((s.get("aleatoric_like_auroc", 0.0) for s in aurocs), default=0.0),
-            epistemic_auroc=max((s.get("epistemic_like_auroc", 0.0) for s in aurocs), default=0.0),
+            aleatoric_auroc=aleatoric_auroc,
+            epistemic_auroc=epistemic_auroc,
             train_size=data.get("train_size", 0),
             eval_sizes=data.get("eval_sizes", {}),
+            best_signals=best_signals,
             results_path=str(output_dir),
         )
 

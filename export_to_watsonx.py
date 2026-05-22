@@ -56,7 +56,7 @@ def main():
         raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
     
     logger.info(f"Loading checkpoint from: {checkpoint_path}")
-    checkpoint = torch.load(checkpoint_path, map_location='cpu')
+    checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
     
     # Try to infer experiment directory
     if args.experiment_dir:
@@ -95,16 +95,16 @@ def main():
     
     # Load data
     logger.info("Loading training data...")
-    train_data = torch.load(exp_dir / 'train_embeddings.pt')
+    train_data = torch.load(exp_dir / 'train_embeddings.pt', weights_only=False)
     
     logger.info("Loading evaluation data...")
-    eval_data = torch.load(exp_dir / 'eval_embeddings.pt')
+    eval_data = torch.load(exp_dir / 'eval_embeddings.pt', weights_only=False)
     
     logger.info("Loading results...")
     import pandas as pd
     signal_table = pd.read_csv(exp_dir / 'signal_table.csv')
-    predictions = torch.load(exp_dir / 'predictions.pt')
-    confidences = torch.load(exp_dir / 'confidences.pt')
+    predictions = torch.load(exp_dir / 'predictions.pt', weights_only=False)
+    confidences = torch.load(exp_dir / 'confidences.pt', weights_only=False)
     auroc_df = pd.read_csv(exp_dir / 'auroc_results.csv')
     
     # Extract from checkpoint

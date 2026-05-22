@@ -74,6 +74,10 @@ class BatchExperimentService:
             UUID of the created batch experiment
         """
         generated_values = self._generate_values(sweep_definition)
+        
+        # Validate parameter combinations before creating batch
+        self._validate_sweep_parameters(base_config, sweep_definition, generated_values)
+        
         storage_root = self._batch_storage_root_placeholder()
 
         with Session(engine) as session:
@@ -306,12 +310,15 @@ class BatchExperimentService:
             result = await self.executor.execute(config_path, output_dir, progress_callback)
             logger.info(f"✅ Training completed for run {position}/{total_runs}")
 
+            # Build summary payload with complete per-signal AUROC data
             summary_payload = {
                 "aleatoric_auroc": result.aleatoric_auroc,
                 "epistemic_auroc": result.epistemic_auroc,
                 "train_size": result.train_size,
                 "eval_sizes": result.eval_sizes,
                 "results_path": result.results_path,
+                # Include complete 7×2 per-signal AUROC structure for visualization
+                "one_vs_rest_auroc": result.best_signals.get("one_vs_rest_auroc", []),
             }
 
             with Session(engine) as session:
@@ -611,16 +618,17 @@ class BatchExperimentService:
                 )
 
     def _build_series(self, runs: list[BatchExperimentRun]) -> list[dict[str, Any]]:
-        """Build normalized plotting series."""
+        """Build normalized plotting series including per-signal AUROC data."""
         ordered_runs = sorted(
             [run for run in runs if run.swept_value_numeric is not None],
             key=lambda item: item.swept_value_numeric or 0.0,
         )
 
-        return [
+        # Start with aggregated metrics (backward compatibility)
+        series = [
             {
                 "metric": "epistemic_auroc",
-                "display_name": "Epistemic AUROC",
+                "display_name": "Epistemic AUROC (Aggregated)",
                 "points": [
                     {
                         "x": run.swept_value_numeric,
@@ -634,7 +642,7 @@ class BatchExperimentService:
             },
             {
                 "metric": "aleatoric_auroc",
-                "display_name": "Aleatoric AUROC",
+                "display_name": "Aleatoric AUROC (Aggregated)",
                 "points": [
                     {
                         "x": run.swept_value_numeric,
@@ -647,6 +655,77 @@ class BatchExperimentService:
                 ],
             },
         ]
+
+        # Extract per-signal AUROC from result_summary_json
+        # Collect all unique signal names across runs
+        signal_names_set = set()
+        for run in ordered_runs:
+            if run.result_summary_json:
+                try:
+                    summary = json.loads(run.result_summary_json)
+                    one_vs_rest = summary.get("one_vs_rest_auroc", [])
+                    for item in one_vs_rest:
+                        signal_names_set.add(item.get("signal"))
+                except (json.JSONDecodeError, KeyError):
+                    continue
+
+        # Build series for each signal
+        for signal_name in sorted(signal_names_set):
+            if not signal_name:
+                continue
+                
+            # Aleatoric AUROC for this signal
+            aleatoric_points = []
+            epistemic_points = []
+            
+            for run in ordered_runs:
+                if not run.result_summary_json:
+                    continue
+                    
+                try:
+                    summary = json.loads(run.result_summary_json)
+                    one_vs_rest = summary.get("one_vs_rest_auroc", [])
+                    
+                    for item in one_vs_rest:
+                        if item.get("signal") == signal_name:
+                            alea_auroc = item.get("aleatoric_like_auroc")
+                            epis_auroc = item.get("epistemic_like_auroc")
+                            
+                            if alea_auroc is not None and not (isinstance(alea_auroc, float) and (alea_auroc != alea_auroc)):  # Check for NaN
+                                aleatoric_points.append({
+                                    "x": run.swept_value_numeric,
+                                    "y": alea_auroc,
+                                    "run_index": run.run_index,
+                                    "status": run.status.value,
+                                })
+                            
+                            if epis_auroc is not None and not (isinstance(epis_auroc, float) and (epis_auroc != epis_auroc)):  # Check for NaN
+                                epistemic_points.append({
+                                    "x": run.swept_value_numeric,
+                                    "y": epis_auroc,
+                                    "run_index": run.run_index,
+                                    "status": run.status.value,
+                                })
+                            break
+                except (json.JSONDecodeError, KeyError):
+                    continue
+            
+            # Add series for this signal if we have data
+            if aleatoric_points:
+                series.append({
+                    "metric": f"{signal_name}_aleatoric",
+                    "display_name": f"{signal_name} (Aleatoric)",
+                    "points": aleatoric_points,
+                })
+            
+            if epistemic_points:
+                series.append({
+                    "metric": f"{signal_name}_epistemic",
+                    "display_name": f"{signal_name} (Epistemic)",
+                    "points": epistemic_points,
+                })
+
+        return series
 
     def _best_run_payload(
         self, runs: list[BatchExperimentRun], metric_name: str
@@ -686,5 +765,94 @@ class BatchExperimentService:
     def _batch_storage_root_placeholder(self) -> str:
         """Temporary placeholder before batch id exists."""
         return str(Path("/tmp/walaris_experiments") / "pending_batch")
+
+    def _validate_sweep_parameters(
+        self,
+        base_config: TrainingConfig,
+        sweep_definition: SweepDefinition,
+        generated_values: list[int | float],
+    ) -> None:
+        """
+        Validate that sweep parameter values won't cause data sampling errors.
+        
+        Raises:
+            ValueError: If parameter combinations are invalid
+        """
+        # Only validate for under_train_per_class sweeps
+        if sweep_definition.parameter != "under_train_per_class":
+            return
+        
+        # Get base config values (TrainingConfig has flat fields)
+        eval_per_group = base_config.eval_per_group or 600
+        regular_train_per_class = base_config.regular_train_per_class or 300
+        under_supported_classes_str = base_config.under_supported_classes or "3,5"
+        under_supported_classes = [int(x.strip()) for x in under_supported_classes_str.split(",") if x.strip()]
+        num_under_classes = len(under_supported_classes)
+        num_regular_classes = 10 - num_under_classes
+        
+        # CIFAR-10N statistics (worse_label noise)
+        samples_per_class = 5000
+        noise_rate = 0.40
+        estimated_clean_per_class = int(samples_per_class * (1 - noise_rate))  # ~3000
+        estimated_noisy_per_class = int(samples_per_class * noise_rate)  # ~2000
+        
+        # Check epistemic eval pool (clean samples from under-supported classes)
+        max_under_train = max(generated_values)
+        epistemic_needed = max_under_train + eval_per_group
+        
+        if epistemic_needed > estimated_clean_per_class:
+            raise ValueError(
+                f"❌ Epistemic evaluation pool will be empty!\n\n"
+                f"Under-supported classes need {epistemic_needed} clean samples "
+                f"({max_under_train} training + {eval_per_group} eval), "
+                f"but only ~{estimated_clean_per_class} available per class.\n\n"
+                f"Solutions:\n"
+                f"  1. Reduce max under_train_per_class to {estimated_clean_per_class - eval_per_group}\n"
+                f"  2. Reduce eval_per_group to {estimated_clean_per_class - max_under_train}\n"
+                f"  3. Use fewer under-supported classes (currently {num_under_classes})"
+            )
+        
+        # Check aleatoric eval pool (noisy samples from regular classes)
+        # After training uses regular_train_per_class samples, we need eval_per_group noisy samples total
+        noisy_per_regular_class_needed = eval_per_group / num_regular_classes
+        # Assume training uses proportional mix of clean/noisy
+        noisy_used_in_training = regular_train_per_class * noise_rate
+        noisy_remaining = estimated_noisy_per_class - noisy_used_in_training
+        
+        if noisy_per_regular_class_needed > noisy_remaining:
+            raise ValueError(
+                f"❌ Aleatoric evaluation pool will be empty!\n\n"
+                f"Need {eval_per_group} noisy samples total from {num_regular_classes} regular classes "
+                f"(~{noisy_per_regular_class_needed:.0f} per class), but after training uses "
+                f"{regular_train_per_class} samples per class, only ~{noisy_remaining:.0f} noisy samples remain.\n\n"
+                f"Solutions:\n"
+                f"  1. Reduce eval_per_group from {eval_per_group} to {int(noisy_remaining * num_regular_classes)}\n"
+                f"  2. Reduce regular_train_per_class from {regular_train_per_class} to "
+                f"{int((estimated_noisy_per_class - noisy_per_regular_class_needed) / noise_rate)}"
+            )
+        
+        # Check clean eval pool (clean samples from regular classes)
+        clean_per_regular_class_needed = eval_per_group / num_regular_classes
+        clean_used_in_training = regular_train_per_class * (1 - noise_rate)
+        clean_remaining = estimated_clean_per_class - clean_used_in_training
+        
+        if clean_per_regular_class_needed > clean_remaining:
+            raise ValueError(
+                f"❌ Clean evaluation pool will be empty!\n\n"
+                f"Need {eval_per_group} clean samples total from {num_regular_classes} regular classes "
+                f"(~{clean_per_regular_class_needed:.0f} per class), but after training uses "
+                f"{regular_train_per_class} samples per class, only ~{clean_remaining:.0f} clean samples remain.\n\n"
+                f"Solutions:\n"
+                f"  1. Reduce eval_per_group from {eval_per_group} to {int(clean_remaining * num_regular_classes)}\n"
+                f"  2. Reduce regular_train_per_class from {regular_train_per_class} to "
+                f"{int((estimated_clean_per_class - clean_per_regular_class_needed) / (1 - noise_rate))}"
+            )
+        
+        logger.info(
+            f"✅ Parameter validation passed:\n"
+            f"   - Epistemic pool: {epistemic_needed} <= {estimated_clean_per_class} per under-class\n"
+            f"   - Aleatoric pool: {noisy_per_regular_class_needed:.0f} <= {noisy_remaining:.0f} noisy per regular class\n"
+            f"   - Clean pool: {clean_per_regular_class_needed:.0f} <= {clean_remaining:.0f} clean per regular class"
+        )
 
 # Made with Bob

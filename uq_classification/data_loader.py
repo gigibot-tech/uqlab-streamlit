@@ -48,6 +48,7 @@ def sample_indices_for_fast_pilot(
     regular_train_per_class: int,
     eval_per_group: int,
     seed: int,
+    aleatoric_noise_percentage: float = 0.0,
 ) -> SplitSpec:
     """
     Sample train/eval indices with controlled class support for uncertainty experiments.
@@ -64,10 +65,17 @@ def sample_indices_for_fast_pilot(
         regular_train_per_class: Number of training samples per regular class
         eval_per_group: Number of evaluation samples per group
         seed: Random seed for reproducibility
+        aleatoric_noise_percentage: Custom noise percentage (0-100). If > 0, injects
+            uniform random label noise instead of using CIFAR-10N noise.
         
     Returns:
         SplitSpec with train and evaluation indices
     """
+    # Apply custom noise injection if requested (BEFORE sampling)
+    if aleatoric_noise_percentage > 0:
+        print(f"\n🎲 Injecting custom uniform noise: {aleatoric_noise_percentage}%")
+        dataset.inject_custom_noise(noise_percentage=aleatoric_noise_percentage, seed=seed)
+    
     rng = np.random.default_rng(seed)
     clean_labels = np.asarray(dataset.cifar10.targets)
     noise_mask = (
@@ -89,7 +97,11 @@ def sample_indices_for_fast_pilot(
             selected = cls_clean[:under_train_per_class]
         else:
             # Regular: use all samples (clean + noisy), normal quantity
-            selected = cls_all[:regular_train_per_class]
+            # Handle None case - if None, skip training samples for this class
+            if regular_train_per_class is None:
+                selected = np.array([], dtype=np.int64)
+            else:
+                selected = cls_all[:regular_train_per_class]
         train_indices.extend(selected.tolist())
 
     train_indices = np.array(sorted(set(train_indices)), dtype=np.int64)
@@ -105,14 +117,35 @@ def sample_indices_for_fast_pilot(
     aleatoric_eval_pool = np.where(non_under_mask & noise_mask & ~train_mask)[0]
     epistemic_eval_pool = np.where(under_mask & clean_mask & ~train_mask)[0]
 
-    # Sample evaluation sets
+    # Sample evaluation sets - use min(requested, available) to handle edge cases
     rng.shuffle(clean_eval_pool)
     rng.shuffle(aleatoric_eval_pool)
     rng.shuffle(epistemic_eval_pool)
 
-    clean_eval_indices = clean_eval_pool[:eval_per_group]
-    aleatoric_eval_indices = aleatoric_eval_pool[:eval_per_group]
-    epistemic_eval_indices = epistemic_eval_pool[:eval_per_group]
+    # Take up to eval_per_group samples, but use whatever is available
+    clean_eval_indices = clean_eval_pool[:min(eval_per_group, len(clean_eval_pool))]
+    aleatoric_eval_indices = aleatoric_eval_pool[:min(eval_per_group, len(aleatoric_eval_pool))]
+    epistemic_eval_indices = epistemic_eval_pool[:min(eval_per_group, len(epistemic_eval_pool))]
+    
+    # Log warnings if we got fewer samples than requested
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    if len(clean_eval_indices) < eval_per_group:
+        logger.warning(
+            f"⚠️  Clean eval pool: requested {eval_per_group}, got {len(clean_eval_indices)} "
+            f"(pool size: {len(clean_eval_pool)})"
+        )
+    if len(aleatoric_eval_indices) < eval_per_group:
+        logger.warning(
+            f"⚠️  Aleatoric eval pool: requested {eval_per_group}, got {len(aleatoric_eval_indices)} "
+            f"(pool size: {len(aleatoric_eval_pool)})"
+        )
+    if len(epistemic_eval_indices) < eval_per_group:
+        logger.warning(
+            f"⚠️  Epistemic eval pool: requested {eval_per_group}, got {len(epistemic_eval_indices)} "
+            f"(pool size: {len(epistemic_eval_pool)})"
+        )
 
     return SplitSpec(
         train_indices=train_indices,
@@ -131,16 +164,18 @@ def extract_features_for_indices(
     dinov2_model: str,
     batch_size: int,
     device: torch.device,
+    use_untrained_resnet: bool = False,
 ) -> Dict[str, torch.Tensor]:
     """
-    Extract DINOv2 features for specified dataset indices.
+    Extract features for specified dataset indices.
     
     Args:
         dataset: CIFAR-10N dataset
         indices: Indices to extract features for
-        dinov2_model: DINOv2 model size ('small', 'base', 'large', 'giant')
+        dinov2_model: DINOv2 model size ('small', 'base', 'large', 'giant') - ignored if use_untrained_resnet=True
         batch_size: Batch size for feature extraction
         device: Device to run on
+        use_untrained_resnet: If True, use untrained ResNet-50 instead of DINOv2
         
     Returns:
         Dictionary containing:
@@ -150,25 +185,44 @@ def extract_features_for_indices(
             - is_noisy: Boolean mask [N]
             - original_indices: Original dataset indices [N]
     """
-    try:
-        from src.models.dinov2_backbone import create_dinov2_model
-    except Exception as exc:
-        raise RuntimeError(
-            "DINOv2 feature extraction requires the DINOv2 dependencies. "
-            "Please run this in the project venv where `transformers` is available."
-        ) from exc
-
     subset = Subset(dataset, list(indices))
     loader = DataLoader(subset, batch_size=batch_size, shuffle=False, num_workers=0)
 
-    model = create_dinov2_model(
-        model_name=dinov2_model,
-        num_classes=10,
-        dropout_rate=0.0,
-        mc_dropout=False,
-        freeze_backbone=True,
-    ).to(device)
-    model.eval()
+    if use_untrained_resnet:
+        # Use untrained ResNet-50 as feature extractor
+        import torchvision.models as models
+        import torch.nn as nn
+        
+        resnet = models.resnet50(weights=None)  # Untrained weights
+        # Remove final classification layer to get features
+        model = nn.Sequential(*list(resnet.children())[:-1])
+        model = model.to(device)
+        model.eval()
+        
+        def extract_batch_features(images):
+            features = model(images)
+            return features.squeeze(-1).squeeze(-1)  # [B, 2048]
+    else:
+        # Use DINOv2 as before
+        try:
+            from src.models.dinov2_backbone import create_dinov2_model
+        except Exception as exc:
+            raise RuntimeError(
+                "DINOv2 feature extraction requires the DINOv2 dependencies. "
+                "Please run this in the project venv where `transformers` is available."
+            ) from exc
+
+        model = create_dinov2_model(
+            model_name=dinov2_model,
+            num_classes=10,
+            dropout_rate=0.0,
+            mc_dropout=False,
+            freeze_backbone=True,
+        ).to(device)
+        model.eval()
+        
+        def extract_batch_features(images):
+            return model.extract_features(images)  # Returns [B, feature_dim] with CLS token
 
     all_features: List[torch.Tensor] = []
     all_noisy_labels: List[torch.Tensor] = []
@@ -177,7 +231,7 @@ def extract_features_for_indices(
 
     for batch in loader:
         images, noisy_labels, clean_labels, is_noisy = batch
-        features = model.extract_features(images.to(device))
+        features = extract_batch_features(images.to(device))
         all_features.append(features.cpu())
         all_noisy_labels.append(noisy_labels.cpu())
         all_clean_labels.append(clean_labels.cpu())
@@ -200,6 +254,7 @@ def maybe_load_or_compute_feature_cache(
     dinov2_model: str,
     batch_size: int,
     device: torch.device,
+    use_untrained_resnet: bool = False,
 ) -> Dict[str, torch.Tensor]:
     """
     Load features from cache or compute and cache them.
@@ -208,16 +263,17 @@ def maybe_load_or_compute_feature_cache(
         dataset: CIFAR-10N dataset
         indices: Indices to extract features for
         cache_file: Path to cache file
-        dinov2_model: DINOv2 model size
+        dinov2_model: DINOv2 model size (ignored if use_untrained_resnet=True)
         batch_size: Batch size for feature extraction
         device: Device to run on
+        use_untrained_resnet: If True, use untrained ResNet-50 instead of DINOv2
         
     Returns:
         Dictionary with features and labels
     """
     if cache_file.exists():
         print(f"Loading cached features from {cache_file}")
-        return torch.load(cache_file, map_location="cpu")
+        return torch.load(cache_file, map_location="cpu", weights_only=False)
 
     print(f"Computing features (will cache to {cache_file})")
     cache_file.parent.mkdir(parents=True, exist_ok=True)
@@ -227,6 +283,7 @@ def maybe_load_or_compute_feature_cache(
         dinov2_model=dinov2_model,
         batch_size=batch_size,
         device=device,
+        use_untrained_resnet=use_untrained_resnet,
     )
     torch.save(payload, cache_file)
     return payload
@@ -238,6 +295,7 @@ def build_feature_cache_path(
     *,
     noise_type: str,
     dinov2_model: str,
+    use_untrained_resnet: bool = False,
 ) -> Path:
     """
     Build a stable feature-cache path from the selected data indices.
@@ -247,7 +305,13 @@ def build_feature_cache_path(
     """
     index_bytes = np.asarray(indices, dtype=np.int64).tobytes()
     index_hash = hashlib.sha1(index_bytes).hexdigest()[:12]
-    return cache_dir / f"features_{noise_type}_{dinov2_model}_n{len(indices)}_{index_hash}.pt"
+    
+    if use_untrained_resnet:
+        model_name = "resnet50_untrained"
+    else:
+        model_name = dinov2_model
+    
+    return cache_dir / f"features_{noise_type}_{model_name}_n{len(indices)}_{index_hash}.pt"
 
 
 def train_feature_model(
@@ -411,6 +475,7 @@ class EmbeddingOrganizer:
             union_indices.tolist(),
             noise_type=self.noise_type,
             dinov2_model=self.dinov2_model,
+            use_untrained_resnet=False,  # EmbeddingOrganizer doesn't support ResNet yet
         )
         
         # Step 3: Load or compute features

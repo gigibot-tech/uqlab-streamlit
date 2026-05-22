@@ -21,6 +21,7 @@ from __future__ import annotations
 # Standard library
 import argparse
 import json
+import logging
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -29,6 +30,9 @@ from pathlib import Path
 import numpy as np
 import torch
 import yaml
+
+# Setup logger
+logger = logging.getLogger(__name__)
 
 # Add project root to path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -248,6 +252,7 @@ Examples:
     under_train_per_class = data_config.get("under_train_per_class", 50)
     regular_train_per_class = data_config.get("regular_train_per_class", 300)
     eval_per_group = data_config.get("eval_per_group", 600)
+    aleatoric_noise_percentage = data_config.get("aleatoric_noise_percentage", 0.0)
     
     # Extract model parameters
     model_config = config.get("model", {})
@@ -287,7 +292,58 @@ Examples:
             f"`{cifar10n_root / 'cifar-10-batches-py'}` before running this pilot."
         )
 
-    # Sample train/eval splits
+    # ============================================================================
+    # ENTERPRISE VALIDATION: Fail Fast with Clear Error Messages
+    # ============================================================================
+    # Validate configuration BEFORE attempting data sampling
+    # This catches invalid configs early and provides actionable error messages
+    
+    # Validate regular_train_per_class
+    if regular_train_per_class is not None and regular_train_per_class < 0:
+        raise ValueError(
+            f"❌ Invalid regular_train_per_class={regular_train_per_class}. "
+            f"Must be None or >= 0."
+        )
+    
+    # Validate under_train_per_class
+    if under_train_per_class < 0:
+        raise ValueError(
+            f"❌ Invalid under_train_per_class={under_train_per_class}. "
+            f"Must be >= 0."
+        )
+    
+    # Validate eval_per_group
+    if eval_per_group <= 0:
+        raise ValueError(
+            f"❌ Invalid eval_per_group={eval_per_group}. "
+            f"Must be > 0."
+        )
+    
+    # Validate under_supported_classes
+    if not under_supported_classes or len(under_supported_classes) == 0:
+        raise ValueError(
+            f"❌ Invalid under_supported_classes={under_supported_classes}. "
+            f"Must specify at least one class (e.g., [3, 5])."
+        )
+    
+    for cls in under_supported_classes:
+        if cls < 0 or cls >= 10:
+            raise ValueError(
+                f"❌ Invalid class {cls} in under_supported_classes. "
+                f"Must be in range [0, 9] for CIFAR-10."
+            )
+    
+    # Log configuration
+    logger.info("=" * 80)
+    logger.info("CONFIGURATION VALIDATION")
+    logger.info("=" * 80)
+    logger.info(f"regular_train_per_class: {regular_train_per_class}")
+    logger.info(f"under_train_per_class: {under_train_per_class}")
+    logger.info(f"eval_per_group: {eval_per_group}")
+    logger.info(f"under_supported_classes: {under_supported_classes}")
+    logger.info("=" * 80)
+    
+    # Sample train/eval splits - data loader now handles edge cases gracefully
     split_spec: SplitSpec = sample_indices_for_fast_pilot(
         dataset,
         under_supported_classes=under_supported_classes,
@@ -295,11 +351,62 @@ Examples:
         regular_train_per_class=regular_train_per_class,
         eval_per_group=eval_per_group,
         seed=args.seed,
+        aleatoric_noise_percentage=aleatoric_noise_percentage,
     )
-    if len(split_spec.clean_eval_indices) == 0 or len(split_spec.aleatoric_eval_indices) == 0 or len(split_spec.epistemic_eval_indices) == 0:
+    
+    # ============================================================================
+    # POST-SAMPLING VALIDATION: Verify We Have Usable Data
+    # ============================================================================
+    
+    # Log actual eval sizes
+    logger.info("=" * 80)
+    logger.info("EVALUATION SPLITS CREATED")
+    logger.info("=" * 80)
+    logger.info(f"Clean: {len(split_spec.clean_eval_indices)} samples")
+    logger.info(f"Aleatoric: {len(split_spec.aleatoric_eval_indices)} samples")
+    logger.info(f"Epistemic: {len(split_spec.epistemic_eval_indices)} samples")
+    logger.info(f"Training: {len(split_spec.train_indices)} samples")
+    logger.info("=" * 80)
+    
+    # Enterprise check: Fail fast if ALL eval groups are empty
+    all_empty = (
+        len(split_spec.clean_eval_indices) == 0 and
+        len(split_spec.aleatoric_eval_indices) == 0 and
+        len(split_spec.epistemic_eval_indices) == 0
+    )
+    
+    if all_empty:
         raise RuntimeError(
-            "At least one evaluation group is empty. Try reducing `--eval_per_group`, "
-            "changing `--under_supported_classes`, or using a milder support reduction."
+            f"❌ CRITICAL: All evaluation groups are empty!\n"
+            f"Configuration:\n"
+            f"  - regular_train_per_class: {regular_train_per_class}\n"
+            f"  - under_train_per_class: {under_train_per_class}\n"
+            f"  - eval_per_group: {eval_per_group}\n"
+            f"  - under_supported_classes: {under_supported_classes}\n"
+            f"\n"
+            f"This configuration leaves no samples for evaluation.\n"
+            f"Possible fixes:\n"
+            f"  1. Set regular_train_per_class to a valid number (e.g., 300)\n"
+            f"  2. Reduce eval_per_group (currently {eval_per_group})\n"
+            f"  3. Reduce under_train_per_class (currently {under_train_per_class})\n"
+            f"  4. Use correct under_supported_classes (recommended: [3, 5])"
+        )
+    
+    # Warn if individual groups are empty (but allow experiment to continue)
+    if len(split_spec.clean_eval_indices) == 0:
+        logger.warning(
+            f"⚠️  Clean evaluation group is empty. "
+            f"AUROC for clean samples will return NaN."
+        )
+    if len(split_spec.aleatoric_eval_indices) == 0:
+        logger.warning(
+            f"⚠️  Aleatoric evaluation group is empty. "
+            f"AUROC for aleatoric uncertainty will return NaN."
+        )
+    if len(split_spec.epistemic_eval_indices) == 0:
+        logger.warning(
+            f"⚠️  Epistemic evaluation group is empty. "
+            f"AUROC for epistemic uncertainty will return NaN."
         )
 
     # Extract or load cached embeddings using OO-based organizer

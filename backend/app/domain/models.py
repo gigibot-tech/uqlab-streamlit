@@ -1,6 +1,6 @@
 """Domain models for training configuration and results."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -82,8 +82,8 @@ class TrainingResult(BaseModel):
     epistemic_auroc: float = Field(description="AUROC for epistemic uncertainty detection")
     train_size: int = Field(description="Number of training samples")
     eval_sizes: Dict[str, int] = Field(description="Evaluation set sizes per group")
-    best_signals: Dict[str, float] = Field(
-        default_factory=dict, description="Best performing signals and their scores"
+    best_signals: Dict[str, List[Dict[str, Any]]] = Field(
+        default_factory=dict, description="Best performing signals with per-signal AUROC data (7×2 structure)"
     )
     results_path: Optional[str] = Field(None, description="Path to detailed results")
 

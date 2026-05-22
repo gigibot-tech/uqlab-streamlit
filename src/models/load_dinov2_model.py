@@ -120,7 +120,7 @@ def load_checkpoint(
         Model with loaded weights
     """
     model = load_model(model_name, device)
-    checkpoint = torch.load(checkpoint_path, map_location=device)
+    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
     
     # Handle different checkpoint formats
     if 'state_dict' in checkpoint:
