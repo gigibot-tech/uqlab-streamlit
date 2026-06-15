@@ -32,7 +32,7 @@ def _post_process_paper_csvs(
     results_root: Path,
     meta_experiment_name: str,
 ) -> Path:
-    from walaris.results_io import flatten_paper_result_csvs
+    from uqlab.results_io import flatten_paper_result_csvs
 
     out = results_root / "paper_benchmarks" / sweep_type / "metrics.csv"
     flatten_paper_result_csvs(
@@ -81,7 +81,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 0
         os.chdir(PROJECT_ROOT)
-        from walaris.disentanglement_paper.main import main as paper_main
+        from uqlab.disentanglement_paper.main import main as paper_main
 
         paper_main()
 

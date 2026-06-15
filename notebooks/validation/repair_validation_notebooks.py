@@ -86,7 +86,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-from walaris.notebook_support import (
+from uqlab.notebook_support import (
     ARCHITECTURE_STYLES,
     ensure_columns,
     find_project_root,
@@ -328,7 +328,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-from walaris.notebook_support import (
+from uqlab.notebook_support import (
     ensure_columns,
     find_project_root,
     load_sweep_metrics,

@@ -108,8 +108,9 @@ class TrainingOrchestrator:
 
     def _prepare_paths(self, experiment_id: uuid.UUID, config: TrainingConfig) -> tuple[Path, Path]:
         """Prepare config file and output directory."""
-        base_dir = Path("/tmp/walaris_experiments")
-        exp_dir = base_dir / str(experiment_id)
+        from app.core.runtime_paths import experiment_dir
+
+        exp_dir = experiment_dir(experiment_id)
         exp_dir.mkdir(parents=True, exist_ok=True)
 
         config_path = exp_dir / "config.yaml"

@@ -50,7 +50,7 @@ from ui_components import (
 )
 
 # Import UQ Benchmarks UI components (Phase 5)
-from ui_components.uq_benchmarks import render_uq_benchmarks_tab
+from uqlab.ui_components.visualization.analysis.uq_benchmarks import render_uq_benchmarks_tab
 
 # Import watsonx.ai cloud mode components
 from uq_classification.watsonx_streamlit import render_cloud_mode_toggle

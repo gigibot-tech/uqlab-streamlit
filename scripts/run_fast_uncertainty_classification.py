@@ -49,15 +49,15 @@ if str(SRC_DIR) not in sys.path:
 # ============================================================================
 
 # Data loading
-from src.data.cifar10n_loader import CIFAR10NDataset
+from uqlab.data_loaders.cifar10n_loader import CIFAR10NDataset
 from torch.utils.data import Dataset
 from torchvision import datasets, transforms
 
 # Uncertainty metrics
-from src.metrics.mc_dropout_uq import calculate_mc_dropout_uncertainty, mc_forward_efficient
+from uqlab.mc_dropout_uq import calculate_mc_dropout_uncertainty, mc_forward_efficient
 
 # Attribution methods
-from src.triage.dualxda_axioms import DualXDATracer, infer_classifier_layer_name
+from uqlab.triage.dualxda_axioms import DualXDATracer, infer_classifier_layer_name
 
 # UQ Classification package - Constants
 GROUP_CLEAN = 0
@@ -97,10 +97,10 @@ from uq_classification.evaluation import (
 )
 
 # Walaris artifacts
-from walaris.run_artifacts import save_zwischen_result
+from uqlab.run_artifacts import save_zwischen_result
 
 # Walaris classification - Attribution signals
-from walaris.classification.attribution_signals import (
+from uqlab.classification.attribution_signals import (
     build_fast_pilot_signal_table,
     compute_attribution_structure_signals,
 )
@@ -715,31 +715,37 @@ Examples:
     if not cifar10n_root.is_absolute():
         cifar10n_root = PROJECT_ROOT / cifar10n_root
 
-    if aleatoric_noise_percentage > 0:
-        # Reset to clean labels, then inject custom noise.
-        print(f"\n🎯 Loading CIFAR-10N for custom noise injection ({aleatoric_noise_percentage}%)")
+    from uqlab.data_loaders.cifar10n_loader import (
+        apply_clean_training_labels,
+        is_clean_training_noise_type,
+    )
 
+    if aleatoric_noise_percentage > 0:
+        print(f"\n🎯 Loading CIFAR-10 for custom noise injection ({aleatoric_noise_percentage}%)")
         dataset = CIFAR10NDataset(
             root=str(cifar10n_root),
-            noise_type=noise_type,  # ignored in this branch after reset below
+            noise_type=noise_type,
             train=True,
             transform=dino_transform(),
             download=True,
         )
-
-        # Do not mix CIFAR-10N noise with custom flips.
-        dataset.noisy_labels = None
-        dataset.noise_mask = None
-        dataset.noise_rate = 0.0
-
-        # Actual label flipping happens in `CIFAR10NDataset.inject_custom_noise()`.
+        apply_clean_training_labels(dataset)
         dataset.inject_custom_noise(noise_percentage=aleatoric_noise_percentage, seed=42)
-
-        print(f"   ✅ Loaded CIFAR-10N with custom noise: {len(dataset)} samples, {aleatoric_noise_percentage}% noise")
+        print(
+            f"   ✅ Custom noise: {len(dataset)} samples, {aleatoric_noise_percentage}% flipped"
+        )
+    elif is_clean_training_noise_type(noise_type):
+        print(f"\n🎯 Loading CIFAR-10 with clean training labels (noise_type={noise_type})")
+        dataset = CIFAR10NDataset(
+            root=str(cifar10n_root),
+            noise_type=noise_type,
+            train=True,
+            transform=dino_transform(),
+            download=True,
+        )
+        apply_clean_training_labels(dataset)
+        print(f"   ✅ Clean training labels: {len(dataset)} samples")
     else:
-        # IMPORTANT:
-        # This branch uses the pre-existing CIFAR-10N noisy labels selected by
-        # `noise_type` (for example `worse_label`).
         print(f"\n🎯 Loading CIFAR-10N with existing noise (type: {noise_type})")
         dataset = CIFAR10NDataset(
             root=str(cifar10n_root),
@@ -751,8 +757,9 @@ Examples:
         if dataset.noise_mask is None or float(dataset.noise_rate) == 0.0:
             raise RuntimeError(
                 "CIFAR-10N noisy labels are not available or the selected noise split "
-                f"`{noise_type}` resolved to zero noise. Please place `CIFAR-10_human.pt` under "
-                f"`{cifar10n_root / 'cifar-10-batches-py'}` before running this pilot."
+                f"`{noise_type}` resolved to zero noise. For label-noise sweeps use "
+                "`clean_label` with aleatoric_noise_percentage > 0. Otherwise place "
+                f"`CIFAR-10_human.pt` under `{cifar10n_root / 'cifar-10-batches-py'}`."
             )
 
     # ============================================================================
@@ -1095,7 +1102,7 @@ Examples:
     with (results_dir / "summary.json").open("w") as f:
         json.dump(summary, f, indent=2)
 
-    from walaris.run_artifacts import save_signal_formula_manifest
+    from uqlab.run_artifacts import save_signal_formula_manifest
 
     save_signal_formula_manifest(results_dir, signal_formulas)
 
@@ -1120,8 +1127,11 @@ Examples:
             'dinov2_model': dinov2_model,
         }
     }
-    torch.save(checkpoint, results_dir / "checkpoint.pt")
-    print(f"✅ Saved model checkpoint to {results_dir / 'checkpoint.pt'}")
+    try:
+        torch.save(checkpoint, results_dir / "checkpoint.pt")
+        print(f"✅ Saved model checkpoint to {results_dir / 'checkpoint.pt'}")
+    except Exception as exc:
+        print(f"⚠️ Checkpoint save failed (training metrics still saved): {exc}")
 
     # Save complete results for watsonx.ai export
     results_data = {
@@ -1161,8 +1171,11 @@ Examples:
         # AUROC results
         'auroc_rows': auroc_rows,
     }
-    torch.save(results_data, results_dir / "results.pt")
-    print(f"✅ Saved results data to {results_dir / 'results.pt'}")
+    try:
+        torch.save(results_data, results_dir / "results.pt")
+        print(f"✅ Saved results data to {results_dir / 'results.pt'}")
+    except Exception as exc:
+        print(f"⚠️ results.pt save failed (summary.json is available): {exc}")
 
     # Create a namespace object for backward compatibility with build_results_markdown
     config_ns = argparse.Namespace(
@@ -1196,7 +1209,7 @@ Examples:
     (results_dir / "summary.md").write_text(markdown)
 
     try:
-        from walaris.run_artifacts import metrics_row_from_run, print_run_metrics_summary
+        from uqlab.run_artifacts import metrics_row_from_run, print_run_metrics_summary
 
         print("\n" + "=" * 70)
         print("SIGNAL MEANS & AUROC (all uncertainties)")
@@ -1235,8 +1248,12 @@ Examples:
     for name, score in clf_rows:
         print(f"  {name}: {score:.4f}")
 
+    # Rewrite summary.json last so the API always finds it after a successful run.
+    with (results_dir / "summary.json").open("w") as f:
+        json.dump(summary, f, indent=2)
+
     print(f"\nSaved per-sample signals to: {results_dir / 'per_sample_signals.csv'}")
-    print(f"Saved summary to: {results_dir / 'summary.md'}")
+    print(f"Saved summary to: {results_dir / 'summary.json'} and {results_dir / 'summary.md'}")
 
 
 if __name__ == "__main__":

@@ -3,14 +3,19 @@ import asyncio
 import json
 import logging
 import sys
+import threading
 from pathlib import Path
 from typing import Callable, Optional
 
+from app.core.ml_bootstrap import ensure_ml_paths
 from app.domain.models import TrainingResult
 from app.domain.value_objects import ProgressUpdate, TrainingStage
 from app.services.executors.base import TrainingExecutor
 
 logger = logging.getLogger(__name__)
+
+# Only one in-process training run at a time (shared sys.argv / reloaded module).
+_TRAINING_LOCK = threading.Lock()
 
 # Global progress callback that ML scripts can use
 _GLOBAL_PROGRESS_CALLBACK: Optional[Callable[[ProgressUpdate], None]] = None
@@ -38,15 +43,16 @@ class DirectExecutor(TrainingExecutor):
 
     def __init__(self, script_path: Path):
         self.script_path = script_path
-        # Add both scripts directory AND project root to Python path
+        # ``uqlab`` comes from editable install (``uv sync`` in backend/).
+        # Repo root: ``uq_classification`` symlink; scripts/: training module name.
         scripts_dir = script_path.parent
-        project_root = scripts_dir.parent  # Go up one more level to walaris-cen
-        
-        for path in [str(scripts_dir), str(project_root)]:
-            if path not in sys.path:
-                sys.path.insert(0, path)
-        
-        logger.info(f"Added to sys.path: {scripts_dir}, {project_root}")
+        project_root = ensure_ml_paths(scripts_dir=scripts_dir)
+
+        logger.info(
+            "Python path for training: scripts=%s, project_root=%s",
+            scripts_dir,
+            project_root,
+        )
         
         # Validate script exists
         if not script_path.exists():
@@ -60,8 +66,10 @@ class DirectExecutor(TrainingExecutor):
         """Verify that all required modules can be imported."""
         try:
             # Test critical imports
-            import uq_classification
-            from src.data.cifar10n_loader import CIFAR10NDataset
+            from uq_classification.models import EmbeddingDataset
+            from uq_classification.config import ExperimentConfig
+            from uqlab.data_loaders.cifar10n_loader import CIFAR10NDataset
+            assert EmbeddingDataset is not None and ExperimentConfig is not None
             logger.info("✅ Pre-flight check passed: All required modules can be imported")
         except ImportError as e:
             logger.error(f"❌ Pre-flight check failed: {e}", exc_info=True)
@@ -123,6 +131,13 @@ class DirectExecutor(TrainingExecutor):
         self, config_path: Path, output_dir: Path, progress_callback: Callable[[ProgressUpdate], None]
     ) -> TrainingResult:
         """Run training synchronously (called in thread pool)."""
+        with _TRAINING_LOCK:
+            return self._run_training_sync_locked(config_path, output_dir, progress_callback)
+
+    def _run_training_sync_locked(
+        self, config_path: Path, output_dir: Path, progress_callback: Callable[[ProgressUpdate], None]
+    ) -> TrainingResult:
+        """Run training under the global lock (no concurrent sys.argv)."""
         # Set up sys.argv to simulate command line args
         original_argv = sys.argv.copy()
         original_stdout = sys.stdout
@@ -184,13 +199,24 @@ class DirectExecutor(TrainingExecutor):
             set_progress_callback(None)
 
     def _read_results(self, output_dir: Path) -> TrainingResult:
-        """Read results from summary.json."""
+        """Read results from summary.json, or rebuild from results.pt if needed."""
         summary_file = output_dir / "summary.json"
-        if not summary_file.exists():
-            raise FileNotFoundError(f"Results file not found: {summary_file}")
-            
-        with open(summary_file) as f:
-            data = json.load(f)
+        data: dict
+
+        if summary_file.exists():
+            with open(summary_file) as f:
+                data = json.load(f)
+        else:
+            data = self._load_results_fallback(output_dir)
+            if data is None:
+                raise FileNotFoundError(
+                    f"Results file not found: {summary_file} "
+                    f"(also no results.pt under {output_dir})"
+                )
+            logger.warning(
+                "summary.json missing in %s — loaded metrics from results.pt",
+                output_dir,
+            )
         
         # Extract per-signal AUROC data (7 signals × 2 uncertainty types)
         one_vs_rest_auroc = data.get("one_vs_rest_auroc", [])
@@ -212,5 +238,25 @@ class DirectExecutor(TrainingExecutor):
             best_signals=best_signals,
             results_path=str(output_dir),
         )
+
+    def _load_results_fallback(self, output_dir: Path) -> dict | None:
+        """Build summary-shaped dict from results.pt when summary.json is absent."""
+        results_pt = output_dir / "results.pt"
+        if not results_pt.exists():
+            return None
+        try:
+            from uqlab.run_artifacts import load_run_directory
+
+            artifacts = load_run_directory(output_dir)
+            if artifacts.source == "none":
+                return None
+            return {
+                "train_size": artifacts.train_size or 0,
+                "eval_sizes": artifacts.eval_sizes or {},
+                "one_vs_rest_auroc": artifacts.one_vs_rest_auroc or [],
+            }
+        except Exception as exc:
+            logger.warning("Could not load fallback results from %s: %s", output_dir, exc)
+            return None
 
 # Made with Bob

@@ -95,14 +95,48 @@ class SubprocessExecutor(TrainingExecutor):
         return self._read_results(output_dir)
 
     def _read_results(self, output_dir: Path) -> TrainingResult:
-        """Read results from summary.json."""
-        with open(output_dir / "summary.json") as f:
-            data = json.load(f)
+        """Read results from summary.json, or rebuild from results.pt if needed."""
+        summary_file = output_dir / "summary.json"
+        if summary_file.exists():
+            with open(summary_file) as f:
+                data = json.load(f)
+        else:
+            data = self._load_results_fallback(output_dir)
+            if data is None:
+                raise FileNotFoundError(
+                    f"Results file not found: {summary_file} "
+                    f"(also no results.pt under {output_dir})"
+                )
+            logger.warning(
+                "summary.json missing in %s — loaded metrics from results.pt",
+                output_dir,
+            )
         aurocs = data.get("one_vs_rest_auroc", [])
+        best_signals = {"one_vs_rest_auroc": aurocs}
         return TrainingResult(
             aleatoric_auroc=max((s.get("aleatoric_like_auroc", 0.0) for s in aurocs), default=0.0),
             epistemic_auroc=max((s.get("epistemic_like_auroc", 0.0) for s in aurocs), default=0.0),
             train_size=data.get("train_size", 0),
             eval_sizes=data.get("eval_sizes", {}),
+            best_signals=best_signals,
             results_path=str(output_dir),
         )
+
+    def _load_results_fallback(self, output_dir: Path) -> dict | None:
+        """Build summary-shaped dict from results.pt when summary.json is absent."""
+        if not (output_dir / "results.pt").exists():
+            return None
+        try:
+            from uqlab.run_artifacts import load_run_directory
+
+            artifacts = load_run_directory(output_dir)
+            if artifacts.source == "none":
+                return None
+            return {
+                "train_size": artifacts.train_size or 0,
+                "eval_sizes": artifacts.eval_sizes or {},
+                "one_vs_rest_auroc": artifacts.one_vs_rest_auroc or [],
+            }
+        except Exception as exc:
+            logger.warning("Could not load fallback results from %s: %s", output_dir, exc)
+            return None

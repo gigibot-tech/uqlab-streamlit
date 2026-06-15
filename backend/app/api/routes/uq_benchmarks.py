@@ -5,10 +5,13 @@ New endpoints for running uncertainty quantification benchmarks
 using the uq_benchmarks package.
 """
 
+import importlib
 import logging
+import sys
 import uuid
-from typing import Any, List
 from datetime import datetime
+from pathlib import Path
+from typing import Any, List
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -119,15 +122,35 @@ class AvailableMethodsResponse(BaseModel):
 # ============================================================================
 
 def _check_uq_benchmarks_available():
-    """Check if uq_benchmarks package is available."""
+    """Check if uq_benchmarks package is available (``uqlab`` editable install)."""
     try:
-        import uq_benchmarks
+        import uq_benchmarks  # noqa: F401
         return True
     except ImportError:
-        raise HTTPException(
-            status_code=503,
-            detail="UQ Benchmarks package not available. Install with: pip install -e uq_benchmarks/[keras]"
-        )
+        try:
+            bench = importlib.import_module("uqlab.4_evaluation.benchmarks")
+            sys.modules["uq_benchmarks"] = bench
+            return True
+        except ImportError as exc:
+            root = Path(__file__).resolve().parents[4]
+            for entry in (root, root / "src"):
+                path = str(entry)
+                if path not in sys.path:
+                    sys.path.insert(0, path)
+            try:
+                bench = importlib.import_module("uqlab.4_evaluation.benchmarks")
+                sys.modules["uq_benchmarks"] = bench
+                return True
+            except ImportError:
+                pass
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "UQ Benchmarks package not available. "
+                    "From repo root: pip install -e . and ensure uq_benchmarks symlink exists. "
+                    f"({exc})"
+                ),
+            ) from exc
 
 
 def _get_method(method_name: str, num_samples: int):

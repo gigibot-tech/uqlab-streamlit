@@ -17,9 +17,10 @@ from scipy.stats import pearsonr
 
 # Add project root to path
 project_root = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(project_root / "src"))
 sys.path.insert(0, str(project_root))
 
-from src.walaris.notebook_support.signals import SIGNAL_NAMES, EPISTEMIC_SIGNALS, ALEATORIC_SIGNALS
+from uqlab.notebook_support.signals import SIGNAL_NAMES, EPISTEMIC_SIGNALS, ALEATORIC_SIGNALS
 
 
 def load_validation_results(results_dir: Path) -> Tuple[pd.DataFrame, pd.DataFrame]:

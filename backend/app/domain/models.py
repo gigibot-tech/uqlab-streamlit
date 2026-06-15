@@ -30,15 +30,16 @@ class DataConfig(BaseModel):
 class ModelConfig(BaseModel):
     """Architecture and model-shape parameters."""
 
-    architecture: str = Field(default="dinov2_mlp", description="Model architecture")
+    architecture: str = Field(default="resnet18_mcdropout", description="Model architecture (resnet18_mcdropout, dinov2_mlp, cnn_mcdropout)")
     training_mode: str = Field(default="feature_space", description="Training mode")
-    dinov2_model: str = Field(default="small", description="DINOv2 model size")
+    dinov2_model: str = Field(default="small", description="DINOv2 model size (only for dinov2_mlp)")
     hidden_dim: Optional[int] = Field(default=256, ge=1, le=2048)
     dropout: Optional[float] = Field(default=0.2, ge=0.0, le=1.0)
     use_untrained_resnet: bool = Field(
         default=False,
         description="If True, use randomly initialized ResNet instead of pretrained weights",
     )
+    checkpoint_path: Optional[str] = Field(default=None, description="Path to checkpoint to load (optional)")
 
     class Config:
         frozen = True
@@ -60,7 +61,7 @@ class TrainingRuntimeConfig(BaseModel):
 class EvaluationConfig(BaseModel):
     """Evaluation and uncertainty scoring parameters."""
 
-    mc_passes: Optional[int] = Field(default=20, ge=1, le=1000)
+    mc_passes: Optional[int] = Field(default=0, ge=0, le=1000, description="MC Dropout passes (0=disabled, baseline)")
     attribution_method: str = Field(default="dualxda", description="Attribution method")
     top_k: int = Field(default=10, ge=1, le=1000)
 
@@ -74,6 +75,107 @@ class PathsConfig(BaseModel):
     cifar10n_root: str = Field(default="./data/cifar10n")
     feature_cache_dir: str = Field(default="./cache/fast_uncertainty_classification/features")
     results_base_dir: str = Field(default="./results")
+
+    class Config:
+        frozen = True
+
+
+class ExperimentConfig(BaseModel):
+    """Complete experiment configuration with nested structure.
+    
+    This is the NEW recommended config format that maps cleanly to folder structure:
+    - config.data → 1_data/
+    - config.model → 2_models/
+    - config.training → 3_training/
+    - config.evaluation → 4_evaluation/
+    - config.paths → file paths
+    """
+
+    seed: int = Field(default=42)
+    device: str = Field(default="auto")
+    
+    data: DataConfig = Field(default_factory=DataConfig)
+    model: ModelConfig = Field(default_factory=ModelConfig)
+    training: TrainingRuntimeConfig = Field(default_factory=TrainingRuntimeConfig)
+    evaluation: EvaluationConfig = Field(default_factory=EvaluationConfig)
+    paths: PathsConfig = Field(default_factory=PathsConfig)
+
+    def to_flat_dict(self) -> Dict[str, Any]:
+        """Convert to flat dict for backward compatibility."""
+        return {
+            "seed": self.seed,
+            "device": self.device,
+            # Data fields
+            "noise_type": self.data.noise_type,
+            "aleatoric_noise_percentage": self.data.aleatoric_noise_percentage,
+            "under_supported_classes": self.data.under_supported_classes,
+            "under_train_per_class": self.data.under_train_per_class,
+            "regular_train_per_class": self.data.regular_train_per_class,
+            "eval_per_group": self.data.eval_per_group,
+            # Model fields
+            "architecture": self.model.architecture,
+            "training_mode": self.model.training_mode,
+            "dinov2_model": self.model.dinov2_model,
+            "hidden_dim": self.model.hidden_dim,
+            "dropout": self.model.dropout,
+            "use_untrained_resnet": self.model.use_untrained_resnet,
+            # Training fields
+            "epochs": self.training.epochs,
+            "learning_rate": self.training.learning_rate,
+            "weight_decay": self.training.weight_decay,
+            "train_batch_size": self.training.train_batch_size,
+            "feature_batch_size": self.training.feature_batch_size,
+            # Evaluation fields
+            "mc_passes": self.evaluation.mc_passes,
+            "attribution_method": self.evaluation.attribution_method,
+            "top_k": self.evaluation.top_k,
+            # Paths
+            "cifar10n_root": self.paths.cifar10n_root,
+            "feature_cache_dir": self.paths.feature_cache_dir,
+            "results_base_dir": self.paths.results_base_dir,
+        }
+
+    @classmethod
+    def from_flat_dict(cls, flat: Dict[str, Any]) -> "ExperimentConfig":
+        """Create from flat dict (backward compatibility)."""
+        return cls(
+            seed=flat.get("seed", 42),
+            device=flat.get("device", "auto"),
+            data=DataConfig(
+                noise_type=flat.get("noise_type", "worse_label"),
+                aleatoric_noise_percentage=flat.get("aleatoric_noise_percentage", 0.0),
+                under_supported_classes=flat.get("under_supported_classes", "3,5"),
+                under_train_per_class=flat.get("under_train_per_class", 50),
+                regular_train_per_class=flat.get("regular_train_per_class", 300),
+                eval_per_group=flat.get("eval_per_group", 600),
+            ),
+            model=ModelConfig(
+                architecture=flat.get("architecture", "resnet18_mcdropout"),
+                training_mode=flat.get("training_mode", "feature_space"),
+                dinov2_model=flat.get("dinov2_model", "small"),
+                hidden_dim=flat.get("hidden_dim", 256),
+                dropout=flat.get("dropout", 0.2),
+                use_untrained_resnet=flat.get("use_untrained_resnet", False),
+                checkpoint_path=flat.get("checkpoint_path"),
+            ),
+            training=TrainingRuntimeConfig(
+                epochs=flat.get("epochs", 12),
+                learning_rate=flat.get("learning_rate", 0.001),
+                weight_decay=flat.get("weight_decay", 0.0001),
+                train_batch_size=flat.get("train_batch_size", 256),
+                feature_batch_size=flat.get("feature_batch_size", 64),
+            ),
+            evaluation=EvaluationConfig(
+                mc_passes=flat.get("mc_passes", 0),
+                attribution_method=flat.get("attribution_method", "dualxda"),
+                top_k=flat.get("top_k", 10),
+            ),
+            paths=PathsConfig(
+                cifar10n_root=flat.get("cifar10n_root", "./data/cifar10n"),
+                feature_cache_dir=flat.get("feature_cache_dir", "./cache/fast_uncertainty_classification/features"),
+                results_base_dir=flat.get("results_base_dir", "./results"),
+            ),
+        )
 
     class Config:
         frozen = True
@@ -98,7 +200,11 @@ class TrainingPreset(BaseModel):
 
 
 class TrainingConfig(BaseModel):
-    """Training configuration value object with flat API and grouped YAML export."""
+    """DEPRECATED: Use ExperimentConfig instead.
+    
+    Training configuration value object with flat API and grouped YAML export.
+    This class is kept for backward compatibility but will be removed in future versions.
+    """
 
     seed: int = Field(default=42)
     device: str = Field(default="auto")
@@ -117,7 +223,7 @@ class TrainingConfig(BaseModel):
     eval_per_group: Optional[int] = Field(default=600, ge=1, le=10000)
 
     # Model parameters
-    architecture: str = Field(default="dinov2_mlp", description="Model architecture")
+    architecture: str = Field(default="resnet18_mcdropout", description="Model architecture")
     training_mode: str = Field(default="feature_space", description="Training mode")
     dinov2_model: str = Field(default="small", description="DINOv2 model size")
     hidden_dim: Optional[int] = Field(default=256, ge=1, le=2048)
@@ -135,7 +241,7 @@ class TrainingConfig(BaseModel):
     feature_batch_size: int = Field(default=64, ge=1, le=4096)
 
     # Evaluation parameters
-    mc_passes: Optional[int] = Field(default=20, ge=1, le=1000)
+    mc_passes: Optional[int] = Field(default=0, ge=0, le=1000, description="MC Dropout passes (0=disabled)")
     attribution_method: str = Field(default="dualxda", description="Attribution method")
     top_k: int = Field(default=10, ge=1, le=1000)
 

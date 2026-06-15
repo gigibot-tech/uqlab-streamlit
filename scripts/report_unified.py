@@ -29,7 +29,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--png", type=Path, default=None, help="Export 3×4 figure to PNG (requires kaleido).")
     args = parser.parse_args(argv)
 
-    from walaris.results_io import load_unified_metrics
+    from uqlab.results_io import load_unified_metrics
 
     df = load_unified_metrics(args.sweep, sources=tuple(args.sources))
     print(f"Unified metrics shape: {df.shape}")
@@ -52,10 +52,10 @@ def main(argv: list[str] | None = None) -> int:
     print(df.groupby(["source", "method", "disentanglement"], dropna=False).size().to_string())
 
     if args.png:
-        from walaris.notebook_support.method_comparison_plotly import (
+        from uqlab.notebook_support.method_comparison_plotly import (
             create_method_uncertainty_comparison_figure,
         )
-        from walaris.notebook_support.signals import resolve_x_col
+        from uqlab.notebook_support.signals import resolve_x_col
 
         x_col = resolve_x_col(df, args.sweep)
         fig = create_method_uncertainty_comparison_figure(df, x_col=x_col, sweep_type=args.sweep)

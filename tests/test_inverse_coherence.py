@@ -9,7 +9,7 @@ _root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_root / "src"))
 sys.path.insert(0, str(_root))
 
-from walaris.classification.attribution_signals import (  # noqa: E402
+from uqlab.classification.attribution_signals import (  # noqa: E402
     build_fast_pilot_signal_table,
     inverse_coherence_from_coherence,
     map_attribution_structure_to_uncertainty,

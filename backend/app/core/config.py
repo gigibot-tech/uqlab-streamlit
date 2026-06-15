@@ -1,3 +1,4 @@
+import os
 import secrets
 import warnings
 from pathlib import Path
@@ -53,8 +54,11 @@ class Settings(BaseSettings):
     # Can be overridden via environment variable for custom locations
     DTAG_ROOT: str = str(Path(__file__).resolve().parents[3] / "scripts")
     
+    # Persistent data root (experiments + default SQLite). Override via WALARIS_DATA_DIR.
+    WALARIS_DATA_DIR: str = ""
+
     # Database configuration - modular for future persistence
-    # Use in-memory SQLite by default, can switch to PostgreSQL via env vars
+    # Use file SQLite by default, can switch to PostgreSQL via env vars
     USE_SQLITE: bool = True  # Set to False to use PostgreSQL
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_PORT: int = 5432
@@ -75,8 +79,12 @@ class Settings(BaseSettings):
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
         if self.USE_SQLITE:
-            # File-based SQLite - persists across restarts
-            db_path = Path("/tmp/walaris_dev.db")
+            if self.WALARIS_DATA_DIR:
+                os.environ["WALARIS_DATA_DIR"] = self.WALARIS_DATA_DIR
+            from app.core.runtime_paths import sqlite_db_path
+
+            db_path = sqlite_db_path()
+            db_path.parent.mkdir(parents=True, exist_ok=True)
             return f"sqlite:///{db_path}"
         else:
             # PostgreSQL for production persistence

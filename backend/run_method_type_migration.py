@@ -13,7 +13,9 @@ from pathlib import Path
 def run_migration():
     """Execute the method_type column migration."""
     # Get database path (matches backend config)
-    db_path = Path("/tmp/walaris_dev.db")
+    from app.core.runtime_paths import sqlite_db_path
+
+    db_path = sqlite_db_path()
     
     if not db_path.exists():
         print(f"❌ Database not found at {db_path}")

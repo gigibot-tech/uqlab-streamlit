@@ -127,7 +127,9 @@ class SqlBatchExperimentTracker(BatchExperimentTracker):
         user: User,
         batch_root: Path,
     ) -> uuid.UUID:
-        storage_root = str(Path("/tmp/walaris_experiments") / "pending_batch")
+        from app.core.runtime_paths import experiments_root
+
+        storage_root = str(experiments_root() / "pending_batch")
 
         with Session(engine) as session:
             repository = BatchExperimentRepository(session)
@@ -546,7 +548,9 @@ class SqlBatchExperimentTracker(BatchExperimentTracker):
     def _prepare_run_paths(
         self, batch_id: uuid.UUID, run_name: str, config: TrainingConfig
     ) -> tuple[Path, Path]:
-        run_dir = Path("/tmp/walaris_experiments") / f"batch_{batch_id}" / "experiments" / run_name
+        from app.core.runtime_paths import batch_root
+
+        run_dir = batch_root(batch_id) / "experiments" / run_name
         run_dir.mkdir(parents=True, exist_ok=True)
 
         config_path = run_dir / "config.yaml"
@@ -1135,7 +1139,9 @@ class BatchExperimentService:
 
     def _batch_root_placeholder(self) -> Path:
         """Temporary placeholder before batch id exists."""
-        return Path("/tmp/walaris_experiments") / "pending_batch"
+        from app.core.runtime_paths import experiments_root
+
+        return experiments_root() / "pending_batch"
 
     def _build_series(self, runs: list[BatchExperimentRun]) -> list[dict[str, Any]]:
         """Build normalized plotting series including per-signal AUROC data."""
@@ -1280,11 +1286,15 @@ class BatchExperimentService:
 
     def _batch_root(self, batch_id: uuid.UUID) -> Path:
         """Return the canonical storage root for a batch."""
-        return Path("/tmp/walaris_experiments") / f"batch_{batch_id}"
+        from app.core.runtime_paths import batch_root
+
+        return batch_root(batch_id)
 
     def _batch_storage_root_placeholder(self) -> str:
         """Temporary placeholder before batch id exists."""
-        return str(Path("/tmp/walaris_experiments") / "pending_batch")
+        from app.core.runtime_paths import experiments_root
+
+        return str(experiments_root() / "pending_batch")
 
     def _validate_sweep_parameters(
         self,
@@ -1305,8 +1315,13 @@ class BatchExperimentService:
         # Get base config values
         eval_per_group = base_config.data.eval_per_group or 600
         regular_train_per_class = base_config.data.regular_train_per_class or 300
+        from uqlab.shared.config.classification import parse_under_supported_classes
+
         under_supported_classes_str = base_config.data.under_supported_classes or "3,5"
-        under_supported_classes = [int(x.strip()) for x in under_supported_classes_str.split(",") if x.strip()]
+        under_supported_classes = parse_under_supported_classes(
+            under_supported_classes_str,
+            seed=base_config.seed,
+        )
         num_under_classes = len(under_supported_classes)
         num_regular_classes = 10 - num_under_classes
         

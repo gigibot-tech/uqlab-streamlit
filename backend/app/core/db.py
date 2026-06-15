@@ -1,3 +1,8 @@
+from app.core.ml_bootstrap import ensure_ml_paths
+
+# ML training imports ``uqlab``; bootstrap before other app imports that may load training.
+ensure_ml_paths()
+
 from sqlmodel import Session, SQLModel, create_engine, select
 
 from app import crud

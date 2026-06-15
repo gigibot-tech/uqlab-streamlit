@@ -40,13 +40,17 @@ for _p in (_SRC, PROJECT_ROOT):
     if _s not in sys.path:
         sys.path.insert(0, _s)
 
-from walaris.validation_config import (
+from uqlab.validation_config import (
     ARCHITECTURES,
-    DATASET_SIZE_SWEEP,
+    FIXED_REGULAR_TRAIN_PER_CLASS,
+    FIXED_UNDER_TRAIN_ALEATORIC_ARM,
     LABEL_NOISE_SWEEP,
     LEGACY_ARCHITECTURE_LABELS,
     TRAINING_CONFIG,
+    aligned_sweep_summary,
+    aligned_under_train_sweep,
     create_experiment_config as create_config,
+    epochs_for_under_train,
 )
 
 
@@ -112,10 +116,14 @@ def _parse_experiment_folder(
     Examples
     --------
     ``cnn_mcdropout_noise75``  → ``("CNN MC Dropout", 75.0)``  (label_noise)
-    ``dinov2_mlp_size200``     → ``("DINOv2 + MLP", 200.0)``   (dataset_size)
+    ``dinov2_mlp_size200``     → ``("DINOv2 + MLP", 200.0)``   (legacy dataset_size)
+    ``dinov2_mlp_under150``    → ``("DINOv2 + MLP", 150.0)``   (under-train / Fig. 3)
     """
     name = folder.name
-    sep = '_noise' if sweep_kind == 'label_noise' else '_size'
+    if sweep_kind == 'label_noise':
+        sep = '_noise'
+    else:
+        sep = '_under' if '_under' in name else '_size'
     if sep not in name:
         return None, None
     arch_key, _, val_str = name.rpartition(sep)
@@ -161,7 +169,8 @@ def rebuild_metrics_from_folders(
             metrics['noise_percent'] = value
             metrics['noise_rate'] = value / 100.0
         else:
-            metrics['dataset_size'] = int(value)
+            metrics['under_train_per_class'] = int(value)
+            metrics['dataset_size'] = int(value)  # legacy column name
 
         rows.append(metrics)
         if metrics_csv is not None:
@@ -181,7 +190,7 @@ def _merge_metrics_into_csv(
     sweep_kind: str,
 ) -> pd.DataFrame:
     """Merge many rows into ``metrics.csv`` (used by rebuild-only and end-of-sweep)."""
-    from walaris.run_artifacts import append_metrics_row_to_csv
+    from uqlab.run_artifacts import append_metrics_row_to_csv
 
     if new_df is None or new_df.empty:
         if csv_path.is_file():
@@ -202,13 +211,13 @@ def _merge_metrics_into_csv(
 
 def extract_metrics_from_results(results_dir: Path) -> Dict:
     """Extract key metrics from one run folder (summary.json + results.pt)."""
-    from walaris.run_artifacts import metrics_row_from_run
+    from uqlab.run_artifacts import metrics_row_from_run
 
     return metrics_row_from_run(Path(results_dir))
 
 
 def _print_run_metrics_summary(metrics: Dict) -> None:
-    from walaris.run_artifacts import print_run_metrics_summary
+    from uqlab.run_artifacts import print_run_metrics_summary
 
     print_run_metrics_summary(metrics)
 
@@ -221,7 +230,7 @@ def _persist_experiment_metrics(
     sweep_kind: str,
 ) -> int:
     """Save per-run + sweep CSV rows immediately after each successful experiment."""
-    from walaris.run_artifacts import append_metrics_row_to_csv, save_run_metrics_row_csv
+    from uqlab.run_artifacts import append_metrics_row_to_csv, save_run_metrics_row_csv
 
     save_run_metrics_row_csv(output_dir, metrics)
     n_rows = append_metrics_row_to_csv(metrics, metrics_csv, sweep_kind=sweep_kind)
@@ -235,55 +244,49 @@ def run_dataset_size_sweep(
     *,
     metrics_csv: Path,
 ) -> pd.DataFrame:
-    """Run dataset size sweep for all architectures.
-    
-    Implements epoch adjustment to maintain approximately constant total gradient steps
-    across different dataset sizes, following the methodology from the original research:
-    adjusted_epochs = base_epochs * (max_size / current_size)
-    
-    This ensures that uncertainty differences are due to dataset size, not training
-    convergence issues.
+    """
+    Fig. 3 — under-train / epistemic sweep (``under_train_per_class``).
+
+    Uses the same 5-point (quick) or 11-point (full) grid as the API paired sweeps,
+    not the legacy 3-point ``regular_train_per_class`` grid.
     """
     
     print("\n" + "="*80)
-    print("DATASET SIZE SWEEP (with epoch adjustment)")
+    print("UNDER-TRAIN SWEEP / Fig. 3 (epistemic, epoch-adjusted)")
     print("="*80)
     
-    dataset_sizes = DATASET_SIZE_SWEEP[mode]
+    under_values = aligned_under_train_sweep(mode)
+    summary = aligned_sweep_summary(mode)
     results = []
     
-    # Maximum dataset size for epoch adjustment calculation
-    max_dataset_size = max(dataset_sizes)
-    base_epochs = TRAINING_CONFIG[mode]['epochs']
+    print(f"Under-train per class: {under_values}")
+    print(f"Fixed regular_train_per_class: {FIXED_REGULAR_TRAIN_PER_CLASS}")
+    print(f"Label-noise arm (for reference): {summary['label_noise_percent']}")
     
-    print(f"Base configuration: {base_epochs} epochs at {max_dataset_size} samples/class")
-    print(f"Epoch adjustment: epochs = {base_epochs} * ({max_dataset_size} / dataset_size)")
-    
-    total_experiments = len(ARCHITECTURES) * len(dataset_sizes)
+    total_experiments = len(ARCHITECTURES) * len(under_values)
     current_experiment = 0
     
     for arch_key, arch_info in ARCHITECTURES.items():
-        for dataset_size in dataset_sizes:
+        for under_train in under_values:
             current_experiment += 1
-            
-            # Calculate adjusted epochs to maintain constant total gradient steps
-            # Formula: adjusted_epochs = base_epochs * (max_size / current_size)
-            adjusted_epochs = int(base_epochs * (max_dataset_size / dataset_size))
+            adjusted_epochs = epochs_for_under_train(under_train, mode)
             
             print(f"\n[{current_experiment}/{total_experiments}] "
-                  f"{arch_info['name']} - {dataset_size} samples per class, {adjusted_epochs} epochs")
+                  f"{arch_info['name']} - under_train={under_train}, "
+                  f"regular={FIXED_REGULAR_TRAIN_PER_CLASS}, epochs={adjusted_epochs}")
             
-            # Create config with adjusted epochs
-            config = create_config(arch_key, mode, dataset_size=dataset_size)
-            # Override epochs with adjusted value
-            config['training']['epochs'] = adjusted_epochs
+            config = create_config(
+                arch_key,
+                mode,
+                under_train_per_class=under_train,
+                regular_train_per_class=FIXED_REGULAR_TRAIN_PER_CLASS,
+                epochs=adjusted_epochs,
+            )
             
-            # Create output directory
-            experiment_name = f"{arch_key}_size{dataset_size}"
+            experiment_name = f"{arch_key}_under{under_train}"
             output_dir = output_base / experiment_name
             output_dir.mkdir(parents=True, exist_ok=True)
             
-            # Run experiment
             success, output = run_experiment(config, output_dir, experiment_name)
             
             if not success:
@@ -291,12 +294,11 @@ def run_dataset_size_sweep(
                 print(output)
                 continue
             
-            # Extract metrics
             metrics = extract_metrics_from_results(output_dir)
             
-            # Add metadata
             metrics['architecture'] = arch_info['name']
-            metrics['dataset_size'] = dataset_size
+            metrics['under_train_per_class'] = under_train
+            metrics['dataset_size'] = under_train  # legacy CSV column
             metrics['experiment_name'] = experiment_name
             metrics['timestamp'] = datetime.now().isoformat()
             
@@ -337,8 +339,13 @@ def run_label_noise_sweep(
             print(f"\n[{current_experiment}/{total_experiments}] "
                   f"{arch_info['name']} - {noise_rate:.0f}% label noise")
             
-            # Create config
-            config = create_config(arch_key, mode, noise_rate=noise_rate)
+            config = create_config(
+                arch_key,
+                mode,
+                noise_rate=noise_rate,
+                regular_train_per_class=FIXED_REGULAR_TRAIN_PER_CLASS,
+                under_train_per_class=FIXED_UNDER_TRAIN_ALEATORIC_ARM,
+            )
             
             # Create output directory
             experiment_name = f"{arch_key}_noise{int(noise_rate)}"

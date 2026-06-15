@@ -41,9 +41,15 @@ else:
             "dtag directory exists in one of: " + ", ".join(str(p) for p in POSSIBLE_PATHS if p)
         )
 
-# Add to Python path
-if str(DTAG_ROOT) not in sys.path:
-    sys.path.insert(0, str(DTAG_ROOT))
+from app.core.ml_bootstrap import ensure_ml_paths
+
+ensure_ml_paths()
+
+# Optional legacy dtag on path
+if DTAG_ROOT.exists():
+    _dtag_entry = str(DTAG_ROOT)
+    if _dtag_entry not in sys.path:
+        sys.path.insert(0, _dtag_entry)
 
 # Set data directory
 if DATA_DIR_ENV:
@@ -58,11 +64,23 @@ os.environ["CIFAR10N_DATA_DIR"] = str(DATA_DIR)
 
 router = APIRouter()
 
+
+def _normalize_noise_type(noise_type: str) -> str:
+    """Map UI aliases (``none``) to CIFAR-10N keys (``clean_label``)."""
+    try:
+        from uqlab.data_loaders.cifar10n_loader import normalize_noise_type
+
+        return normalize_noise_type(noise_type)
+    except ImportError:
+        aliases = {"none": "clean_label", "clean": "clean_label", "no_noise": "clean_label"}
+        return aliases.get(noise_type, noise_type)
+
+
 # Lazy import helper - only import when needed
 def _get_cifar10n_dataset():
     """Lazy import of CIFAR10NDataset to avoid startup failures."""
     try:
-        from src.data.cifar10n_loader import CIFAR10NDataset
+        from uqlab.data_loaders.cifar10n_loader import CIFAR10NDataset
         import numpy as np
         return CIFAR10NDataset, np
     except ImportError as e:
@@ -99,58 +117,61 @@ async def get_dataset_stats_by_name(
         )
     
     CIFAR10NDataset, np = _get_cifar10n_dataset()
-    
+    resolved_noise = _normalize_noise_type(noise_type)
+
     try:
-        dataset = CIFAR10NDataset(root=str(DATA_DIR), noise_type=noise_type, download=False, train=True)
-
-        total_samples = len(dataset)
-        
-        # Get noise info from dataset attributes
-        if dataset.noise_mask is not None:
-            noisy_samples = int(np.sum(dataset.noise_mask))
-            noise_rate = float(dataset.noise_rate)
-        else:
-            noisy_samples = 0
-            noise_rate = 0.0
-
-        # Get clean labels from wrapped CIFAR10 dataset
-        clean_labels = np.array(dataset.cifar10.targets)
-        class_counts = {
-            int(i): int(np.sum(clean_labels == i)) for i in range(10)
-        }
-
-        # Noise per class
-        noise_per_class = {}
-        for i in range(10):
-            class_mask = clean_labels == i
-            if dataset.noise_mask is not None:
-                class_noisy = int(np.sum(dataset.noise_mask[class_mask]))
-            else:
-                class_noisy = 0
-            
-            total_in_class = int(np.sum(class_mask))
-            noise_per_class[int(i)] = {
-                "total": total_in_class,
-                "noisy": class_noisy,
-                "rate": float(class_noisy / total_in_class) if total_in_class > 0 else 0.0,
-            }
-
-        # Get class names from CIFAR10
-        class_names = dataset.cifar10.classes
-
-        return {
-            "total_samples": total_samples,
-            "num_classes": 10,  # Added for Streamlit app
-            "noisy_samples": noisy_samples,
-            "clean_samples": total_samples - noisy_samples,
-            "noise_rate": noise_rate,
-            "class_distribution": class_counts,
-            "noise_per_class": noise_per_class,
-            "class_names": class_names,
-        }
+        dataset = CIFAR10NDataset(
+            root=str(DATA_DIR), noise_type=resolved_noise, download=False, train=True
+        )
+        return _dataset_stats_payload(dataset, np, requested_noise_type=noise_type)
     except Exception as e:
         logger.error(f"Error loading dataset stats: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Dataset error: {str(e)}")
+
+
+def _dataset_stats_payload(dataset, np, *, requested_noise_type: str) -> dict[str, Any]:
+    """Shared stats dict for CIFAR-10N dataset instances."""
+    total_samples = len(dataset)
+
+    if dataset.noise_mask is not None:
+        noisy_samples = int(np.sum(dataset.noise_mask))
+        noise_rate = float(dataset.noise_rate)
+    else:
+        noisy_samples = 0
+        noise_rate = 0.0
+
+    clean_labels = np.array(dataset.cifar10.targets)
+    class_counts = {int(i): int(np.sum(clean_labels == i)) for i in range(10)}
+
+    noise_per_class = {}
+    for i in range(10):
+        class_mask = clean_labels == i
+        if dataset.noise_mask is not None:
+            class_noisy = int(np.sum(dataset.noise_mask[class_mask]))
+        else:
+            class_noisy = 0
+
+        total_in_class = int(np.sum(class_mask))
+        noise_per_class[int(i)] = {
+            "total": total_in_class,
+            "noisy": class_noisy,
+            "rate": float(class_noisy / total_in_class) if total_in_class > 0 else 0.0,
+        }
+
+    class_names = dataset.cifar10.classes
+
+    return {
+        "total_samples": total_samples,
+        "num_classes": 10,
+        "noisy_samples": noisy_samples,
+        "clean_samples": total_samples - noisy_samples,
+        "noise_rate": noise_rate,
+        "noise_type": requested_noise_type,
+        "resolved_noise_type": dataset.noise_type,
+        "class_distribution": class_counts,
+        "noise_per_class": noise_per_class,
+        "class_names": class_names,
+    }
 
 
 @router.get("/cifar10n/stats")
@@ -159,54 +180,15 @@ async def get_dataset_stats(
 ) -> dict[str, Any]:
     """Get CIFAR-10N dataset statistics including noise distribution (legacy endpoint)."""
     CIFAR10NDataset, np = _get_cifar10n_dataset()
-    
+    resolved_noise = _normalize_noise_type(noise_type)
+
     try:
-        dataset = CIFAR10NDataset(root=str(DATA_DIR), noise_type=noise_type, download=False, train=True)
-
-        total_samples = len(dataset)
-        
-        # Get noise info from dataset attributes
-        if dataset.noise_mask is not None:
-            noisy_samples = int(np.sum(dataset.noise_mask))
-            noise_rate = float(dataset.noise_rate)
-        else:
-            noisy_samples = 0
-            noise_rate = 0.0
-
-        # Get clean labels from wrapped CIFAR10 dataset
-        clean_labels = np.array(dataset.cifar10.targets)
-        class_counts = {
-            int(i): int(np.sum(clean_labels == i)) for i in range(10)
-        }
-
-        # Noise per class
-        noise_per_class = {}
-        for i in range(10):
-            class_mask = clean_labels == i
-            if dataset.noise_mask is not None:
-                class_noisy = int(np.sum(dataset.noise_mask[class_mask]))
-            else:
-                class_noisy = 0
-            
-            total_in_class = int(np.sum(class_mask))
-            noise_per_class[int(i)] = {
-                "total": total_in_class,
-                "noisy": class_noisy,
-                "rate": float(class_noisy / total_in_class) if total_in_class > 0 else 0.0,
-            }
-
-        # Get class names from CIFAR10
-        class_names = dataset.cifar10.classes
-
-        return {
-            "total_samples": total_samples,
-            "noisy_samples": noisy_samples,
-            "clean_samples": total_samples - noisy_samples,
-            "noise_rate": noise_rate,
-            "class_distribution": class_counts,
-            "noise_per_class": noise_per_class,
-            "class_names": class_names,
-        }
+        dataset = CIFAR10NDataset(
+            root=str(DATA_DIR), noise_type=resolved_noise, download=False, train=True
+        )
+        payload = _dataset_stats_payload(dataset, np, requested_noise_type=noise_type)
+        payload.pop("num_classes", None)
+        return payload
     except Exception as e:
         logger.error(f"Error loading dataset stats: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Dataset error: {str(e)}")

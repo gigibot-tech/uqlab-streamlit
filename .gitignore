@@ -1,45 +1,143 @@
-# VSC
-.vscode/*
-!.vscode/settings.json
-!.vscode/extensions.json
-!.vscode/launch.json
-
-# Node
-node_modules/
-
-# Environment files
-*.env*
-!.env*.example
-
-/test-results/
-/playwright-report/
-/blob-report/
-git-push.sh
-/playwright/.cache/
-
-# Local misc folder
-/local
-
-# Data files (large datasets)
-/data/
-*.pt
-*.pth
-*.ckpt
-*.safetensors
-
-# Python cache
+# Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+*.so
 .Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Temporary files
-/tmp/
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+.virtualenv/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Database
 *.db
 *.sqlite
 *.sqlite3
+postgres_data/
 
-# Generated results and cache
-/results/
-/cache/
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints/
+
+# MLflow
+mlruns/
+mlartifacts/
+
+# Experiment results
+results/
+experiments/
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+*.pkl
+*.pickle
+
+# Data (keep structure, ignore content)
+data/*
+!data/.gitkeep
+datasets/
+*.csv
+*.json
+
+# Cache
+.cache/
+cache/
+*.cache
+.pytest_cache/
+
+# Backup and temporary
+backup/
+*.backup
+*.bak
+tmp/
+temp/
+*.tmp
+
+# Documentation build
+docs/_build/
+docs/.doctrees/
+site/
+
+# Testing
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+
+# Docker
+*.pid
+*.seed
+*.pid.lock
+docker-compose.override.yml
+
+# Node (if using frontend tools)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Archives
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# OS specific
+Thumbs.db
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Ignore everything in src/ except uqlab submodule
+src/*
+!src/uqlab/
+
+# Keep important config files
+!.gitignore
+!.gitmodules
+!README.md
+!requirements.txt
+!docker-compose.yml
+!.env.example
+
+# Made with Bob
