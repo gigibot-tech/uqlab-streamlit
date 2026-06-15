@@ -6,6 +6,7 @@ from app.api.routes import (
     experiments,
     items,
     login,
+    uq_benchmarks,
     users,
     utils,
     websocket,
@@ -22,5 +23,8 @@ api_router.include_router(
 )
 api_router.include_router(
     batch_experiments.router, prefix="/batch-experiments", tags=["batch-experiments"]
+)
+api_router.include_router(
+    uq_benchmarks.router, prefix="/uq-benchmarks", tags=["uq-benchmarks"]
 )
 api_router.include_router(websocket.router, tags=["websocket"])

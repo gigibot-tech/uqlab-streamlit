@@ -3,6 +3,7 @@
 import uuid
 from pathlib import Path
 from typing import Annotated, Any
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
@@ -12,10 +13,11 @@ from sqlmodel import Session, select
 from app.api.deps import SessionDep
 from app.core.db import engine
 from app.core.security import get_password_hash
-from app.domain.models import TrainingConfig
+from app.domain.models import TrainingConfig, TrainingPresetName
 from app.repositories.batch_experiment_repository import BatchExperimentRepository
 from app.services.batch_experiment_service import (
     BatchExperimentService,
+    MlflowStyleBatchExperimentTracker,
     SweepDefinition,
     SweepRangeDefinition,
 )
@@ -33,7 +35,10 @@ def get_batch_service() -> BatchExperimentService:
     """Get or create a reusable batch experiment service."""
     global _batch_service
     if _batch_service is None:
-        _batch_service = BatchExperimentService(DirectExecutor(ML_SCRIPT))
+        _batch_service = BatchExperimentService(
+            DirectExecutor(ML_SCRIPT),
+            tracker=MlflowStyleBatchExperimentTracker(),
+        )
     return _batch_service
 
 # Type alias for dependency injection
@@ -79,7 +84,8 @@ class BatchExperimentCreate(BaseModel):
 
     name: str = Field(min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=1000)
-    base_config: TrainingConfig
+    preset: TrainingPresetName | None = None
+    base_config: TrainingConfig | None = None
     sweep_definitions: list[BatchSweepDefinitionRequest] = Field(min_length=1, max_length=1)
     auto_start: bool = True
 
@@ -127,16 +133,26 @@ async def create_batch_experiment(
     if len(payload.sweep_definitions) != 1:
         raise HTTPException(status_code=400, detail="V1 supports exactly one sweep definition")
 
-    test_user = get_or_create_test_user(session)
-    sweep_request = payload.sweep_definitions[0]
-    service = get_batch_service()
+    test_user: Any = get_or_create_test_user(session)
+    sweep_request: BatchSweepDefinitionRequest = payload.sweep_definitions[0]
+    service: Any | BatchExperimentService = get_batch_service()
 
     try:
+        if payload.preset is not None:
+            base_config = TrainingConfig.preset_config(payload.preset)
+        elif payload.base_config is not None:
+            base_config = payload.base_config
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Provide either `preset` or `base_config` when creating a batch experiment.",
+            )
+
         # Service now returns UUID directly to avoid DetachedInstanceError
-        batch_id = service.create_batch(
+        batch_id: UUID | Any = service.create_batch(
             name=payload.name,
             description=payload.description,
-            base_config=payload.base_config,
+            base_config=base_config,
             sweep_definition=SweepDefinition(
                 parameter=sweep_request.parameter,
                 value_type=sweep_request.value_type,
@@ -197,7 +213,7 @@ async def start_batch_experiment(batch_id: uuid.UUID, session: SessionDep) -> di
     if batch.status == JobStatus.RUNNING:
         raise HTTPException(status_code=400, detail="Batch experiment already running")
 
-    service = get_batch_service()
+    service: BatchExperimentService = get_batch_service()
     try:
         await service.start_batch(batch_id)
         return {"id": str(batch_id), "status": "running"}

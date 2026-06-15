@@ -39,3 +39,7 @@ __pycache__/
 *.db
 *.sqlite
 *.sqlite3
+
+# Generated results and cache
+/results/
+/cache/

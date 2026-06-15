@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime
 from enum import Enum
+from typing import Optional
 
 from pydantic import EmailStr
 from sqlmodel import Field, Relationship, SQLModel
@@ -21,6 +22,9 @@ class User(SQLModel, table=True):
     batch_experiments: list["BatchExperiment"] = Relationship(
         back_populates="created_by", cascade_delete=True
     )
+    # New UQ Benchmarks relationships (Phase 4)
+    benchmark_results: list["BenchmarkResult"] = Relationship(cascade_delete=True)
+    benchmark_sweeps: list["BenchmarkSweep"] = Relationship(cascade_delete=True)
 
 
 class Item(SQLModel, table=True):
@@ -58,6 +62,7 @@ class UncertaintyExperiment(SQLModel, table=True):
     aleatoric_auroc: float | None = None
     epistemic_auroc: float | None = None
     results_path: str | None = Field(default=None, max_length=500)
+    best_signals_json: str | None = None  # JSON string with all 7 signals (TEXT type)
 
     created_at: datetime = Field(default_factory=datetime.utcnow)
     started_at: datetime | None = None
@@ -76,6 +81,7 @@ class BatchExperiment(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     name: str = Field(max_length=255)
     description: str | None = Field(default=None, max_length=1000)
+    method_type: str | None = Field(default="attribution", max_length=50)  # "attribution" or "benchmark"
     base_config_yaml: str
     sweep_definitions_json: str
     status: JobStatus = Field(default=JobStatus.QUEUED)
@@ -137,3 +143,109 @@ class BatchExperimentRun(SQLModel, table=True):
     completed_at: datetime | None = None
 
     batch_experiment: BatchExperiment = Relationship(back_populates="runs")
+
+
+# UQ Benchmarks Tables (New - Phase 4)
+
+
+class BenchmarkResult(SQLModel, table=True):
+    """Stores results from UQ benchmark experiments.
+    
+    This table stores individual benchmark runs using the new uq_benchmarks package.
+    Each result represents a single method evaluation on a specific dataset configuration.
+    """
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    
+    # Method information
+    method: str = Field(max_length=100, index=True)  # e.g., "gaussian_logits", "information_theoretic"
+    framework: str = Field(max_length=50)  # "keras" or "pytorch"
+    
+    # Configuration (stored as JSON for flexibility)
+    dataset_config_json: str  # Dataset configuration
+    training_config_json: str  # Training hyperparameters
+    evaluation_config_json: str  # Evaluation settings
+    
+    # Results
+    accuracy: float
+    aleatoric_uncertainty: float
+    epistemic_uncertainty: float
+    
+    # Timing information
+    training_time: float  # seconds
+    evaluation_time: float  # seconds
+    
+    # Status tracking
+    status: JobStatus = Field(default=JobStatus.COMPLETED)
+    error_message: str | None = Field(default=None, max_length=2000)
+    
+    # Timestamps
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    
+    # User relationship
+    created_by_id: uuid.UUID = Field(
+        foreign_key="user.id", nullable=False, ondelete="CASCADE"
+    )
+    created_by: User = Relationship(sa_relationship_kwargs={"overlaps": "benchmark_results"})
+    
+    # Optional link to sweep
+    sweep_id: uuid.UUID | None = Field(
+        default=None, foreign_key="benchmarksweep.id", ondelete="CASCADE"
+    )
+    sweep: Optional["BenchmarkSweep"] = Relationship(back_populates="results")
+    
+    # Parameter value for sweep (if part of a sweep)
+    parameter_value: float | None = Field(default=None)
+    
+    # wx.gov compatibility fields (optional for backward compatibility)
+    training_loss: float | None = None
+    risk_level: str | None = Field(default=None, max_length=50)
+    use_case: str = Field(default="uncertainty_quantification", max_length=100)
+    data_classification: str = Field(default="research", max_length=50)
+    wx_gov_model_id: str | None = Field(default=None, max_length=255)
+    wx_gov_run_id: str | None = Field(default=None, max_length=255)
+
+
+class BenchmarkSweep(SQLModel, table=True):
+    """Stores parameter sweep experiments for UQ benchmarks.
+    
+    A sweep runs the same method multiple times with different values
+    for a single parameter (e.g., noise_rate, dataset_size).
+    """
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    name: str = Field(max_length=255)
+    description: str | None = Field(default=None, max_length=1000)
+    
+    # Method and sweep configuration
+    method: str = Field(max_length=100, index=True)
+    sweep_parameter: str = Field(max_length=100)  # e.g., "noise_rate", "under_train_per_class"
+    sweep_values_json: str  # JSON array of parameter values
+    
+    # Base configuration (non-swept parameters)
+    base_config_json: str
+    
+    # Aggregate status
+    status: JobStatus = Field(default=JobStatus.QUEUED)
+    progress: float = Field(default=0.0)
+    total_runs: int = Field(default=0)
+    completed_runs: int = Field(default=0)
+    failed_runs: int = Field(default=0)
+    
+    # Timestamps
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    
+    # User relationship
+    created_by_id: uuid.UUID = Field(
+        foreign_key="user.id", nullable=False, ondelete="CASCADE"
+    )
+    created_by: User = Relationship(sa_relationship_kwargs={"overlaps": "benchmark_sweeps"})
+    
+    # Results relationship
+    results: list["BenchmarkResult"] = Relationship(
+        back_populates="sweep", cascade_delete=True
+    )

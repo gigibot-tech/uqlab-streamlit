@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "walaris"
+version = "0.1.0"
+description = "Unified UQ validation and paper benchmark tooling for walaris-cen"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pandas>=2.0",
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+streamlit = ["streamlit>=1.28", "plotly>=5.18"]
+paper = ["tensorflow>=2.12", "keras>=3.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]
+norecursedirs = ["tests/legacy", "src/walaris/classification/archive"]

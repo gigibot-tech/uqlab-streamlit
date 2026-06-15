@@ -15,7 +15,7 @@ from sqlmodel import Session, select, desc
 from app.api.deps import CurrentUser, SessionDep
 from app.core.config import settings
 from app.core.security import get_password_hash
-from app.domain.models import TrainingConfig
+from app.domain.models import TrainingConfig, TrainingPresetName
 from app.repositories.experiment_repository import ExperimentRepository
 from app.services.executors.direct_executor import DirectExecutor
 from app.services.training_orchestrator import TrainingOrchestrator
@@ -62,37 +62,16 @@ def get_or_create_test_user(session: Session) -> User:
     return user
 
 
-class ExperimentConfig(BaseModel):
-    """Experiment configuration matching YAML structure."""
-
-    # Data parameters
-    noise_type: str = "worse_label"
-    under_supported_classes: str = "3,5"
-    under_train_per_class: int = 50
-    regular_train_per_class: int = 300
-    eval_per_group: int = 600
-
-    # Model parameters
-    dinov2_model: str = "small"
-    hidden_dim: int = 256
-    dropout: float = 0.2
-
-    # Training parameters
-    epochs: int = 12
-    learning_rate: float = 0.001
-    weight_decay: float = 0.0001
-    train_batch_size: int = 256
-
-    # Evaluation parameters
-    mc_passes: int = 20
-    attribution_method: str = "dualxda"
+class ExperimentConfig(TrainingConfig):
+    """Experiment configuration matching the simplified flat API."""
 
 
 class ExperimentCreate(BaseModel):
     """Request to create a new experiment."""
 
     name: str = Field(min_length=1, max_length=255)
-    config: ExperimentConfig
+    preset: TrainingPresetName | None = None
+    config: ExperimentConfig | None = None
 
 
 class ExperimentResponse(BaseModel):
@@ -109,6 +88,7 @@ class ExperimentResponse(BaseModel):
     aleatoric_auroc: float | None
     epistemic_auroc: float | None
     results_path: str | None
+    best_signals_json: str | None = None  # JSON string with all 7 signals
 
 
 @router.post("/no-auth", response_model=ExperimentResponse)
@@ -140,41 +120,17 @@ async def _create_experiment_impl(
     user: User,
 ) -> Any:
     """Implementation of experiment creation."""
-    # Convert config to YAML
-    config_dict = {
-        "seed": 42,
-        "device": "auto",
-        "data": {
-            "noise_type": experiment.config.noise_type,
-            "under_supported_classes": experiment.config.under_supported_classes,
-            "under_train_per_class": experiment.config.under_train_per_class,
-            "regular_train_per_class": experiment.config.regular_train_per_class,
-            "eval_per_group": experiment.config.eval_per_group,
-        },
-        "model": {
-            "dinov2_model": experiment.config.dinov2_model,
-            "hidden_dim": experiment.config.hidden_dim,
-            "dropout": experiment.config.dropout,
-        },
-        "training": {
-            "epochs": experiment.config.epochs,
-            "learning_rate": experiment.config.learning_rate,
-            "weight_decay": experiment.config.weight_decay,
-            "train_batch_size": experiment.config.train_batch_size,
-            "feature_batch_size": 64,
-        },
-        "evaluation": {
-            "mc_passes": experiment.config.mc_passes,
-            "top_k": 10,
-        },
-        "paths": {
-            "cifar10n_root": "./data/cifar10n",
-            "feature_cache_dir": "./cache/fast_uncertainty_classification/features",
-            "results_base_dir": "./results",
-        },
-    }
+    if experiment.preset is not None:
+        training_config = TrainingConfig.preset_config(experiment.preset)
+    elif experiment.config is not None:
+        training_config = TrainingConfig(**experiment.config.model_dump())
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Provide either `preset` or `config` when creating an experiment.",
+        )
 
-    config_yaml = yaml.dump(config_dict, default_flow_style=False)
+    config_yaml = yaml.dump(training_config.to_yaml_dict(), default_flow_style=False)
 
     # Create experiment record
     db_experiment = UncertaintyExperiment(
@@ -271,22 +227,22 @@ async def start_experiment_no_auth(experiment_id: str, session: SessionDep) -> d
     
     try:
         # Check if experiment already exists in database
-        db_experiment = session.get(UncertaintyExperiment, experiment_uuid)
+        existing_experiment = session.get(UncertaintyExperiment, experiment_uuid)
         
-        if not db_experiment:
-            # Create database experiment from mock
+        if not existing_experiment:
+            # Create database experiment from request fallback
             logger.debug(f"Creating database experiment with ID: {experiment_uuid}")
-            db_experiment = UncertaintyExperiment(
+            existing_experiment = UncertaintyExperiment(
                 id=experiment_uuid,
-                name=db_experiment.name,
+                name=f"experiment_{experiment_id}",
                 config_yaml=config_yaml,
                 created_by_id=user.id,
                 status=JobStatus.QUEUED,
             )
-            session.add(db_experiment)
+            session.add(existing_experiment)
             session.commit()
-            session.refresh(db_experiment)
-            logger.info(f"Database experiment created successfully: {db_experiment.id}")
+            session.refresh(existing_experiment)
+            logger.info(f"Database experiment created successfully: {existing_experiment.id}")
         else:
             logger.info(f"Experiment {experiment_uuid} already exists in database, using existing record")
         

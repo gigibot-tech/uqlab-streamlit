@@ -20,6 +20,12 @@ dependencies = [
     "torchvision>=0.15.0",
     "numpy>=1.24.0",
     "pyyaml>=6.0",
+    # UQ Benchmarks dependencies (Phase 2-6)
+    "tensorflow>=2.10.0,<2.16.0",  # For Gaussian Logits
+    "keras>=2.10.0,<3.0.0",  # Keras 2.x for compatibility
+    "pandas>=1.3.0",  # For data handling
+    "matplotlib>=3.4.0",  # For visualization
+    "scikit-learn>=1.0.0",  # For metrics
 ]
 
 [tool.uv]

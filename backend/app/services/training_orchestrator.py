@@ -52,7 +52,12 @@ class TrainingOrchestrator:
                     raise ValueError(f"Experiment {experiment_id} not found")
 
                 # Parse config and generate YAML
-                config = TrainingConfig(**experiment.config_yaml if isinstance(experiment.config_yaml, dict) else yaml.safe_load(experiment.config_yaml))
+                raw_config = (
+                    experiment.config_yaml
+                    if isinstance(experiment.config_yaml, dict)
+                    else yaml.safe_load(experiment.config_yaml)
+                )
+                config = TrainingConfig.from_legacy_flat_dict(raw_config)
                 config_path, output_dir = self._prepare_paths(experiment_id, config)
 
                 # Update status to running

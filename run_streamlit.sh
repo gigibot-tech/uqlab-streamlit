@@ -22,9 +22,10 @@ fi
 # Activate virtual environment
 source .venv/bin/activate
 
-# Install requirements
+# Install requirements (Streamlit UI + editable walaris package)
 echo -e "${BLUE}Installing dependencies...${NC}"
 pip install -q -r streamlit_requirements.txt
+pip install -q -e ".[streamlit]"
 
 # Set API URL (default to localhost, can be overridden)
 export API_URL="${API_URL:-http://localhost:8000}"

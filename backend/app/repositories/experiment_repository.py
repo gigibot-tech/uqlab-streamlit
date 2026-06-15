@@ -1,5 +1,6 @@
 """Repository for experiment data access."""
 
+import json
 import uuid
 from datetime import datetime
 from typing import Optional
@@ -72,6 +73,7 @@ class ExperimentRepository:
         experiment.aleatoric_auroc = results.aleatoric_auroc
         experiment.epistemic_auroc = results.epistemic_auroc
         experiment.results_path = results.results_path
+        experiment.best_signals_json = json.dumps(results.best_signals) if results.best_signals else None
         experiment.status = JobStatus.COMPLETED
         experiment.completed_at = datetime.utcnow()
         experiment.progress = 1.0

@@ -89,17 +89,31 @@ class CIFAR10NDataset(Dataset):
     def inject_custom_noise(self, noise_percentage: float, seed: int = 42):
         """
         Inject uniform random label noise.
-        
-        This method creates synthetic label noise by randomly flipping labels
-        to wrong classes. The noise is:
-        - Uniformly distributed across all samples (not class-biased)
-        - Persistent (same seed produces same noise pattern)
-        - Applied by flipping to random wrong class (not biased to specific class)
-        
+
+        IMPORTANT EXPERIMENT CONTROL:
+        This is the function that performs synthetic label-noise flipping.
+
+        If you want to know "where are labels actually flipped?", it happens here,
+        not in the model code.
+
+        Exact behavior:
+        - Start from the clean CIFAR-10 labels
+        - Randomly choose `noise_percentage` of dataset indices
+        - For each chosen index, replace the true label with a randomly selected
+          wrong class from the other 9 classes
+        - Store the result in `self.noisy_labels`
+        - Mark flipped examples in `self.noise_mask`
+
+        This means:
+        - label noise is uniform over samples
+        - label noise is not targeted to specific classes
+        - the corruption is reproducible for a fixed seed
+        - the model later trains/evaluates against these modified labels
+
         Args:
             noise_percentage: Percentage of labels to corrupt (0-100)
             seed: Random seed for reproducibility
-        
+
         Example:
             >>> dataset.inject_custom_noise(noise_percentage=20.0, seed=42)
             >>> # 20% of labels will be randomly flipped to wrong classes
@@ -115,27 +129,25 @@ class CIFAR10NDataset(Dataset):
         clean_labels = np.array(self.cifar10.targets)
         num_samples = len(clean_labels)
         
-        # Calculate number of samples to corrupt
+        # Number of labels to flip.
         num_noisy = int(num_samples * (noise_percentage / 100.0))
-        
-        # Use fixed seed for reproducibility
+
+        # Reproducible random selection of indices to corrupt.
         rng = np.random.default_rng(seed)
-        
-        # Select samples to corrupt uniformly (not class-biased)
         noisy_indices = rng.choice(num_samples, size=num_noisy, replace=False)
-        
-        # Create noisy labels (start with clean)
+
+        # Start from clean labels, then overwrite selected indices.
         noisy_labels = clean_labels.copy()
-        
-        # For each selected sample, flip to a random wrong class
+
+        # IMPORTANT:
+        # This is the actual label-flip operation.
+        # Each selected sample is reassigned to one randomly chosen WRONG class.
         for idx in noisy_indices:
             original_class = clean_labels[idx]
-            # Get all classes except the original
             wrong_classes = [c for c in range(10) if c != original_class]
-            # Randomly select one wrong class
             noisy_labels[idx] = rng.choice(wrong_classes)
         
-        # Update dataset state
+        # Downstream split code reads these fields.
         self.noisy_labels = noisy_labels
         self.noise_mask = (noisy_labels != clean_labels)
         self.noise_rate = self.noise_mask.mean()

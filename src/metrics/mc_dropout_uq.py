@@ -3,8 +3,11 @@ MC Dropout Uncertainty Quantification
 Implements variance-based uncertainty estimation using Monte Carlo Dropout.
 """
 
+from __future__ import annotations
+
 import torch
-import numpy as np
+import torch.nn as nn
+import torch.nn.functional as F
 from typing import Tuple, Dict
 
 
@@ -50,6 +53,68 @@ def calculate_mc_dropout_uncertainty(predictions: torch.Tensor) -> Dict[str, tor
         'mutual_info': mutual_info,
         'mean_prediction': mean_pred
     }
+
+
+@torch.no_grad()
+def _mc_forward_one_chunk(
+    model: nn.Module,
+    x: torch.Tensor,
+    n_passes: int,
+) -> torch.Tensor:
+    """
+    MC passes on one sample chunk [B, ...] → [T, B, C].
+
+    CNN/ResNet: backbone features computed once per chunk; only dropout+head repeat.
+    MLP: T lightweight forwards (dropout is the main cost).
+    """
+    if hasattr(model, "enable_dropout"):
+        model.eval()
+        model.enable_dropout()
+
+    if hasattr(model, "extract_features") and hasattr(model, "classifier"):
+        features = model.extract_features(x)
+        dropout = getattr(model, "dropout", None)
+        if dropout is None:
+            raise AttributeError("Model has extract_features but no dropout module")
+        preds = []
+        for _ in range(n_passes):
+            h = dropout(features)
+            logits = model.classifier(h)
+            preds.append(F.softmax(logits, dim=1))
+        return torch.stack(preds, dim=0)
+
+    preds = []
+    for _ in range(n_passes):
+        logits = model(x)
+        preds.append(F.softmax(logits, dim=1))
+    return torch.stack(preds, dim=0)
+
+
+@torch.no_grad()
+def mc_forward_efficient(
+    model: nn.Module,
+    x: torch.Tensor,
+    n_passes: int,
+    *,
+    sample_batch_size: int = 256,
+) -> torch.Tensor:
+    """
+    Batched MC Dropout over eval samples.
+
+    Chunks the eval set along batch dimension to limit memory; reuses CNN/ResNet
+    backbone features within each chunk (see :func:`_mc_forward_one_chunk`).
+    """
+    if n_passes < 1:
+        raise ValueError(f"n_passes must be >= 1, got {n_passes}")
+    n = int(x.shape[0])
+    if n == 0:
+        raise ValueError("empty eval tensor")
+    chunks: list[torch.Tensor] = []
+    for start in range(0, n, sample_batch_size):
+        end = min(start + sample_batch_size, n)
+        chunks.append(_mc_forward_one_chunk(model, x[start:end], n_passes))
+    return torch.cat(chunks, dim=1)
+
 
 def calculate_sirc_score(predictions: torch.Tensor, epsilon: float = 1e-10) -> torch.Tensor:
     """

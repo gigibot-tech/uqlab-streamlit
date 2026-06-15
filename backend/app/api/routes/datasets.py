@@ -71,12 +71,93 @@ def _get_cifar10n_dataset():
             detail=f"CIFAR10N dependencies not available. Error: {str(e)}"
         )
 
+@router.get("/{dataset_name}/stats")
+async def get_dataset_stats_by_name(
+    dataset_name: str,
+    noise_type: str = Query("worse_label", description="Noise type to analyze")
+) -> dict[str, Any]:
+    """
+    Get dataset statistics including noise distribution.
+    
+    Args:
+        dataset_name: Name of the dataset (currently only 'cifar10' supported)
+        noise_type: Type of noise to analyze (worse_label, random_label1, etc.)
+    
+    Returns:
+        Dictionary with dataset statistics including:
+        - total_samples: Total number of samples
+        - num_classes: Number of classes
+        - noise_rate: Percentage of noisy labels
+        - class_distribution: Samples per class
+        - noise_per_class: Noise statistics per class
+    """
+    # Validate dataset name
+    if dataset_name.lower() != "cifar10":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported dataset: {dataset_name}. Currently only 'cifar10' is supported."
+        )
+    
+    CIFAR10NDataset, np = _get_cifar10n_dataset()
+    
+    try:
+        dataset = CIFAR10NDataset(root=str(DATA_DIR), noise_type=noise_type, download=False, train=True)
+
+        total_samples = len(dataset)
+        
+        # Get noise info from dataset attributes
+        if dataset.noise_mask is not None:
+            noisy_samples = int(np.sum(dataset.noise_mask))
+            noise_rate = float(dataset.noise_rate)
+        else:
+            noisy_samples = 0
+            noise_rate = 0.0
+
+        # Get clean labels from wrapped CIFAR10 dataset
+        clean_labels = np.array(dataset.cifar10.targets)
+        class_counts = {
+            int(i): int(np.sum(clean_labels == i)) for i in range(10)
+        }
+
+        # Noise per class
+        noise_per_class = {}
+        for i in range(10):
+            class_mask = clean_labels == i
+            if dataset.noise_mask is not None:
+                class_noisy = int(np.sum(dataset.noise_mask[class_mask]))
+            else:
+                class_noisy = 0
+            
+            total_in_class = int(np.sum(class_mask))
+            noise_per_class[int(i)] = {
+                "total": total_in_class,
+                "noisy": class_noisy,
+                "rate": float(class_noisy / total_in_class) if total_in_class > 0 else 0.0,
+            }
+
+        # Get class names from CIFAR10
+        class_names = dataset.cifar10.classes
+
+        return {
+            "total_samples": total_samples,
+            "num_classes": 10,  # Added for Streamlit app
+            "noisy_samples": noisy_samples,
+            "clean_samples": total_samples - noisy_samples,
+            "noise_rate": noise_rate,
+            "class_distribution": class_counts,
+            "noise_per_class": noise_per_class,
+            "class_names": class_names,
+        }
+    except Exception as e:
+        logger.error(f"Error loading dataset stats: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Dataset error: {str(e)}")
+
 
 @router.get("/cifar10n/stats")
 async def get_dataset_stats(
     noise_type: str = Query("worse_label", description="Noise type to analyze")
 ) -> dict[str, Any]:
-    """Get CIFAR-10N dataset statistics including noise distribution."""
+    """Get CIFAR-10N dataset statistics including noise distribution (legacy endpoint)."""
     CIFAR10NDataset, np = _get_cifar10n_dataset()
     
     try:

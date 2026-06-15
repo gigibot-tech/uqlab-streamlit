@@ -29,7 +29,7 @@ from pathlib import Path
 # Third-party
 import numpy as np
 import torch
-import yaml
+import torch.nn as nn
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -39,29 +39,41 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+# Add src directory to path for walaris imports
+SRC_DIR = PROJECT_ROOT / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
 # ============================================================================
 # MODULAR IMPORTS: Explicit, specific imports from each module
 # ============================================================================
 
 # Data loading
 from src.data.cifar10n_loader import CIFAR10NDataset
+from torch.utils.data import Dataset
+from torchvision import datasets, transforms
 
 # Uncertainty metrics
-from src.metrics.mc_dropout_uq import calculate_mc_dropout_uncertainty
+from src.metrics.mc_dropout_uq import calculate_mc_dropout_uncertainty, mc_forward_efficient
 
 # Attribution methods
 from src.triage.dualxda_axioms import DualXDATracer, infer_classifier_layer_name
 
 # UQ Classification package - Constants
-from uq_classification import (
-    GROUP_ALEATORIC,
-    GROUP_CLEAN,
-    GROUP_EPISTEMIC,
-    GROUP_NAMES,
-)
+GROUP_CLEAN = 0
+GROUP_ALEATORIC = 1
+GROUP_EPISTEMIC = 2
+GROUP_NAMES: dict[int, str] = {
+    GROUP_CLEAN: "clean",
+    GROUP_ALEATORIC: "aleatoric_like",
+    GROUP_EPISTEMIC: "epistemic_like",
+}
 
 # UQ Classification package - Models
 from uq_classification.models import EmbeddingDataset
+from uq_classification.config import ExperimentConfig
+from uq_classification.model_factory import build_model
+from uq_classification.feature_extractor import create_feature_extractor, DINOv2FeatureExtractor
 
 # UQ Classification package - Utils
 from uq_classification.utils import auto_device, dino_transform, set_seed
@@ -70,14 +82,10 @@ from uq_classification.utils import auto_device, dino_transform, set_seed
 from uq_classification.data_loader import (
     EmbeddingOrganizer,
     SplitSpec,
-    build_feature_cache_path,
-    maybe_load_or_compute_feature_cache,
     sample_indices_for_fast_pilot,
-    train_feature_model,
 )
 
-# UQ Classification package - Attribution signals
-from uq_classification.attribution_signals import compute_attribution_structure_signals
+from uq_classification.signal_formula_specs import build_signal_formula_manifest
 
 # UQ Classification package - Evaluation
 from uq_classification.evaluation import (
@@ -87,6 +95,421 @@ from uq_classification.evaluation import (
     split_group_balanced_targets,
     train_signal_classifier,
 )
+
+# Walaris artifacts
+from walaris.run_artifacts import save_zwischen_result
+
+# Walaris classification - Attribution signals
+from walaris.classification.attribution_signals import (
+    build_fast_pilot_signal_table,
+    compute_attribution_structure_signals,
+)
+
+
+class CIFAR10NImageDataset(Dataset):
+    """Subset wrapper returning image data with labels/metadata for end-to-end training."""
+
+    def __init__(self, base_dataset: CIFAR10NDataset, indices, transform=None):
+        self.base_dataset = base_dataset
+        self.indices = np.asarray(indices, dtype=np.int64)
+        self.transform = transform
+
+        clean_labels = np.asarray(base_dataset.cifar10.targets)
+        if base_dataset.noisy_labels is not None and base_dataset.noise_mask is not None:
+            noisy_labels = np.asarray(base_dataset.noisy_labels)
+            is_noisy = np.asarray(base_dataset.noise_mask, dtype=bool)
+        else:
+            noisy_labels = clean_labels.copy()
+            is_noisy = np.zeros(len(base_dataset), dtype=bool)
+
+        self.targets = torch.as_tensor(noisy_labels[self.indices], dtype=torch.long)
+        self.clean_labels = torch.as_tensor(clean_labels[self.indices], dtype=torch.long)
+        self.is_noisy = torch.as_tensor(is_noisy[self.indices], dtype=torch.bool)
+        self.original_indices = torch.as_tensor(self.indices, dtype=torch.long)
+
+    def __len__(self) -> int:
+        return len(self.indices)
+
+    def __getitem__(self, item: int):
+        dataset_index = int(self.indices[item])
+        image = self.base_dataset.cifar10.data[dataset_index]
+        image = transforms.ToPILImage()(image)
+
+        if self.transform is not None:
+            image = self.transform(image)
+
+        return image, self.targets[item]
+
+
+def get_data_loading_mode(config: ExperimentConfig) -> str:
+    """Determine data loading mode from config."""
+    model_config = config.model
+    if model_config is None:
+        raise ValueError("ExperimentConfig.model must be set")
+
+    if model_config.training_mode == "feature_space":
+        return "embeddings"
+    if model_config.training_mode == "end_to_end":
+        return "images"
+    raise ValueError(f"Unknown training mode: {model_config.training_mode}")
+
+
+def load_image_datasets(
+    dataset: CIFAR10NDataset,
+    split_spec: SplitSpec,
+) -> tuple[CIFAR10NImageDataset, dict[str, dict[str, torch.Tensor]]]:
+    """Load CIFAR-10N subsets as image datasets for end-to-end training."""
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(
+            (0.4914, 0.4822, 0.4465),
+            (0.2023, 0.1994, 0.2010),
+        ),
+    ])
+
+    train_dataset = CIFAR10NImageDataset(dataset, split_spec.train_indices, transform=transform)
+
+    def build_eval_pack(indices: np.ndarray) -> dict[str, torch.Tensor]:
+        subset = CIFAR10NImageDataset(dataset, indices, transform=transform)
+        images = torch.stack([subset[i][0] for i in range(len(subset))], dim=0) if len(subset) > 0 else torch.empty((0, 3, 32, 32), dtype=torch.float32)
+        return {
+            "inputs": images,
+            "features": images,
+            "noisy_labels": subset.targets,
+            "clean_labels": subset.clean_labels,
+            "is_noisy": subset.is_noisy,
+            "original_indices": subset.original_indices,
+        }
+
+    eval_packs = {
+        "clean": build_eval_pack(split_spec.clean_eval_indices),
+        "aleatoric": build_eval_pack(split_spec.aleatoric_eval_indices),
+        "epistemic": build_eval_pack(split_spec.epistemic_eval_indices),
+    }
+
+    return train_dataset, eval_packs
+
+
+def prepare_eval_data(
+    clean_eval_pack: dict[str, torch.Tensor],
+    aleatoric_eval_pack: dict[str, torch.Tensor],
+    epistemic_eval_pack: dict[str, torch.Tensor],
+) -> dict[str, torch.Tensor]:
+    """Concatenate eval packs and build shared eval metadata tensors."""
+    eval_inputs = torch.cat(
+        [
+            clean_eval_pack["features"],
+            aleatoric_eval_pack["features"],
+            epistemic_eval_pack["features"],
+        ],
+        dim=0,
+    )
+    eval_group_labels = torch.cat(
+        [
+            torch.full((len(clean_eval_pack["features"]),), GROUP_CLEAN, dtype=torch.long),
+            torch.full((len(aleatoric_eval_pack["features"]),), GROUP_ALEATORIC, dtype=torch.long),
+            torch.full((len(epistemic_eval_pack["features"]),), GROUP_EPISTEMIC, dtype=torch.long),
+        ],
+        dim=0,
+    )
+    eval_clean_labels = torch.cat(
+        [
+            clean_eval_pack["clean_labels"],
+            aleatoric_eval_pack["clean_labels"],
+            epistemic_eval_pack["clean_labels"],
+        ],
+        dim=0,
+    )
+    eval_is_noisy = torch.cat(
+        [
+            clean_eval_pack["is_noisy"],
+            aleatoric_eval_pack["is_noisy"],
+            epistemic_eval_pack["is_noisy"],
+        ],
+        dim=0,
+    )
+    eval_noisy_labels = torch.cat(
+        [
+            clean_eval_pack["noisy_labels"],
+            aleatoric_eval_pack["noisy_labels"],
+            epistemic_eval_pack["noisy_labels"],
+        ],
+        dim=0,
+    )
+    eval_dataset_index = torch.cat(
+        [
+            clean_eval_pack["original_indices"],
+            aleatoric_eval_pack["original_indices"],
+            epistemic_eval_pack["original_indices"],
+        ],
+        dim=0,
+    )
+    return {
+        "eval_inputs": eval_inputs,
+        "eval_group_labels": eval_group_labels,
+        "eval_clean_labels": eval_clean_labels,
+        "eval_is_noisy": eval_is_noisy,
+        "eval_noisy_labels": eval_noisy_labels,
+        "eval_dataset_index": eval_dataset_index,
+    }
+
+
+def compute_eval_signals(
+    *,
+    model: nn.Module,
+    train_dataset,
+    eval_inputs: torch.Tensor,
+    device: torch.device,
+    train_batch_size: int,
+    mc_passes: int,
+    top_k: int,
+    run_cache_dir: Path,
+    results_dir: Path,
+) -> dict[str, object]:
+    """Run deterministic eval, attribution signals, MC dropout, and build the signal table."""
+    eval_x = eval_inputs.to(device)
+    eval_batch_size = train_batch_size
+
+    print("Deterministic eval forward (DualXDA targets)...")
+    det_logits_chunks: list[torch.Tensor] = []
+    with torch.no_grad():
+        model.eval()
+        for start in range(0, int(eval_x.shape[0]), eval_batch_size):
+            end = min(start + eval_batch_size, int(eval_x.shape[0]))
+            det_logits_chunks.append(model(eval_x[start:end]).cpu())
+    det_logits = torch.cat(det_logits_chunks, dim=0)
+    mean_pred_det = torch.softmax(det_logits, dim=1)
+
+    save_zwischen_result(
+        results_dir,
+        "01_deterministic_forward",
+        {
+            "det_logits": det_logits,
+            "mean_prediction": mean_pred_det,
+        },
+    )
+
+    tracer = DualXDATracer(
+        model=model,
+        train_dataset=train_dataset,
+        layer_name=infer_classifier_layer_name(model),
+        device=str(device),
+        cache_dir=str(run_cache_dir / "dualxda"),
+    )
+    print("DualXDA attribution signals...")
+    attribution_signals = compute_attribution_structure_signals(
+        tracer,
+        model,
+        eval_inputs,
+        mean_pred_det,
+        train_dataset,
+        device=device,
+        batch_size=train_batch_size,
+        top_k=top_k,
+        num_classes=10,
+    )
+    save_zwischen_result(
+        results_dir,
+        "02_attribution_signals",
+        {k: v.cpu() if hasattr(v, "cpu") else v for k, v in attribution_signals.items()},
+    )
+
+    logit_magnitude = torch.abs(det_logits).sum(dim=1)
+    save_zwischen_result(
+        results_dir,
+        "03_logit_signals",
+        {
+            "det_logits": det_logits,
+            "logit_magnitude": logit_magnitude,
+        },
+    )
+
+    print(f"MC Dropout ({mc_passes} passes, batched eval)...")
+    mc_predictions = mc_forward_efficient(
+        model,
+        eval_x,
+        mc_passes,
+        sample_batch_size=eval_batch_size,
+    ).cpu()
+    uq = calculate_mc_dropout_uncertainty(mc_predictions)
+    save_zwischen_result(
+        results_dir,
+        "04_mc_dropout",
+        {
+            "entropy": uq["entropy"].cpu(),
+            "mutual_info": uq["mutual_info"].cpu(),
+            "mean_variance": uq["mean_variance"].cpu(),
+            "mean_prediction": uq["mean_prediction"].cpu(),
+            "n_passes": mc_passes,
+        },
+    )
+
+    signal_table = build_fast_pilot_signal_table(
+        attribution_signals=attribution_signals,
+        mc_uq=uq,
+        logit_magnitude=logit_magnitude,
+    )
+    save_zwischen_result(
+        results_dir,
+        "05_signal_table",
+        {k: v.cpu() if hasattr(v, "cpu") else v for k, v in signal_table.items()},
+    )
+
+    return {
+        "eval_x": eval_x,
+        "det_logits": det_logits,
+        "mean_pred_det": mean_pred_det,
+        "attribution_signals": attribution_signals,
+        "logit_magnitude": logit_magnitude,
+        "mc_predictions": mc_predictions,
+        "uq": uq,
+        "signal_table": signal_table,
+    }
+
+
+def summarize_eval_signals(
+    *,
+    signal_table: dict[str, torch.Tensor],
+    eval_group_labels: torch.Tensor,
+    eval_clean_labels: torch.Tensor,
+    eval_is_noisy: torch.Tensor,
+    eval_noisy_labels: torch.Tensor,
+    eval_dataset_index: torch.Tensor,
+    results_dir: Path,
+    device: torch.device,
+    seed: int,
+) -> dict[str, list]:
+    """Compute eval summaries and write per-sample signal artifacts."""
+    aleatoric_positive = eval_group_labels == GROUP_ALEATORIC
+    epistemic_positive = eval_group_labels == GROUP_EPISTEMIC
+
+    auroc_rows = []
+    for name, values in signal_table.items():
+        auroc_rows.append(
+            (
+                name,
+                binary_auroc(values, aleatoric_positive),
+                binary_auroc(values, epistemic_positive),
+            )
+        )
+
+    from uq_classification.evaluation import evaluate_three_way_classification
+
+    clf_rows = evaluate_three_way_classification(
+        signal_table=signal_table,
+        eval_group_labels=eval_group_labels,
+        device=device,
+        seed=seed,
+        train_fraction=0.5,
+    )
+
+    save_per_sample_csv(
+        results_dir / "per_sample_signals.csv",
+        eval_group_labels,
+        eval_clean_labels,
+        eval_is_noisy,
+        signal_table,
+        GROUP_NAMES,
+        eval_noisy_labels=eval_noisy_labels,
+        eval_dataset_index=eval_dataset_index,
+    )
+
+    return {
+        "auroc_rows": auroc_rows,
+        "clf_rows": clf_rows,
+    }
+
+
+def train_feature_model(
+    model: torch.nn.Module,
+    train_dataset: Dataset,
+    training_config,
+    device: torch.device,
+) -> torch.nn.Module:
+    """Train a model on embedding datasets."""
+    from torch.utils.data import DataLoader
+
+    loader = DataLoader(
+        train_dataset,
+        batch_size=training_config.train_batch_size,
+        shuffle=True,
+        num_workers=0,
+    )
+    optimizer = torch.optim.AdamW(
+        model.parameters(),
+        lr=training_config.learning_rate,
+        weight_decay=training_config.weight_decay,
+    )
+    criterion = nn.CrossEntropyLoss()
+
+    model = model.to(device)
+    model.train()
+    for epoch in range(training_config.epochs):
+        total_loss = 0.0
+        for xb, yb in loader:
+            xb = xb.to(device)
+            yb = yb.to(device)
+            optimizer.zero_grad()
+            logits = model(xb)
+            loss = criterion(logits, yb)
+            loss.backward()
+            optimizer.step()
+            total_loss += float(loss.item())
+        if (epoch + 1) % max(1, training_config.epochs // 3) == 0 or epoch == training_config.epochs - 1:
+            print(
+                f"  Epoch {epoch + 1}/{training_config.epochs}, "
+                f"loss={total_loss / max(1, len(loader)):.4f}"
+            )
+
+    return model
+
+
+def train_image_model(
+    model: nn.Module,
+    train_dataset: Dataset,
+    training_config,
+    device: torch.device,
+) -> nn.Module:
+    """Train model end-to-end on images."""
+    from torch.utils.data import DataLoader
+    import torch.optim as optim
+
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=training_config.train_batch_size,
+        shuffle=True,
+        num_workers=4,
+    )
+
+    optimizer = optim.Adam(
+        model.parameters(),
+        lr=training_config.learning_rate,
+        weight_decay=training_config.weight_decay,
+    )
+
+    criterion = nn.CrossEntropyLoss()
+
+    model = model.to(device)
+    model.train()
+    for epoch in range(training_config.epochs):
+        total_loss = 0.0
+        for images, labels in train_loader:
+            images, labels = images.to(device), labels.to(device)
+
+            optimizer.zero_grad()
+            logits = model(images)
+            loss = criterion(logits, labels)
+            loss.backward()
+            optimizer.step()
+
+            total_loss += float(loss.item())
+
+        print(
+            f"Epoch {epoch + 1}/{training_config.epochs}, "
+            f"Loss: {total_loss / max(1, len(train_loader)):.4f}"
+        )
+
+    return model
 
 
 def main() -> None:
@@ -147,25 +570,36 @@ def main() -> None:
     - --device: Device to use (auto/cpu/cuda/mps)
     - --output_dir: Override output directory (optional)
     
-    Recommended Values:
-    -------------------
-    Quick experiments (5-10 min):
-      - under_train_per_class: 30-50
-      - regular_train_per_class: 200-300
-      - eval_per_group: 400-600
+    Recommended Values / Presets:
+    -----------------------------
+    The backend now exposes named presets that resolve to concrete flat config values
+    before being written into this grouped YAML structure.
+
+    Quick preset (5-10 min):
+      - under_train_per_class: 40
+      - regular_train_per_class: 250
+      - eval_per_group: 500
       - dinov2_model: "small"
-      - epochs: 8-12
-      - mc_passes: 10-20
-      - top_k: 5-10
-    
-    Thorough experiments (30-60 min):
-      - under_train_per_class: 100-200
-      - regular_train_per_class: 500-1000
-      - eval_per_group: 1000-2000
+      - epochs: 10
+      - mc_passes: 15
+      - top_k: 8
+
+    Thorough preset (30-60 min):
+      - under_train_per_class: 150
+      - regular_train_per_class: 750
+      - eval_per_group: 1500
       - dinov2_model: "base"
-      - epochs: 20-30
-      - mc_passes: 50-100
-      - top_k: 20-50
+      - epochs: 24
+      - mc_passes: 75
+      - top_k: 30
+
+    API usage:
+      - single experiment endpoints accept either:
+        * preset = "quick" | "thorough"
+        * or an explicit config payload
+      - batch experiment endpoints accept either:
+        * preset = "quick" | "thorough"
+        * or an explicit base_config payload
     """
     # Parse arguments (minimal CLI interface)
     parser = argparse.ArgumentParser(
@@ -222,12 +656,13 @@ Examples:
             f"  {PROJECT_ROOT / 'experiments' / 'configs' / 'fast_uq_classification.yaml'}"
         )
     
-    with open(config_path, "r") as f:
-        config = yaml.safe_load(f)
-    
+    config = ExperimentConfig.from_yaml(config_path)
+    if config.data is None or config.model is None or config.training is None or config.evaluation is None or config.paths is None:
+        raise ValueError("ExperimentConfig is incomplete; data/model/training/evaluation/paths must be defined")
+
     # Extract parameters from config with CLI overrides
-    seed = args.seed if args.seed is not None else config.get("seed", 42)
-    device_str = args.device if args.device is not None else config.get("device", "auto")
+    seed = args.seed if args.seed is not None else config.seed
+    device_str = args.device if args.device is not None else config.device
     
     # Setup
     set_seed(seed)
@@ -237,60 +672,88 @@ Examples:
     if args.output_dir:
         results_dir = Path(args.output_dir)
     else:
-        results_base = PROJECT_ROOT / config.get("paths", {}).get("results_base_dir", "./results")
+        results_base = PROJECT_ROOT / config.paths.results_base_dir
         results_dir = results_base / f"fast_uncertainty_classification_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     
-    feature_cache_dir = PROJECT_ROOT / config.get("paths", {}).get("feature_cache_dir", "./cache/fast_uncertainty_classification/features")
+    feature_cache_dir = PROJECT_ROOT / config.paths.feature_cache_dir
     run_cache_dir = results_dir / "cache"
     results_dir.mkdir(parents=True, exist_ok=True)
 
     # Extract data parameters
-    data_config = config.get("data", {})
-    noise_type = data_config.get("noise_type", "aggre_label")
-    under_supported_classes_str = data_config.get("under_supported_classes", "3,5")
-    under_supported_classes = [int(x.strip()) for x in under_supported_classes_str.split(",") if x.strip()]
-    under_train_per_class = data_config.get("under_train_per_class", 50)
-    regular_train_per_class = data_config.get("regular_train_per_class", 300)
-    eval_per_group = data_config.get("eval_per_group", 600)
-    aleatoric_noise_percentage = data_config.get("aleatoric_noise_percentage", 0.0)
-    
-    # Extract model parameters
-    model_config = config.get("model", {})
-    dinov2_model = model_config.get("dinov2_model", "small")
-    hidden_dim = model_config.get("hidden_dim", 256)
-    dropout = model_config.get("dropout", 0.2)
-    
-    # Extract training parameters
-    training_config = config.get("training", {})
-    epochs = training_config.get("epochs", 12)
-    learning_rate = training_config.get("learning_rate", 1e-3)
-    weight_decay = training_config.get("weight_decay", 1e-4)
-    train_batch_size = training_config.get("train_batch_size", 256)
-    feature_batch_size = training_config.get("feature_batch_size", 64)
-    
-    # Extract evaluation parameters
-    eval_config = config.get("evaluation", {})
-    mc_passes = eval_config.get("mc_passes", 20)
-    top_k = eval_config.get("top_k", 10)
+    data_config = config.data
+    noise_type = data_config.noise_type
+    under_supported_classes = data_config.under_supported_classes or []
+    under_supported_classes_str = ",".join(str(x) for x in under_supported_classes)
+    under_train_per_class = data_config.under_train_per_class
+    regular_train_per_class = data_config.regular_train_per_class
+    eval_per_group = data_config.eval_per_group
+    aleatoric_noise_percentage = data_config.aleatoric_noise_percentage
 
-    # Load CIFAR-10N dataset
-    cifar10n_root = Path(config.get("paths", {}).get("cifar10n_root", "./data/cifar10n"))
+    # Extract model parameters
+    model_config = config.model
+    dinov2_model = model_config.dinov2_model
+    hidden_dim = model_config.hidden_dim
+    dropout = model_config.dropout
+
+    # Extract training parameters
+    training_config = config.training
+    epochs = training_config.epochs
+    learning_rate = training_config.learning_rate
+    weight_decay = training_config.weight_decay
+    train_batch_size = training_config.train_batch_size
+    feature_batch_size = training_config.feature_batch_size
+
+    # Extract evaluation parameters
+    eval_config = config.evaluation
+    mc_passes = eval_config.mc_passes
+    top_k = eval_config.top_k
+
+    # Aleatoric control happens here:
+    # - `aleatoric_noise_percentage > 0` -> custom random flips
+    # - otherwise -> use CIFAR-10N noise from `noise_type`
+    cifar10n_root = Path(config.paths.cifar10n_root)
     if not cifar10n_root.is_absolute():
         cifar10n_root = PROJECT_ROOT / cifar10n_root
 
-    dataset = CIFAR10NDataset(
-        root=str(cifar10n_root),
-        noise_type=noise_type,
-        train=True,
-        transform=dino_transform(),
-        download=True,
-    )
-    if dataset.noise_mask is None or float(dataset.noise_rate) == 0.0:
-        raise RuntimeError(
-            "CIFAR-10N noisy labels are not available or the selected noise split "
-            f"`{noise_type}` resolved to zero noise. Please place `CIFAR-10_human.pt` under "
-            f"`{cifar10n_root / 'cifar-10-batches-py'}` before running this pilot."
+    if aleatoric_noise_percentage > 0:
+        # Reset to clean labels, then inject custom noise.
+        print(f"\n🎯 Loading CIFAR-10N for custom noise injection ({aleatoric_noise_percentage}%)")
+
+        dataset = CIFAR10NDataset(
+            root=str(cifar10n_root),
+            noise_type=noise_type,  # ignored in this branch after reset below
+            train=True,
+            transform=dino_transform(),
+            download=True,
         )
+
+        # Do not mix CIFAR-10N noise with custom flips.
+        dataset.noisy_labels = None
+        dataset.noise_mask = None
+        dataset.noise_rate = 0.0
+
+        # Actual label flipping happens in `CIFAR10NDataset.inject_custom_noise()`.
+        dataset.inject_custom_noise(noise_percentage=aleatoric_noise_percentage, seed=42)
+
+        print(f"   ✅ Loaded CIFAR-10N with custom noise: {len(dataset)} samples, {aleatoric_noise_percentage}% noise")
+    else:
+        # IMPORTANT:
+        # This branch uses the pre-existing CIFAR-10N noisy labels selected by
+        # `noise_type` (for example `worse_label`).
+        print(f"\n🎯 Loading CIFAR-10N with existing noise (type: {noise_type})")
+        dataset = CIFAR10NDataset(
+            root=str(cifar10n_root),
+            noise_type=noise_type,
+            train=True,
+            transform=dino_transform(),
+            download=True,
+        )
+        if dataset.noise_mask is None or float(dataset.noise_rate) == 0.0:
+            raise RuntimeError(
+                "CIFAR-10N noisy labels are not available or the selected noise split "
+                f"`{noise_type}` resolved to zero noise. Please place `CIFAR-10_human.pt` under "
+                f"`{cifar10n_root / 'cifar-10-batches-py'}` before running this pilot."
+            )
 
     # ============================================================================
     # ENTERPRISE VALIDATION: Fail Fast with Clear Error Messages
@@ -343,7 +806,21 @@ Examples:
     logger.info(f"under_supported_classes: {under_supported_classes}")
     logger.info("=" * 80)
     
-    # Sample train/eval splits - data loader now handles edge cases gracefully
+    # IMPORTANT EXPERIMENT CONTROL:
+    # This call hands the prepared dataset state to the split builder.
+    #
+    # By this point:
+    # - noisy vs clean labels have already been decided above
+    # - under-supported classes have already been chosen in config
+    #
+    # The split builder then:
+    # - downsamples the under-supported classes for training
+    # - builds clean / aleatoric / epistemic evaluation pools
+    #
+    # Key implementation file:
+    #   src/walaris/classification/data_loader.py
+    # Key function:
+    #   sample_indices_for_fast_pilot(...)
     split_spec: SplitSpec = sample_indices_for_fast_pilot(
         dataset,
         under_supported_classes=under_supported_classes,
@@ -409,33 +886,73 @@ Examples:
             f"AUROC for epistemic uncertainty will return NaN."
         )
 
-    # Extract or load cached embeddings using OO-based organizer
-    embedding_organizer = EmbeddingOrganizer(
-        dataset=dataset,
-        split_spec=split_spec,
-        feature_cache_dir=feature_cache_dir,
-        noise_type=noise_type,
-        dinov2_model=dinov2_model,
-        batch_size=feature_batch_size,
-        device=device,
-    )
-    
-    # Load embeddings once, organize by split
-    embedding_organizer.load_or_compute_features()
-    
-    # Extract organized data packs
-    train_pack = embedding_organizer.get_train_pack()
-    clean_eval_pack = embedding_organizer.get_clean_eval_pack()
-    aleatoric_eval_pack = embedding_organizer.get_aleatoric_eval_pack()
-    epistemic_eval_pack = embedding_organizer.get_epistemic_eval_pack()
+    mode = get_data_loading_mode(config)
 
-    train_dataset = EmbeddingDataset(
-        train_pack["features"],
-        train_pack["noisy_labels"],
-        train_pack["clean_labels"],
-        train_pack["is_noisy"],
-        train_pack["original_indices"],
+    feature_extractor = None
+    feature_dim = None
+
+    if mode == "embeddings":
+        feature_extractor = create_feature_extractor(
+            config.model,
+            device=device,
+            dataset=dataset,
+            split_spec=split_spec,
+            feature_cache_dir=feature_cache_dir,
+            noise_type=noise_type,
+            batch_size=feature_batch_size,
+        )
+        if not isinstance(feature_extractor, DINOv2FeatureExtractor):
+            raise TypeError("Expected DINOv2FeatureExtractor for feature_space mode")
+
+        feature_extractor.organizer.load_or_compute_features()
+
+        train_pack = feature_extractor.get_train_pack()
+        clean_eval_pack = feature_extractor.get_clean_eval_pack()
+        aleatoric_eval_pack = feature_extractor.get_aleatoric_eval_pack()
+        epistemic_eval_pack = feature_extractor.get_epistemic_eval_pack()
+
+        train_dataset = EmbeddingDataset(
+            train_pack["features"],
+            train_pack["noisy_labels"],
+            train_pack["clean_labels"],
+            train_pack["is_noisy"],
+            train_pack["original_indices"],
+        )
+        eval_data = prepare_eval_data(
+            clean_eval_pack,
+            aleatoric_eval_pack,
+            epistemic_eval_pack,
+        )
+        eval_inputs = eval_data["eval_inputs"]
+        feature_dim = int(train_pack["features"].shape[1])
+    elif mode == "images":
+        train_dataset, eval_packs = load_image_datasets(dataset, split_spec)
+        clean_eval_pack = eval_packs["clean"]
+        aleatoric_eval_pack = eval_packs["aleatoric"]
+        epistemic_eval_pack = eval_packs["epistemic"]
+        eval_data = prepare_eval_data(
+            clean_eval_pack,
+            aleatoric_eval_pack,
+            epistemic_eval_pack,
+        )
+        eval_inputs = eval_data["eval_inputs"]
+    else:
+        raise ValueError(f"Unsupported data loading mode: {mode}")
+
+    model = build_model(
+        config=config.model,
+        num_classes=10,
+        feature_dim=feature_dim if mode == "embeddings" else None,
     )
+    model = model.to(device)
+
+    if mode == "images":
+        feature_extractor = create_feature_extractor(
+            config.model,
+            device=device,
+            model=model,
+            batch_size=feature_batch_size,
+        )
 
     print(f"Using device: {device}")
     print(f"Results directory: {results_dir}")
@@ -447,131 +964,58 @@ Examples:
         f"epistemic_like={len(epistemic_eval_pack['features'])}"
     )
 
-    # Train feature-space classifier
-    model = train_feature_model(
-        train_dataset,
-        device=device,
-        num_classes=10,
-        hidden_dim=hidden_dim,
-        dropout=dropout,
-        epochs=epochs,
-        batch_size=train_batch_size,
-        learning_rate=learning_rate,
-        weight_decay=weight_decay,
-    )
+    if mode == "embeddings":
+        model = train_feature_model(model, train_dataset, training_config, device)
+    elif mode == "images":
+        model = train_image_model(model, train_dataset, training_config, device)
+    else:
+        raise ValueError(f"Unsupported training mode: {mode}")
+
+    model = model.to(device)
     model.eval()
 
-    # Prepare evaluation data
-    eval_features = torch.cat(
-        [
-            clean_eval_pack["features"],
-            aleatoric_eval_pack["features"],
-            epistemic_eval_pack["features"],
-        ],
-        dim=0,
-    )
-    eval_group_labels = torch.cat(
-        [
-            torch.full((len(clean_eval_pack["features"]),), GROUP_CLEAN, dtype=torch.long),
-            torch.full((len(aleatoric_eval_pack["features"]),), GROUP_ALEATORIC, dtype=torch.long),
-            torch.full((len(epistemic_eval_pack["features"]),), GROUP_EPISTEMIC, dtype=torch.long),
-        ],
-        dim=0,
-    )
-    eval_clean_labels = torch.cat(
-        [
-            clean_eval_pack["clean_labels"],
-            aleatoric_eval_pack["clean_labels"],
-            epistemic_eval_pack["clean_labels"],
-        ],
-        dim=0,
-    )
-    eval_is_noisy = torch.cat(
-        [
-            clean_eval_pack["is_noisy"],
-            aleatoric_eval_pack["is_noisy"],
-            epistemic_eval_pack["is_noisy"],
-        ],
-        dim=0,
+    eval_group_labels = eval_data["eval_group_labels"]
+    eval_clean_labels = eval_data["eval_clean_labels"]
+    eval_is_noisy = eval_data["eval_is_noisy"]
+    eval_noisy_labels = eval_data["eval_noisy_labels"]
+    eval_dataset_index = eval_data["eval_dataset_index"]
+
+    save_zwischen_result(
+        results_dir,
+        "00_eval_setup",
+        {
+            "eval_group_labels": eval_group_labels.cpu(),
+            "eval_clean_labels": eval_clean_labels.cpu(),
+            "eval_is_noisy": eval_is_noisy.cpu(),
+            "eval_noisy_labels": eval_noisy_labels.cpu(),
+            "eval_dataset_index": eval_dataset_index.cpu(),
+            "n_eval": int(eval_inputs.shape[0]),
+            "mc_passes": mc_passes,
+        },
     )
 
-    # Compute predictive uncertainty with MC Dropout
-    mc_predictions = model.mc_forward(eval_features.to(device), n_passes=mc_passes).cpu()
-    uq = calculate_mc_dropout_uncertainty(mc_predictions)
-    mean_pred = uq["mean_prediction"]
-    msp_uncertainty = 1.0 - mean_pred.max(dim=1).values
-
-    # Compute attribution-based signals with DualXDA
-    tracer = DualXDATracer(
+    eval_outputs = compute_eval_signals(
         model=model,
         train_dataset=train_dataset,
-        layer_name=infer_classifier_layer_name(model),
-        device=str(device),
-        cache_dir=str(run_cache_dir / "dualxda"),
-    )
-    attribution_signals = compute_attribution_structure_signals(
-        tracer,
-        model,
-        eval_features,
-        mean_pred,
-        train_dataset,
+        eval_inputs=eval_inputs,
         device=device,
-        batch_size=train_batch_size,
+        train_batch_size=train_batch_size,
+        mc_passes=mc_passes,
         top_k=top_k,
-        num_classes=10,
+        run_cache_dir=run_cache_dir,
+        results_dir=results_dir,
     )
-    # ============================================================================
-    # MATHEMATICAL RELATIONSHIP: Attribution Mass ≈ Logit Magnitude
-    # ============================================================================
-    # Via the Representer Theorem for kernel methods (which SVM approximates):
-    #
-    # For a linear classifier: f(x) = w^T x + b
-    # The dual formulation gives: w = Σ_i α_i y_i x_i
-    # Therefore: f(x) = Σ_i α_i y_i ⟨x_i, x⟩ + b
-    #
-    # DualXDA attribution mass = Σ_i |α_i y_i ⟨x_i, x⟩| ≈ |f(x)| = |logit|
-    #
-    # This means:
-    # - inverse_mass ≈ 1/|logit| ≈ inverse_logit_magnitude
-    # - High mass → High confidence (large |logit|)
-    # - Low mass → Low confidence (small |logit|) → Epistemic uncertainty
-    #
-    # We implement BOTH attribution-based (inverse_mass) and logit-based
-    # (inverse_logit_magnitude, inverse_max_logit) signals to empirically
-    # validate this theoretical relationship.
-    # ============================================================================
+    det_logits = eval_outputs["det_logits"]
+    mean_pred_det = eval_outputs["mean_pred_det"]
+    uq = eval_outputs["uq"]
+    signal_table = eval_outputs["signal_table"]
+    if not isinstance(uq, dict):
+        raise TypeError("compute_eval_signals() returned invalid `uq` payload")
+    if not isinstance(signal_table, dict):
+        raise TypeError("compute_eval_signals() returned invalid `signal_table` payload")
+    print(f"✅ Zwischenergebnisse: {results_dir / 'zwischen'}/")
 
-    # Compute logit-based signals for comparison with attribution-based signals
-    # NOTE: mean_pred contains softmax probabilities, not raw logits
-    # We need to get raw logits from the model for proper comparison
-    with torch.no_grad():
-        raw_logits = model(eval_features.to(device)).cpu()  # Get raw logits before softmax
-    
-    max_logit = raw_logits.max(dim=1).values
-    logit_magnitude = torch.abs(raw_logits).sum(dim=1)  # L1 norm of logit vector
-
-    # Build signal table
-    compound_uncertainty = uq["entropy"] * attribution_signals["label_disagreement"]
-    
-    signal_table = {
-        # Predictive uncertainty signals (baseline)
-        "msp_uncertainty": msp_uncertainty,
-        "predictive_entropy": uq["entropy"],
-        "mutual_info": uq["mutual_info"],
-        
-        # Attribution-based signals (DualXDA)
-        # Aleatoric indicator (detect label ambiguity)
-        "inverse_coherence": 1.0 - attribution_signals["coherence"],  # BEST aleatoric (0.73 AUROC)
-        
-        # Epistemic indicator (detect lack of support)
-        "dominance": attribution_signals["dominance"],  # Good epistemic (0.76 AUROC)
-        
-        # Logit-based signals (via Representer Theorem: mass ≈ |logit|)
-        "inverse_mass": 1.0 / (attribution_signals["mass"] + 1e-8),  # BEST epistemic (0.94 AUROC)
-        "inverse_logit_magnitude": 1.0 / (logit_magnitude + 1e-8),  # Baseline comparison
-    }
-    
-    # REMOVED SIGNALS (poor performers):
+    # REMOVED SIGNALS (poor performers; still computed inside attribution_signals):
     # - attribution_concentration: Random performance (0.54 alea, 0.31 epis)
     # - label_disagreement: Random performance (0.50, 0.50)
     # - compound_uncertainty: Random performance (0.50, 0.50)
@@ -579,38 +1023,37 @@ Examples:
     # - inverse_max_logit: Redundant with inverse_mass
     # - cross_class_support: Poor performer
 
-    # Compute one-vs-rest AUROC
-    aleatoric_positive = eval_group_labels == GROUP_ALEATORIC
-    epistemic_positive = eval_group_labels == GROUP_EPISTEMIC
-
-    auroc_rows = []
-    for name, values in signal_table.items():
-        auroc_rows.append(
-            (
-                name,
-                binary_auroc(values, aleatoric_positive),
-                binary_auroc(values, epistemic_positive),
-            )
-        )
-
-    # Evaluate three-way classification using refactored function
-    from uq_classification.evaluation import evaluate_three_way_classification
-    clf_rows = evaluate_three_way_classification(
+    eval_summary = summarize_eval_signals(
         signal_table=signal_table,
         eval_group_labels=eval_group_labels,
+        eval_clean_labels=eval_clean_labels,
+        eval_is_noisy=eval_is_noisy,
+        eval_noisy_labels=eval_noisy_labels,
+        eval_dataset_index=eval_dataset_index,
+        results_dir=results_dir,
         device=device,
         seed=seed,
-        train_fraction=0.5,
     )
+    auroc_rows = eval_summary["auroc_rows"]
+    clf_rows = eval_summary["clf_rows"]
 
-    # Save results
-    save_per_sample_csv(
-        results_dir / "per_sample_signals.csv",
-        eval_group_labels,
-        eval_clean_labels,
-        eval_is_noisy,
-        signal_table,
-        GROUP_NAMES,
+    eval_protocol = {
+        "architecture_invariant": True,
+        "rationale": (
+            "Eval indices are sampled from CIFAR-10N pools before training; "
+            "all architectures at the same sweep point use the same seed, "
+            "eval_per_group, and under_supported_classes (same design as "
+            "uq_disentanglement: fixed test set, varying train UQ method)."
+        ),
+        "eval_per_group": eval_per_group,
+        "groups": list(GROUP_NAMES.values()),
+        "under_supported_classes": list(split_spec.under_supported_classes),
+        "seed": seed,
+    }
+    signal_formulas = build_signal_formula_manifest(
+        top_k=top_k,
+        mc_passes=mc_passes,
+        eval_protocol=eval_protocol,
     )
 
     summary = {
@@ -618,18 +1061,20 @@ Examples:
             "config_file": str(config_path),
             "seed": seed,
             "device": str(device),
-            "data": data_config,
-            "model": model_config,
-            "training": training_config,
-            "evaluation": eval_config,
+            "data": vars(data_config),
+            "model": model_config.dict(),
+            "training": vars(training_config),
+            "evaluation": vars(eval_config),
         },
         "under_supported_classes": split_spec.under_supported_classes,
         "train_size": len(train_dataset),
         "eval_sizes": {
-            "clean": len(clean_eval_pack["features"]),
-            "aleatoric_like": len(aleatoric_eval_pack["features"]),
-            "epistemic_like": len(epistemic_eval_pack["features"]),
+            "clean": len(clean_eval_pack["clean_labels"]),
+            "aleatoric_like": len(aleatoric_eval_pack["clean_labels"]),
+            "epistemic_like": len(epistemic_eval_pack["clean_labels"]),
         },
+        "eval_protocol": eval_protocol,
+        "signal_formulas": signal_formulas,
         "one_vs_rest_auroc": [
             {
                 "signal": name,
@@ -649,6 +1094,10 @@ Examples:
 
     with (results_dir / "summary.json").open("w") as f:
         json.dump(summary, f, indent=2)
+
+    from walaris.run_artifacts import save_signal_formula_manifest
+
+    save_signal_formula_manifest(results_dir, signal_formulas)
 
     # Save model checkpoint for watsonx.ai export
     # Remove any forward hooks before saving (DualXDA adds hooks that can't be pickled)
@@ -677,18 +1126,21 @@ Examples:
     # Save complete results for watsonx.ai export
     results_data = {
         # Model outputs
-        'predictions': mean_pred.argmax(dim=1),
-        'confidences': mean_pred.max(dim=1).values,
+        'predictions': uq["mean_prediction"].argmax(dim=1),
+        'confidences': uq["mean_prediction"].max(dim=1).values,
+        'mean_prediction_deterministic': mean_pred_det,
         
         # Training data
-        'train_embeddings': train_dataset.features,
+        'train_embeddings': getattr(train_dataset, 'features', None),
+        'train_images': eval_inputs.new_empty((0,)) if not hasattr(train_dataset, 'features') else None,
         'train_labels': train_dataset.clean_labels,
         'train_noisy_labels': train_dataset.targets,
         'train_is_noisy': train_dataset.is_noisy,
         'train_indices': train_dataset.original_indices,
         
         # Evaluation data
-        'eval_embeddings': eval_features,
+        'eval_embeddings': eval_inputs if mode == "embeddings" else None,
+        'eval_images': eval_inputs if mode == "images" else None,
         'eval_clean_labels': eval_clean_labels,
         'eval_noisy_labels': torch.cat([
             clean_eval_pack["noisy_labels"],
@@ -742,6 +1194,16 @@ Examples:
         clf_rows=clf_rows,
     )
     (results_dir / "summary.md").write_text(markdown)
+
+    try:
+        from walaris.run_artifacts import metrics_row_from_run, print_run_metrics_summary
+
+        print("\n" + "=" * 70)
+        print("SIGNAL MEANS & AUROC (all uncertainties)")
+        print("=" * 70)
+        print_run_metrics_summary(metrics_row_from_run(results_dir))
+    except ImportError:
+        pass
 
     # Print summary - separate attribution-based from logit-based
     attribution_signals = ["inverse_coherence", "dominance"]

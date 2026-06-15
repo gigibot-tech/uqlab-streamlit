@@ -61,6 +61,15 @@ class Settings(BaseSettings):
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = ""
     POSTGRES_DB: str = ""
+    
+    # Storage backend configuration
+    ENABLE_POSTGRES: bool = True  # Enable PostgreSQL storage backend
+    ENABLE_WXGOV: bool = False  # Enable watsonx.governance storage backend
+    
+    # watsonx.governance configuration (optional)
+    WXGOV_API_KEY: str | None = None
+    WXGOV_SPACE_ID: str | None = None
+    WXGOV_URL: str | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property

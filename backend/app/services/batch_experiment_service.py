@@ -22,7 +22,7 @@ from app.repositories.batch_experiment_repository import BatchExperimentReposito
 
 logger = logging.getLogger(__name__)
 from app.repositories.experiment_repository import ExperimentRepository
-from app.services.executors.direct_executor import DirectExecutor
+from app.services.executors.base import TrainingExecutor
 from app.tables import (
     BatchExperiment,
     BatchExperimentRun,
@@ -50,14 +50,8 @@ class SweepDefinition:
     range: SweepRangeDefinition
 
 
-class BatchExperimentService:
-    """Service responsible for batch creation and execution."""
-
-    MAX_RUNS = 100
-
-    def __init__(self, executor: DirectExecutor):
-        self.executor = executor
-        self._running_batches: dict[uuid.UUID, asyncio.Task] = {}
+class BatchExperimentTracker:
+    """Persistence and artifact tracking interface for batch execution."""
 
     def create_batch(
         self,
@@ -66,19 +60,74 @@ class BatchExperimentService:
         description: str | None,
         base_config: TrainingConfig,
         sweep_definition: SweepDefinition,
+        generated_values: list[int | float],
         user: User,
+        batch_root: Path,
     ) -> uuid.UUID:
-        """Create a batch experiment and all generated child runs.
-        
-        Returns:
-            UUID of the created batch experiment
-        """
-        generated_values = self._generate_values(sweep_definition)
-        
-        # Validate parameter combinations before creating batch
-        self._validate_sweep_parameters(base_config, sweep_definition, generated_values)
-        
-        storage_root = self._batch_storage_root_placeholder()
+        raise NotImplementedError
+
+    def get_run_ids(self, batch_id: uuid.UUID) -> list[uuid.UUID]:
+        raise NotImplementedError
+
+    def mark_batch_running(self, batch_id: uuid.UUID, current_run_index: int | None, progress: float) -> None:
+        raise NotImplementedError
+
+    def mark_batch_failed(self, batch_id: uuid.UUID, error_message: str) -> None:
+        raise NotImplementedError
+
+    def get_run_name(self, run_id: uuid.UUID) -> str | None:
+        raise NotImplementedError
+
+    def mark_run_running(self, batch_id: uuid.UUID, run_id: uuid.UUID, position: int, total_runs: int) -> None:
+        raise NotImplementedError
+
+    def prepare_run_execution(
+        self, batch_id: uuid.UUID, run_id: uuid.UUID
+    ) -> tuple[str, TrainingConfig, Path, Path, uuid.UUID | None]:
+        raise NotImplementedError
+
+    def update_run_progress(
+        self, batch_id: uuid.UUID, run_id: uuid.UUID, position: int, total_runs: int, update: ProgressUpdate
+    ) -> None:
+        raise NotImplementedError
+
+    def save_run_success(self, run_id: uuid.UUID, result_summary: dict[str, Any]) -> None:
+        raise NotImplementedError
+
+    def mark_run_failed(self, run_id: uuid.UUID, error_message: str) -> None:
+        raise NotImplementedError
+
+    def finalize_batch(self, batch_id: uuid.UUID) -> None:
+        raise NotImplementedError
+
+    def get_batch_results_payload(self, batch_id: uuid.UUID, batch_root: Path) -> dict[str, Any]:
+        raise NotImplementedError
+
+    def aggregate_batch_results(self, batch_id: uuid.UUID, batch_root: Path) -> None:
+        raise NotImplementedError
+
+    def initialize_storage(self, batch_id: uuid.UUID, batch_root: Path) -> None:
+        raise NotImplementedError
+
+    def write_batch_metadata(self, batch_id: uuid.UUID, batch_root: Path) -> None:
+        raise NotImplementedError
+
+
+class SqlBatchExperimentTracker(BatchExperimentTracker):
+    """SQLModel-backed tracker preserving current persistence behavior."""
+
+    def create_batch(
+        self,
+        *,
+        name: str,
+        description: str | None,
+        base_config: TrainingConfig,
+        sweep_definition: SweepDefinition,
+        generated_values: list[int | float],
+        user: User,
+        batch_root: Path,
+    ) -> uuid.UUID:
+        storage_root = str(Path("/tmp/walaris_experiments") / "pending_batch")
 
         with Session(engine) as session:
             repository = BatchExperimentRepository(session)
@@ -96,19 +145,20 @@ class BatchExperimentService:
             )
             batch = repository.create_batch(batch)
 
-            # ✅ Access batch.id while still in session context
             batch_id = batch.id
-            concrete_storage_root = str(self._batch_root(batch_id))
-            batch.storage_root = concrete_storage_root
+            batch.storage_root = str(batch_root)
             session.add(batch)
             session.commit()
             session.refresh(batch)
 
             runs = []
             for index, value in enumerate(generated_values, start=1):
-                config = self._apply_sweep_value(base_config, sweep_definition, value)
+                config = base_config.with_flat_override(
+                    sweep_definition.parameter,
+                    int(value) if sweep_definition.value_type == "int" else float(value),
+                )
                 run_name = f"exp_{index}_{sweep_definition.parameter}_{self._format_value(value)}"
-                output_dir = str(self._batch_root(batch_id) / "experiments" / run_name)
+                output_dir = str(batch_root / "experiments" / run_name)
 
                 runs.append(
                     BatchExperimentRun(
@@ -123,127 +173,58 @@ class BatchExperimentService:
                     )
                 )
 
-            logger.info(f"📝 Creating {len(runs)} batch experiment runs for batch {batch_id}")
             repository.create_runs(runs)
-            logger.info(f"✅ Successfully created {len(runs)} runs in database")
+            return batch_id
 
-        # ✅ Now safe to use batch_id outside session
-        self._initialize_storage(batch_id)
-        self._write_batch_metadata(batch_id)
-        return batch_id  # Return ID instead of detached object
+    def get_run_ids(self, batch_id: uuid.UUID) -> list[uuid.UUID]:
+        with Session(engine) as session:
+            repository = BatchExperimentRepository(session)
+            batch = repository.get_batch(batch_id)
+            if not batch:
+                raise ValueError(f"Batch experiment {batch_id} not found")
+            return [run.id for run in repository.get_runs(batch_id)]
 
-    async def start_batch(self, batch_id: uuid.UUID) -> None:
-        """Start batch execution asynchronously."""
-        if batch_id in self._running_batches:
-            raise ValueError(f"Batch experiment {batch_id} already running")
+    def mark_batch_running(self, batch_id: uuid.UUID, current_run_index: int | None, progress: float) -> None:
+        with Session(engine) as session:
+            repository = BatchExperimentRepository(session)
+            repository.update_batch_status(
+                batch_id,
+                JobStatus.RUNNING,
+                progress=progress,
+                current_run_index=current_run_index,
+            )
 
-        task = asyncio.create_task(self._run_batch(batch_id))
-        self._running_batches[batch_id] = task
+    def mark_batch_failed(self, batch_id: uuid.UUID, error_message: str) -> None:
+        with Session(engine) as session:
+            repository = BatchExperimentRepository(session)
+            repository.update_batch_status(
+                batch_id,
+                JobStatus.FAILED,
+                progress=0.0,
+                error_message=error_message,
+                current_run_index=None,
+            )
 
-    async def _run_batch(self, batch_id: uuid.UUID) -> None:
-        """Run all generated experiments sequentially."""
-        logger.info(f"🚀 Starting batch execution for {batch_id}")
-        try:
-            # Get run IDs (not objects) to avoid detached instance issues
-            run_ids = []
-            with Session(engine) as session:
-                repository = BatchExperimentRepository(session)
-                batch = repository.get_batch(batch_id)
-                if not batch:
-                    raise ValueError(f"Batch experiment {batch_id} not found")
+    def get_run_name(self, run_id: uuid.UUID) -> str | None:
+        with Session(engine) as session:
+            repository = BatchExperimentRepository(session)
+            run = repository.get_run(run_id)
+            return run.run_name if run else None
 
-                runs = repository.get_runs(batch_id)
-                logger.info(f"📊 Found {len(runs)} runs to execute for batch {batch_id}")
-                
-                if not runs:
-                    logger.error(f"❌ No runs found for batch {batch_id}! Batch will complete immediately.")
-                    repository.update_batch_status(
-                        batch_id,
-                        JobStatus.COMPLETED,
-                        progress=1.0,
-                        current_run_index=None,
-                    )
-                    return
-                
-                # Extract run IDs before session closes
-                run_ids = [run.id for run in runs]
-                
-                repository.update_batch_status(
-                    batch_id,
-                    JobStatus.RUNNING,
-                    progress=0.0,
-                    current_run_index=1,
-                )
+    def mark_run_running(self, batch_id: uuid.UUID, run_id: uuid.UUID, position: int, total_runs: int) -> None:
+        with Session(engine) as session:
+            repository = BatchExperimentRepository(session)
+            repository.update_batch_status(
+                batch_id,
+                JobStatus.RUNNING,
+                progress=(position - 1) / total_runs if total_runs else 1.0,
+                current_run_index=position,
+            )
+            repository.update_run_status(run_id, JobStatus.RUNNING, 0.0)
 
-            total_runs = len(run_ids)
-            logger.info(f"▶️ Beginning execution of {total_runs} experiments")
-
-            for position, run_id in enumerate(run_ids, start=1):
-                # Get run name for logging (extract before session closes)
-                run_name = None
-                with Session(engine) as session:
-                    repository = BatchExperimentRepository(session)
-                    run = repository.get_run(run_id)
-                    if not run:
-                        logger.error(f"❌ Run {run_id} not found, skipping")
-                        continue
-                    
-                    run_name = run.run_name  # Extract as string
-                    logger.info(f"🔄 Starting run {position}/{total_runs}: {run_name}")
-                    repository.update_batch_status(
-                        batch_id,
-                        JobStatus.RUNNING,
-                        progress=(position - 1) / total_runs if total_runs else 1.0,
-                        current_run_index=position,
-                    )
-                    repository.update_run_status(run_id, JobStatus.RUNNING, 0.0)
-
-                await self._run_single_batch_experiment(batch_id, run_id, position, total_runs)
-                logger.info(f"✅ Completed run {position}/{total_runs}: {run_name}")
-                self._aggregate_batch_results(batch_id)
-
-            with Session(engine) as session:
-                repository = BatchExperimentRepository(session)
-                runs = repository.get_runs(batch_id)
-                failed_runs = sum(1 for item in runs if item.status == JobStatus.FAILED)
-                successful_runs = sum(1 for item in runs if item.status == JobStatus.COMPLETED)
-                final_status = (
-                    JobStatus.COMPLETED_WITH_ERRORS if failed_runs > 0 else JobStatus.COMPLETED
-                )
-                logger.info(f"🏁 Batch complete: {successful_runs} successful, {failed_runs} failed")
-                repository.update_batch_counters(
-                    batch_id,
-                    completed_runs=len(runs),
-                    successful_runs=successful_runs,
-                    failed_runs=failed_runs,
-                    progress=1.0,
-                    current_run_index=None,
-                    status=final_status,
-                )
-
-            self._aggregate_batch_results(batch_id)
-        except Exception as exc:
-            with Session(engine) as session:
-                repository = BatchExperimentRepository(session)
-                repository.update_batch_status(
-                    batch_id,
-                    JobStatus.FAILED,
-                    progress=0.0,
-                    error_message=str(exc),
-                    current_run_index=None,
-                )
-        finally:
-            self._running_batches.pop(batch_id, None)
-
-    async def _run_single_batch_experiment(
-        self, batch_id: uuid.UUID, run_id: uuid.UUID, position: int, total_runs: int
-    ) -> None:
-        """Execute one child experiment and persist its results."""
-        # Extract data before session closes to avoid detached instance errors
-        run_name = None
-        config_path = None
-        output_dir = None
-        
+    def prepare_run_execution(
+        self, batch_id: uuid.UUID, run_id: uuid.UUID
+    ) -> tuple[str, TrainingConfig, Path, Path, uuid.UUID | None]:
         with Session(engine) as session:
             batch_repository = BatchExperimentRepository(session)
             run = batch_repository.get_run(run_id)
@@ -251,11 +232,8 @@ class BatchExperimentService:
             if not run or not batch:
                 raise ValueError("Batch run or batch experiment not found")
 
-            # Extract run_name before session closes
-            run_name = run.run_name
-            
             experiment = UncertaintyExperiment(
-                name=f"{batch.name}_{run_name}",
+                name=f"{batch.name}_{run.run_name}",
                 config_yaml=run.resolved_config_yaml,
                 created_by_id=batch.created_by_id,
             )
@@ -269,95 +247,108 @@ class BatchExperimentService:
             session.refresh(run)
 
             config_payload = yaml.safe_load(run.resolved_config_yaml)
-            training_config = TrainingConfig(**config_payload)
-            config_path, output_dir = self._prepare_run_paths(batch_id, run_name, training_config)
+            training_config = TrainingConfig.from_legacy_flat_dict(config_payload)
+            config_path, output_dir = self._prepare_run_paths(batch_id, run.run_name, training_config)
 
             experiment_repository = ExperimentRepository(session)
             experiment_repository.update_status(experiment.id, JobStatus.RUNNING, 0.0)
 
-        loop = asyncio.get_running_loop()
+            return run.run_name, training_config, config_path, output_dir, run.experiment_id
 
-        def progress_callback(update: ProgressUpdate) -> None:
-            run_fraction = update.progress / total_runs
-            batch_progress = ((position - 1) / total_runs) + run_fraction
+    def update_run_progress(
+        self, batch_id: uuid.UUID, run_id: uuid.UUID, position: int, total_runs: int, update: ProgressUpdate
+    ) -> None:
+        run_fraction = update.progress / total_runs
+        batch_progress = ((position - 1) / total_runs) + run_fraction
 
-            with Session(engine) as callback_session:
-                batch_repository = BatchExperimentRepository(callback_session)
-                experiment_repository = ExperimentRepository(callback_session)
+        with Session(engine) as session:
+            batch_repository = BatchExperimentRepository(session)
+            experiment_repository = ExperimentRepository(session)
 
-                batch_repository.update_run_status(run_id, JobStatus.RUNNING, update.progress)
-                batch_repository.update_batch_counters(
-                    batch_id,
-                    completed_runs=position - 1,
-                    successful_runs=self._count_runs(batch_id, JobStatus.COMPLETED, callback_session),
-                    failed_runs=self._count_runs(batch_id, JobStatus.FAILED, callback_session),
-                    progress=min(batch_progress, 0.999),
-                    current_run_index=position,
-                    status=JobStatus.RUNNING,
-                )
-                experiment = batch_repository.get_run(run_id)
-                if experiment and experiment.experiment_id:
-                    experiment_repository.update_status(
-                        experiment.experiment_id, JobStatus.RUNNING, update.progress, update.message
-                    )
-
-            _ = loop
-
-        try:
-            logger.info(f"🎯 Executing training for run {position}/{total_runs}: {run_name}")
-            logger.info(f"   Config: {config_path}")
-            logger.info(f"   Output: {output_dir}")
-            result = await self.executor.execute(config_path, output_dir, progress_callback)
-            logger.info(f"✅ Training completed for run {position}/{total_runs}")
-
-            # Build summary payload with complete per-signal AUROC data
-            summary_payload = {
-                "aleatoric_auroc": result.aleatoric_auroc,
-                "epistemic_auroc": result.epistemic_auroc,
-                "train_size": result.train_size,
-                "eval_sizes": result.eval_sizes,
-                "results_path": result.results_path,
-                # Include complete 7×2 per-signal AUROC structure for visualization
-                "one_vs_rest_auroc": result.best_signals.get("one_vs_rest_auroc", []),
-            }
-
-            with Session(engine) as session:
-                batch_repository = BatchExperimentRepository(session)
-                run = batch_repository.get_run(run_id)
-                if not run:
-                    raise ValueError(f"Batch run {run_id} not found")
-                batch_repository.save_run_results(
-                    run_id,
-                    aleatoric_auroc=result.aleatoric_auroc,
-                    epistemic_auroc=result.epistemic_auroc,
-                    train_size=result.train_size,
-                    eval_sizes=result.eval_sizes,
-                    output_dir=result.results_path,
-                    experiment_id=run.experiment_id,
-                    result_summary=summary_payload,
+            batch_repository.update_run_status(run_id, JobStatus.RUNNING, update.progress)
+            batch_repository.update_batch_counters(
+                batch_id,
+                completed_runs=position - 1,
+                successful_runs=self._count_runs(batch_id, JobStatus.COMPLETED, session),
+                failed_runs=self._count_runs(batch_id, JobStatus.FAILED, session),
+                progress=min(batch_progress, 0.999),
+                current_run_index=position,
+                status=JobStatus.RUNNING,
+            )
+            run = batch_repository.get_run(run_id)
+            if run and run.experiment_id:
+                experiment_repository.update_status(
+                    run.experiment_id, JobStatus.RUNNING, update.progress, update.message
                 )
 
-                if run.experiment_id:
-                    experiment_repository = ExperimentRepository(session)
-                    experiment_repository.save_results(run.experiment_id, result)
-        except Exception as exc:
-            logger.error(f"❌ Training failed for run {position}/{total_runs}: {str(exc)}")
-            logger.exception("Full traceback:")
-            with Session(engine) as session:
-                batch_repository = BatchExperimentRepository(session)
-                run = batch_repository.get_run(run_id)
-                batch_repository.update_run_status(
-                    run_id,
-                    JobStatus.FAILED,
-                    progress=run.progress if run else 0.0,
-                    error_message=str(exc),
-                )
-                if run and run.experiment_id:
-                    experiment_repository = ExperimentRepository(session)
-                    experiment_repository.mark_failed(run.experiment_id, str(exc))
+    def save_run_success(self, run_id: uuid.UUID, result_summary: dict[str, Any]) -> None:
+        with Session(engine) as session:
+            batch_repository = BatchExperimentRepository(session)
+            run = batch_repository.get_run(run_id)
+            if not run:
+                raise ValueError(f"Batch run {run_id} not found")
 
-    def get_batch_results(self, batch_id: uuid.UUID) -> dict[str, Any]:
-        """Return aggregated results for a batch."""
+            batch_repository.save_run_results(
+                run_id,
+                aleatoric_auroc=result_summary["aleatoric_auroc"],
+                epistemic_auroc=result_summary["epistemic_auroc"],
+                train_size=result_summary["train_size"],
+                eval_sizes=result_summary["eval_sizes"],
+                output_dir=result_summary["results_path"],
+                experiment_id=run.experiment_id,
+                result_summary=result_summary,
+            )
+
+            if run.experiment_id:
+                experiment_repository = ExperimentRepository(session)
+                from app.domain.models import TrainingResult
+
+                experiment_repository.save_results(
+                    run.experiment_id,
+                    TrainingResult(
+                        aleatoric_auroc=result_summary["aleatoric_auroc"],
+                        epistemic_auroc=result_summary["epistemic_auroc"],
+                        train_size=result_summary["train_size"],
+                        eval_sizes=result_summary["eval_sizes"],
+                        best_signals={
+                            "one_vs_rest_auroc": result_summary.get("one_vs_rest_auroc", [])
+                        },
+                        results_path=result_summary["results_path"],
+                    ),
+                )
+
+    def mark_run_failed(self, run_id: uuid.UUID, error_message: str) -> None:
+        with Session(engine) as session:
+            batch_repository = BatchExperimentRepository(session)
+            run = batch_repository.get_run(run_id)
+            batch_repository.update_run_status(
+                run_id,
+                JobStatus.FAILED,
+                progress=run.progress if run else 0.0,
+                error_message=error_message,
+            )
+            if run and run.experiment_id:
+                experiment_repository = ExperimentRepository(session)
+                experiment_repository.mark_failed(run.experiment_id, error_message)
+
+    def finalize_batch(self, batch_id: uuid.UUID) -> None:
+        with Session(engine) as session:
+            repository = BatchExperimentRepository(session)
+            runs = repository.get_runs(batch_id)
+            failed_runs = sum(1 for item in runs if item.status == JobStatus.FAILED)
+            successful_runs = sum(1 for item in runs if item.status == JobStatus.COMPLETED)
+            final_status = JobStatus.COMPLETED_WITH_ERRORS if failed_runs > 0 else JobStatus.COMPLETED
+            repository.update_batch_counters(
+                batch_id,
+                completed_runs=len(runs),
+                successful_runs=successful_runs,
+                failed_runs=failed_runs,
+                progress=1.0,
+                current_run_index=None,
+                status=final_status,
+            )
+
+    def get_batch_results_payload(self, batch_id: uuid.UUID, batch_root: Path) -> dict[str, Any]:
         with Session(engine) as session:
             repository = BatchExperimentRepository(session)
             batch = repository.get_batch(batch_id)
@@ -391,16 +382,15 @@ class BatchExperimentService:
             "series": self._build_series(runs),
             "comparison_table": comparison_table,
             "artifacts": {
-                "plot_json": str(self._batch_root(batch.id) / "aggregated_results" / "auroc_curves.json"),
-                "plot_png": str(self._batch_root(batch.id) / "aggregated_results" / "auroc_curves.png"),
-                "comparison_csv": str(self._batch_root(batch.id) / "aggregated_results" / "comparison_table.csv"),
-                "summary_json": str(self._batch_root(batch.id) / "aggregated_results" / "summary.json"),
+                "plot_json": str(batch_root / "aggregated_results" / "auroc_curves.json"),
+                "plot_png": str(batch_root / "aggregated_results" / "auroc_curves.png"),
+                "comparison_csv": str(batch_root / "aggregated_results" / "comparison_table.csv"),
+                "summary_json": str(batch_root / "aggregated_results" / "summary.json"),
             },
             "summary": summary,
         }
 
-    def _aggregate_batch_results(self, batch_id: uuid.UUID) -> None:
-        """Aggregate batch results into summary and CSV artifacts."""
+    def aggregate_batch_results(self, batch_id: uuid.UUID, batch_root: Path) -> None:
         with Session(engine) as session:
             repository = BatchExperimentRepository(session)
             batch = repository.get_batch(batch_id)
@@ -408,7 +398,7 @@ class BatchExperimentService:
             if not batch:
                 raise ValueError(f"Batch experiment {batch_id} not found")
 
-            aggregated_dir = self._batch_root(batch_id) / "aggregated_results"
+            aggregated_dir = batch_root / "aggregated_results"
             aggregated_dir.mkdir(parents=True, exist_ok=True)
 
             comparison_csv = aggregated_dir / "comparison_table.csv"
@@ -508,6 +498,594 @@ class BatchExperimentService:
                 current_run_index=batch.current_run_index,
             )
 
+    def initialize_storage(self, batch_id: uuid.UUID, batch_root: Path) -> None:
+        (batch_root / "experiments").mkdir(parents=True, exist_ok=True)
+        (batch_root / "aggregated_results").mkdir(parents=True, exist_ok=True)
+
+    def write_batch_metadata(self, batch_id: uuid.UUID, batch_root: Path) -> None:
+        with Session(engine) as session:
+            repository = BatchExperimentRepository(session)
+            batch = repository.get_batch(batch_id)
+            runs = repository.get_runs(batch_id)
+            if not batch:
+                raise ValueError(f"Batch experiment {batch_id} not found")
+
+            with open(batch_root / "batch_config.yaml", "w") as handle:
+                yaml.safe_dump(
+                    {
+                        "name": batch.name,
+                        "description": batch.description,
+                        "base_config": yaml.safe_load(batch.base_config_yaml),
+                        "sweep_definitions": json.loads(batch.sweep_definitions_json),
+                    },
+                    handle,
+                )
+
+            with open(batch_root / "batch_metadata.json", "w") as handle:
+                json.dump(
+                    {
+                        "id": str(batch.id),
+                        "status": batch.status.value,
+                        "total_runs": batch.total_runs,
+                        "storage_root": batch.storage_root,
+                        "runs": [
+                            {
+                                "id": str(run.id),
+                                "run_index": run.run_index,
+                                "run_name": run.run_name,
+                                "swept_parameter": run.swept_parameter,
+                                "swept_value": run.swept_value_numeric,
+                            }
+                            for run in runs
+                        ],
+                    },
+                    handle,
+                    indent=2,
+                )
+
+    def _prepare_run_paths(
+        self, batch_id: uuid.UUID, run_name: str, config: TrainingConfig
+    ) -> tuple[Path, Path]:
+        run_dir = Path("/tmp/walaris_experiments") / f"batch_{batch_id}" / "experiments" / run_name
+        run_dir.mkdir(parents=True, exist_ok=True)
+
+        config_path = run_dir / "config.yaml"
+        with open(config_path, "w") as handle:
+            yaml.safe_dump(config.to_yaml_dict(), handle)
+
+        return config_path, run_dir
+
+    def _serialize_sweep_definition(
+        self, definition: SweepDefinition, generated_values: list[int | float]
+    ) -> dict[str, Any]:
+        return {
+            "parameter": definition.parameter,
+            "value_type": definition.value_type,
+            "range": {
+                "start": definition.range.start,
+                "end": definition.range.end,
+                "step": definition.range.step,
+            },
+            "generated_values": generated_values,
+        }
+
+    def _count_runs(self, batch_id: uuid.UUID, status: JobStatus, session: Session) -> int:
+        repository = BatchExperimentRepository(session)
+        return sum(1 for run in repository.get_runs(batch_id) if run.status == status)
+
+    def _format_value(self, value: int | float) -> str:
+        if isinstance(value, int):
+            return str(value)
+        if float(value).is_integer():
+            return str(int(value))
+        return str(value).replace(".", "_")
+
+    def _build_series(self, runs: list[BatchExperimentRun]) -> list[dict[str, Any]]:
+        ordered_runs = sorted(
+            [run for run in runs if run.swept_value_numeric is not None],
+            key=lambda item: item.swept_value_numeric or 0.0,
+        )
+
+        series = [
+            {
+                "metric": "epistemic_auroc",
+                "display_name": "Epistemic AUROC (Aggregated)",
+                "points": [
+                    {
+                        "x": run.swept_value_numeric,
+                        "y": run.epistemic_auroc,
+                        "run_index": run.run_index,
+                        "status": run.status.value,
+                    }
+                    for run in ordered_runs
+                    if run.epistemic_auroc is not None
+                ],
+            },
+            {
+                "metric": "aleatoric_auroc",
+                "display_name": "Aleatoric AUROC (Aggregated)",
+                "points": [
+                    {
+                        "x": run.swept_value_numeric,
+                        "y": run.aleatoric_auroc,
+                        "run_index": run.run_index,
+                        "status": run.status.value,
+                    }
+                    for run in ordered_runs
+                    if run.aleatoric_auroc is not None
+                ],
+            },
+        ]
+
+        signal_names_set = set()
+        for run in ordered_runs:
+            if run.result_summary_json:
+                try:
+                    summary = json.loads(run.result_summary_json)
+                    one_vs_rest = summary.get("one_vs_rest_auroc", [])
+                    for item in one_vs_rest:
+                        signal_names_set.add(item.get("signal"))
+                except (json.JSONDecodeError, KeyError):
+                    continue
+
+        for signal_name in sorted(signal_names_set):
+            if not signal_name:
+                continue
+
+            aleatoric_points = []
+            epistemic_points = []
+
+            for run in ordered_runs:
+                if not run.result_summary_json:
+                    continue
+
+                try:
+                    summary = json.loads(run.result_summary_json)
+                    one_vs_rest = summary.get("one_vs_rest_auroc", [])
+
+                    for item in one_vs_rest:
+                        if item.get("signal") == signal_name:
+                            alea_auroc = item.get("aleatoric_like_auroc")
+                            epis_auroc = item.get("epistemic_like_auroc")
+
+                            if alea_auroc is not None and not (
+                                isinstance(alea_auroc, float) and (alea_auroc != alea_auroc)
+                            ):
+                                aleatoric_points.append(
+                                    {
+                                        "x": run.swept_value_numeric,
+                                        "y": alea_auroc,
+                                        "run_index": run.run_index,
+                                        "status": run.status.value,
+                                    }
+                                )
+
+                            if epis_auroc is not None and not (
+                                isinstance(epis_auroc, float) and (epis_auroc != epis_auroc)
+                            ):
+                                epistemic_points.append(
+                                    {
+                                        "x": run.swept_value_numeric,
+                                        "y": epis_auroc,
+                                        "run_index": run.run_index,
+                                        "status": run.status.value,
+                                    }
+                                )
+                            break
+                except (json.JSONDecodeError, KeyError):
+                    continue
+
+            if aleatoric_points:
+                series.append(
+                    {
+                        "metric": f"{signal_name}_aleatoric",
+                        "display_name": f"{signal_name} (Aleatoric)",
+                        "points": aleatoric_points,
+                    }
+                )
+
+            if epistemic_points:
+                series.append(
+                    {
+                        "metric": f"{signal_name}_epistemic",
+                        "display_name": f"{signal_name} (Epistemic)",
+                        "points": epistemic_points,
+                    }
+                )
+
+        return series
+
+    def _best_run_payload(
+        self, runs: list[BatchExperimentRun], metric_name: str
+    ) -> dict[str, Any] | None:
+        eligible = [
+            run for run in runs
+            if getattr(run, metric_name) is not None and run.status == JobStatus.COMPLETED
+        ]
+        if not eligible:
+            return None
+
+        best = max(eligible, key=lambda run: getattr(run, metric_name) or float("-inf"))
+        return {
+            "run_index": best.run_index,
+            "swept_value": best.swept_value_numeric,
+            metric_name: getattr(best, metric_name),
+        }
+
+
+class MlflowStyleBatchExperimentTracker(BatchExperimentTracker):
+    """Skeleton tracker showing where MLflow-style logging hooks would live."""
+
+    def __init__(self, delegate: BatchExperimentTracker | None = None):
+        self.delegate = delegate or SqlBatchExperimentTracker()
+        self._batch_runs: dict[uuid.UUID, list[uuid.UUID]] = {}
+        self._batch_names: dict[uuid.UUID, str] = {}
+        self._run_names: dict[uuid.UUID, str] = {}
+        self._batch_roots: dict[uuid.UUID, Path] = {}
+        self._run_output_dirs: dict[uuid.UUID, Path] = {}
+
+    def create_batch(
+        self,
+        *,
+        name: str,
+        description: str | None,
+        base_config: TrainingConfig,
+        sweep_definition: SweepDefinition,
+        generated_values: list[int | float],
+        user: User,
+        batch_root: Path,
+    ) -> uuid.UUID:
+        batch_id = self.delegate.create_batch(
+            name=name,
+            description=description,
+            base_config=base_config,
+            sweep_definition=sweep_definition,
+            generated_values=generated_values,
+            user=user,
+            batch_root=batch_root,
+        )
+        self._batch_runs[batch_id] = self.delegate.get_run_ids(batch_id)
+        self._batch_names[batch_id] = name
+        self._batch_roots[batch_id] = batch_root
+        self._log_batch_created(batch_id, name, description, base_config, sweep_definition, generated_values)
+        return batch_id
+
+    def get_run_ids(self, batch_id: uuid.UUID) -> list[uuid.UUID]:
+        run_ids = self.delegate.get_run_ids(batch_id)
+        self._batch_runs[batch_id] = run_ids
+        return run_ids
+
+    def mark_batch_running(self, batch_id: uuid.UUID, current_run_index: int | None, progress: float) -> None:
+        self.delegate.mark_batch_running(batch_id, current_run_index, progress)
+        self._log_batch_status(batch_id, "RUNNING", progress, current_run_index=current_run_index)
+
+    def mark_batch_failed(self, batch_id: uuid.UUID, error_message: str) -> None:
+        self.delegate.mark_batch_failed(batch_id, error_message)
+        self._log_batch_status(batch_id, "FAILED", 1.0, error_message=error_message)
+
+    def get_run_name(self, run_id: uuid.UUID) -> str | None:
+        run_name = self.delegate.get_run_name(run_id)
+        if run_name is not None:
+            self._run_names[run_id] = run_name
+        return run_name
+
+    def mark_run_running(self, batch_id: uuid.UUID, run_id: uuid.UUID, position: int, total_runs: int) -> None:
+        self.delegate.mark_run_running(batch_id, run_id, position, total_runs)
+        self._log_run_status(batch_id, run_id, "RUNNING", 0.0, position=position, total_runs=total_runs)
+
+    def prepare_run_execution(
+        self, batch_id: uuid.UUID, run_id: uuid.UUID
+    ) -> tuple[str, TrainingConfig, Path, Path, uuid.UUID | None]:
+        run_name, training_config, config_path, output_dir, experiment_id = self.delegate.prepare_run_execution(
+            batch_id, run_id
+        )
+        self._run_names[run_id] = run_name
+        self._run_output_dirs[run_id] = output_dir
+        self._log_run_prepared(batch_id, run_id, run_name, training_config, config_path, output_dir, experiment_id)
+        return run_name, training_config, config_path, output_dir, experiment_id
+
+    def update_run_progress(
+        self, batch_id: uuid.UUID, run_id: uuid.UUID, position: int, total_runs: int, update: ProgressUpdate
+    ) -> None:
+        self.delegate.update_run_progress(batch_id, run_id, position, total_runs, update)
+        self._log_run_status(
+            batch_id,
+            run_id,
+            "RUNNING",
+            update.progress,
+            position=position,
+            total_runs=total_runs,
+            message=update.message,
+        )
+
+    def save_run_success(self, run_id: uuid.UUID, result_summary: dict[str, Any]) -> None:
+        self.delegate.save_run_success(run_id, result_summary)
+        self._log_run_result(run_id, result_summary)
+
+    def mark_run_failed(self, run_id: uuid.UUID, error_message: str) -> None:
+        self.delegate.mark_run_failed(run_id, error_message)
+        self._log_run_failure(run_id, error_message)
+
+    def finalize_batch(self, batch_id: uuid.UUID) -> None:
+        self.delegate.finalize_batch(batch_id)
+        self._log_batch_finalized(batch_id)
+
+    def get_batch_results_payload(self, batch_id: uuid.UUID, batch_root: Path) -> dict[str, Any]:
+        return self.delegate.get_batch_results_payload(batch_id, batch_root)
+
+    def aggregate_batch_results(self, batch_id: uuid.UUID, batch_root: Path) -> None:
+        self.delegate.aggregate_batch_results(batch_id, batch_root)
+        self._log_batch_artifacts(batch_id, batch_root)
+
+    def initialize_storage(self, batch_id: uuid.UUID, batch_root: Path) -> None:
+        self.delegate.initialize_storage(batch_id, batch_root)
+        self._batch_roots[batch_id] = batch_root
+
+    def write_batch_metadata(self, batch_id: uuid.UUID, batch_root: Path) -> None:
+        self.delegate.write_batch_metadata(batch_id, batch_root)
+        self._log_batch_metadata(batch_id, batch_root)
+
+    def _log_batch_created(
+        self,
+        batch_id: uuid.UUID,
+        name: str,
+        description: str | None,
+        base_config: TrainingConfig,
+        sweep_definition: SweepDefinition,
+        generated_values: list[int | float],
+    ) -> None:
+        logger.info(
+            "🧪 [MLflowSkeleton] create batch run=%s name=%s description=%s sweep=%s values=%s params=%s",
+            batch_id,
+            name,
+            description,
+            sweep_definition.parameter,
+            generated_values,
+            base_config.to_flat_dict(),
+        )
+
+    def _log_batch_status(
+        self,
+        batch_id: uuid.UUID,
+        status: str,
+        progress: float,
+        *,
+        current_run_index: int | None = None,
+        error_message: str | None = None,
+    ) -> None:
+        logger.info(
+            "🧪 [MLflowSkeleton] batch status batch_id=%s status=%s progress=%.3f current_run_index=%s error=%s",
+            batch_id,
+            status,
+            progress,
+            current_run_index,
+            error_message,
+        )
+
+    def _log_run_prepared(
+        self,
+        batch_id: uuid.UUID,
+        run_id: uuid.UUID,
+        run_name: str,
+        training_config: TrainingConfig,
+        config_path: Path,
+        output_dir: Path,
+        experiment_id: uuid.UUID | None,
+    ) -> None:
+        logger.info(
+            "🧪 [MLflowSkeleton] prepare child run batch_id=%s run_id=%s run_name=%s experiment_id=%s config=%s output=%s params=%s",
+            batch_id,
+            run_id,
+            run_name,
+            experiment_id,
+            config_path,
+            output_dir,
+            training_config.to_flat_dict(),
+        )
+
+    def _log_run_status(
+        self,
+        batch_id: uuid.UUID,
+        run_id: uuid.UUID,
+        status: str,
+        progress: float,
+        *,
+        position: int | None = None,
+        total_runs: int | None = None,
+        message: str | None = None,
+    ) -> None:
+        logger.info(
+            "🧪 [MLflowSkeleton] child run status batch_id=%s run_id=%s run_name=%s status=%s progress=%.3f position=%s/%s message=%s",
+            batch_id,
+            run_id,
+            self._run_names.get(run_id),
+            status,
+            progress,
+            position,
+            total_runs,
+            message,
+        )
+
+    def _log_run_result(self, run_id: uuid.UUID, result_summary: dict[str, Any]) -> None:
+        logger.info(
+            "🧪 [MLflowSkeleton] child run metrics run_id=%s run_name=%s metrics=%s artifacts_dir=%s",
+            run_id,
+            self._run_names.get(run_id),
+            {
+                "aleatoric_auroc": result_summary.get("aleatoric_auroc"),
+                "epistemic_auroc": result_summary.get("epistemic_auroc"),
+                "train_size": result_summary.get("train_size"),
+            },
+            result_summary.get("results_path") or self._run_output_dirs.get(run_id),
+        )
+
+    def _log_run_failure(self, run_id: uuid.UUID, error_message: str) -> None:
+        logger.info(
+            "🧪 [MLflowSkeleton] child run failed run_id=%s run_name=%s error=%s",
+            run_id,
+            self._run_names.get(run_id),
+            error_message,
+        )
+
+    def _log_batch_finalized(self, batch_id: uuid.UUID) -> None:
+        logger.info(
+            "🧪 [MLflowSkeleton] finalize batch batch_id=%s run_count=%s batch_root=%s",
+            batch_id,
+            len(self._batch_runs.get(batch_id, [])),
+            self._batch_roots.get(batch_id),
+        )
+
+    def _log_batch_artifacts(self, batch_id: uuid.UUID, batch_root: Path) -> None:
+        logger.info(
+            "🧪 [MLflowSkeleton] batch artifacts batch_id=%s batch_root=%s aggregated_dir=%s",
+            batch_id,
+            batch_root,
+            batch_root / "aggregated_results",
+        )
+
+    def _log_batch_metadata(self, batch_id: uuid.UUID, batch_root: Path) -> None:
+        logger.info(
+            "🧪 [MLflowSkeleton] batch metadata batch_id=%s metadata_path=%s",
+            batch_id,
+            batch_root / "batch_metadata.json",
+        )
+
+
+class BatchExperimentService:
+    """Service responsible for batch creation and execution."""
+
+    MAX_RUNS = 100
+
+    def __init__(
+        self,
+        executor: TrainingExecutor,
+        tracker: BatchExperimentTracker | None = None,
+    ):
+        self.executor = executor
+        self.tracker = tracker or SqlBatchExperimentTracker()
+        self._running_batches: dict[uuid.UUID, asyncio.Task] = {}
+
+    def create_batch(
+        self,
+        *,
+        name: str,
+        description: str | None,
+        base_config: TrainingConfig,
+        sweep_definition: SweepDefinition,
+        user: User,
+    ) -> uuid.UUID:
+        """Create a batch experiment and all generated child runs.
+        
+        Returns:
+            UUID of the created batch experiment
+        """
+        generated_values = self._generate_values(sweep_definition)
+        
+        # Validate parameter combinations before creating batch
+        self._validate_sweep_parameters(base_config, sweep_definition, generated_values)
+        
+        batch_id = self.tracker.create_batch(
+            name=name,
+            description=description,
+            base_config=base_config,
+            sweep_definition=sweep_definition,
+            generated_values=generated_values,
+            user=user,
+            batch_root=self._batch_root_placeholder(),
+        )
+
+        batch_root = self._batch_root(batch_id)
+        self.tracker.initialize_storage(batch_id, batch_root)
+        self.tracker.write_batch_metadata(batch_id, batch_root)
+        return batch_id
+
+    async def start_batch(self, batch_id: uuid.UUID) -> None:
+        """Start batch execution asynchronously."""
+        if batch_id in self._running_batches:
+            raise ValueError(f"Batch experiment {batch_id} already running")
+
+        task = asyncio.create_task(self._run_batch(batch_id))
+        self._running_batches[batch_id] = task
+
+    async def _run_batch(self, batch_id: uuid.UUID) -> None:
+        """Run all generated experiments sequentially."""
+        logger.info(f"🚀 Starting batch execution for {batch_id}")
+        try:
+            run_ids = self.tracker.get_run_ids(batch_id)
+            logger.info(f"📊 Found {len(run_ids)} runs to execute for batch {batch_id}")
+
+            if not run_ids:
+                self.tracker.finalize_batch(batch_id)
+                return
+
+            self.tracker.mark_batch_running(batch_id, current_run_index=1, progress=0.0)
+
+            total_runs = len(run_ids)
+            logger.info(f"▶️ Beginning execution of {total_runs} experiments")
+
+            for position, run_id in enumerate(run_ids, start=1):
+                run_name = self.tracker.get_run_name(run_id)
+                if not run_name:
+                    logger.error(f"❌ Run {run_id} not found, skipping")
+                    continue
+
+                logger.info(f"🔄 Starting run {position}/{total_runs}: {run_name}")
+                self.tracker.mark_run_running(batch_id, run_id, position, total_runs)
+
+                await self._run_single_batch_experiment(batch_id, run_id, position, total_runs)
+                logger.info(f"✅ Completed run {position}/{total_runs}: {run_name}")
+                self.tracker.aggregate_batch_results(batch_id, self._batch_root(batch_id))
+
+            self.tracker.finalize_batch(batch_id)
+            self.tracker.aggregate_batch_results(batch_id, self._batch_root(batch_id))
+        except Exception as exc:
+            self.tracker.mark_batch_failed(batch_id, str(exc))
+        finally:
+            self._running_batches.pop(batch_id, None)
+
+    async def _run_single_batch_experiment(
+        self, batch_id: uuid.UUID, run_id: uuid.UUID, position: int, total_runs: int
+    ) -> None:
+        """Execute one child experiment and persist its results."""
+        run_name, _training_config, config_path, output_dir, _experiment_id = self.tracker.prepare_run_execution(
+            batch_id, run_id
+        )
+
+        def progress_callback(update: ProgressUpdate) -> None:
+            self.tracker.update_run_progress(batch_id, run_id, position, total_runs, update)
+
+        try:
+            logger.info(f"🎯 Executing training for run {position}/{total_runs}: {run_name}")
+            logger.info(f"   Config: {config_path}")
+            logger.info(f"   Output: {output_dir}")
+            result = await self.executor.execute(config_path, output_dir, progress_callback)
+            logger.info(f"✅ Training completed for run {position}/{total_runs}")
+
+            # Build summary payload with complete per-signal AUROC data
+            summary_payload = {
+                "aleatoric_auroc": result.aleatoric_auroc,
+                "epistemic_auroc": result.epistemic_auroc,
+                "train_size": result.train_size,
+                "eval_sizes": result.eval_sizes,
+                "results_path": result.results_path,
+                # Include complete 7×2 per-signal AUROC structure for visualization
+                "one_vs_rest_auroc": result.best_signals.get("one_vs_rest_auroc", []),
+            }
+
+            self.tracker.save_run_success(run_id, summary_payload)
+        except Exception as exc:
+            logger.error(f"❌ Training failed for run {position}/{total_runs}: {str(exc)}")
+            logger.exception("Full traceback:")
+            self.tracker.mark_run_failed(run_id, str(exc))
+
+    def get_batch_results(self, batch_id: uuid.UUID) -> dict[str, Any]:
+        """Return aggregated results for a batch."""
+        return self.tracker.get_batch_results_payload(batch_id, self._batch_root(batch_id))
+
+    def _aggregate_batch_results(self, batch_id: uuid.UUID) -> None:
+        """Aggregate batch results into summary and CSV artifacts."""
+        self.tracker.aggregate_batch_results(batch_id, self._batch_root(batch_id))
+
     def _generate_values(self, definition: SweepDefinition) -> list[int | float]:
         """Generate sweep values from range config."""
         if definition.range.step <= 0:
@@ -535,9 +1113,10 @@ class BatchExperimentService:
         self, base_config: TrainingConfig, definition: SweepDefinition, value: int | float
     ) -> TrainingConfig:
         """Return a concrete config with one parameter overridden."""
-        updated = base_config.model_dump()
-        updated[definition.parameter] = int(value) if definition.value_type == "int" else float(value)
-        return TrainingConfig(**updated)
+        return base_config.with_flat_override(
+            definition.parameter,
+            int(value) if definition.value_type == "int" else float(value),
+        )
 
     def _serialize_sweep_definition(
         self, definition: SweepDefinition, generated_values: list[int | float]
@@ -554,68 +1133,9 @@ class BatchExperimentService:
             "generated_values": generated_values,
         }
 
-    def _prepare_run_paths(
-        self, batch_id: uuid.UUID, run_name: str, config: TrainingConfig
-    ) -> tuple[Path, Path]:
-        """Prepare config and results paths for a child run."""
-        run_dir = self._batch_root(batch_id) / "experiments" / run_name
-        run_dir.mkdir(parents=True, exist_ok=True)
-
-        config_path = run_dir / "config.yaml"
-        with open(config_path, "w") as handle:
-            yaml.safe_dump(config.to_yaml_dict(), handle)
-
-        output_dir = run_dir
-        return config_path, output_dir
-
-    def _initialize_storage(self, batch_id: uuid.UUID) -> None:
-        """Create batch storage directories."""
-        root = self._batch_root(batch_id)
-        (root / "experiments").mkdir(parents=True, exist_ok=True)
-        (root / "aggregated_results").mkdir(parents=True, exist_ok=True)
-
-    def _write_batch_metadata(self, batch_id: uuid.UUID) -> None:
-        """Write batch-level configuration snapshots."""
-        with Session(engine) as session:
-            repository = BatchExperimentRepository(session)
-            batch = repository.get_batch(batch_id)
-            runs = repository.get_runs(batch_id)
-            if not batch:
-                raise ValueError(f"Batch experiment {batch_id} not found")
-
-            root = self._batch_root(batch_id)
-            with open(root / "batch_config.yaml", "w") as handle:
-                yaml.safe_dump(
-                    {
-                        "name": batch.name,
-                        "description": batch.description,
-                        "base_config": yaml.safe_load(batch.base_config_yaml),
-                        "sweep_definitions": json.loads(batch.sweep_definitions_json),
-                    },
-                    handle,
-                )
-
-            with open(root / "batch_metadata.json", "w") as handle:
-                json.dump(
-                    {
-                        "id": str(batch.id),
-                        "status": batch.status.value,
-                        "total_runs": batch.total_runs,
-                        "storage_root": batch.storage_root,
-                        "runs": [
-                            {
-                                "id": str(run.id),
-                                "run_index": run.run_index,
-                                "run_name": run.run_name,
-                                "swept_parameter": run.swept_parameter,
-                                "swept_value": run.swept_value_numeric,
-                            }
-                            for run in runs
-                        ],
-                    },
-                    handle,
-                    indent=2,
-                )
+    def _batch_root_placeholder(self) -> Path:
+        """Temporary placeholder before batch id exists."""
+        return Path("/tmp/walaris_experiments") / "pending_batch"
 
     def _build_series(self, runs: list[BatchExperimentRun]) -> list[dict[str, Any]]:
         """Build normalized plotting series including per-signal AUROC data."""
@@ -782,10 +1302,10 @@ class BatchExperimentService:
         if sweep_definition.parameter != "under_train_per_class":
             return
         
-        # Get base config values (TrainingConfig has flat fields)
-        eval_per_group = base_config.eval_per_group or 600
-        regular_train_per_class = base_config.regular_train_per_class or 300
-        under_supported_classes_str = base_config.under_supported_classes or "3,5"
+        # Get base config values
+        eval_per_group = base_config.data.eval_per_group or 600
+        regular_train_per_class = base_config.data.regular_train_per_class or 300
+        under_supported_classes_str = base_config.data.under_supported_classes or "3,5"
         under_supported_classes = [int(x.strip()) for x in under_supported_classes_str.split(",") if x.strip()]
         num_under_classes = len(under_supported_classes)
         num_regular_classes = 10 - num_under_classes
