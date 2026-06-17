@@ -57,7 +57,7 @@ from torchvision import datasets, transforms
 from uqlab.mc_dropout_uq import calculate_mc_dropout_uncertainty, mc_forward_efficient
 
 # Attribution methods
-from uqlab.triage.dualxda_axioms import DualXDATracer, infer_classifier_layer_name
+from uqlab.evaluation.legacy.triage.dualxda_axioms import DualXDATracer, infer_classifier_layer_name
 
 # UQ Classification package - Constants
 GROUP_CLEAN = 0
