@@ -39,7 +39,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-# Add src directory to path for walaris imports
+# Add src directory to path for uqlab imports
 SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
@@ -97,10 +97,10 @@ from uq_classification.evaluation import (
     train_signal_classifier,
 )
 
-# Walaris artifacts
+# UQLab artifacts
 from uqlab.run_artifacts import save_zwischen_result
 
-# Walaris classification - Attribution signals
+# UQLab classification - Attribution signals
 from uqlab.classification.attribution_signals import (
     build_fast_pilot_signal_table,
     compute_attribution_structure_signals,
@@ -923,7 +923,7 @@ Examples:
     # - builds clean / aleatoric / epistemic evaluation pools
     #
     # Key implementation file:
-    #   src/walaris/classification/data_loader.py
+    #   src/uqlab/classification/data_loader.py
     # Key function:
     #   sample_indices_for_fast_pilot(...)
     split_spec: SplitSpec = sample_indices_for_fast_pilot(

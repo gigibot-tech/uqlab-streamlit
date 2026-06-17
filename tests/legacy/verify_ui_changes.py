@@ -75,7 +75,7 @@ def main():
     if all(all_checks):
         print("✅ ALL CHECKS PASSED - UI redesign is complete!")
         print("\nNext step: Restart Streamlit to see changes:")
-        print("  cd walaris-cen && ./run_streamlit.sh")
+        print("  cd uqlab-streamlit && ./run_streamlit.sh")
     else:
         print("❌ SOME CHECKS FAILED - Review the output above")
     print("=" * 80)

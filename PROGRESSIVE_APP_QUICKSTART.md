@@ -9,7 +9,7 @@
 ### Launch the App
 
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 streamlit run streamlit_app_progressive.py
 ```
 
@@ -119,7 +119,7 @@ After experiment completes, view results in `streamlit_app.py`:
 **Problem**: Backend not running
 **Solution**: 
 ```bash
-cd walaris-cen/backend
+cd uqlab-streamlit/backend
 uvicorn app.main:app --reload
 ```
 

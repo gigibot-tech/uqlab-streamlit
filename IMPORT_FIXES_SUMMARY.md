@@ -129,7 +129,7 @@ Total files modified: **16**
 
 ### Created:
 1. `src/uqlab_orchestrator/experiment_config.py`
-2. `walaris-cen/IMPORT_FIXES_SUMMARY.md` (this file)
+2. `uqlab-streamlit/IMPORT_FIXES_SUMMARY.md` (this file)
 
 ### Modified:
 1. `src/uqlab_orchestrator/api_client.py`

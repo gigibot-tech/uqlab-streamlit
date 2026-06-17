@@ -56,7 +56,7 @@ def analyze_results(results_dir: str = None):
         # Try common locations
         possible_dirs = [
             Path("results"),
-            Path("walaris-cen/results"),
+            Path("uqlab-streamlit/results"),
             Path("../results"),
             Path.home() / "results",
         ]

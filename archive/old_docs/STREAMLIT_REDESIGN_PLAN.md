@@ -1,6 +1,6 @@
 # Streamlit Interface Redesign - Implementation Plan
 
-**Project:** walaris-cen Uncertainty Quantification Dashboard  
+**Project:** uqlab-streamlit Uncertainty Quantification Dashboard  
 **Version:** 2.0  
 **Date:** 2026-06-03  
 **Status:** Planning Phase
@@ -978,7 +978,7 @@ Existing tables remain unchanged:
 ### 10.1 New Directory Structure
 
 ```
-walaris-cen/
+uqlab-streamlit/
 ├── streamlit_app.py                    # Current v1 (keep for now)
 ├── streamlit_app_v2.py                 # New v2 entry point
 ├── ui_components/

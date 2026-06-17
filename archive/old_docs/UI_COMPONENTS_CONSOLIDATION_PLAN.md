@@ -3,14 +3,14 @@
 ## Problem Identified
 
 Two **identical duplicate** `ui_components` folders exist:
-1. **`/walaris-cen/ui_components/`** (root level) - **ACTIVE** ✅
-2. **`/walaris-cen/src/walaris/ui_components/`** (package level) - **DUPLICATE** ❌
+1. **`/uqlab-streamlit/ui_components/`** (root level) - **ACTIVE** ✅
+2. **`/uqlab-streamlit/src/uqlab/ui_components/`** (package level) - **DUPLICATE** ❌
 
 ## Analysis
 
 ### File Comparison
 ```bash
-$ diff -r ui_components/ src/walaris/ui_components/
+$ diff -r ui_components/ src/uqlab/ui_components/
 # No output = 100% identical
 ```
 
@@ -21,7 +21,7 @@ $ diff -r ui_components/ src/walaris/ui_components/
 - Main Streamlit app imports from root level
 
 **Package-level usage (SELF-REFERENCING ONLY):**
-- [`src/walaris/ui_components/hypothesis_validation.py`](src/walaris/ui_components/hypothesis_validation.py:74): `from walaris.ui_components.per_sample_signals_viz import ...`
+- [`src/uqlab/ui_components/hypothesis_validation.py`](src/uqlab/ui_components/hypothesis_validation.py:74): `from uqlab.ui_components.per_sample_signals_viz import ...`
 - Only files **within** the duplicate folder reference it
 
 ### File Inventory (19 files, ~310KB total)
@@ -58,8 +58,8 @@ $ diff -r ui_components/ src/walaris/ui_components/
 - Follows Streamlit convention (app-level components)
 
 **Actions:**
-1. ✅ **Keep:** `/walaris-cen/ui_components/`
-2. ❌ **Delete:** `/walaris-cen/src/walaris/ui_components/`
+1. ✅ **Keep:** `/uqlab-streamlit/ui_components/`
+2. ❌ **Delete:** `/uqlab-streamlit/src/uqlab/ui_components/`
 3. 🔧 **Fix:** Update self-referencing imports in deleted folder (if any external references exist)
 
 ### Option 2: Keep Package Level (Alternative)
@@ -67,43 +67,43 @@ $ diff -r ui_components/ src/walaris/ui_components/
 **Rationale:**
 - Better for installable package
 - Follows Python package conventions
-- Cleaner namespace: `from walaris.ui_components import ...`
+- Cleaner namespace: `from uqlab.ui_components import ...`
 
 **Actions:**
-1. ❌ **Delete:** `/walaris-cen/ui_components/`
-2. ✅ **Keep:** `/walaris-cen/src/walaris/ui_components/`
-3. 🔧 **Fix:** Update `streamlit_app.py` imports: `from walaris.ui_components import ...`
+1. ❌ **Delete:** `/uqlab-streamlit/ui_components/`
+2. ✅ **Keep:** `/uqlab-streamlit/src/uqlab/ui_components/`
+3. 🔧 **Fix:** Update `streamlit_app.py` imports: `from uqlab.ui_components import ...`
 
 ## Implementation Plan (Option 1 - RECOMMENDED)
 
 ### Step 1: Verify No External Dependencies
 ```bash
-# Search for any imports from src/walaris/ui_components outside the folder
-rg "from src\.walaris\.ui_components|from walaris\.ui_components" \
+# Search for any imports from src/uqlab/ui_components outside the folder
+rg "from src\.uqlab\.ui_components|from uqlab\.ui_components" \
    --type py \
-   --glob '!src/walaris/ui_components/**'
+   --glob '!src/uqlab/ui_components/**'
 ```
 
 ### Step 2: Backup (Safety)
 ```bash
-cd walaris-cen
-tar -czf ui_components_backup_$(date +%Y%m%d).tar.gz src/walaris/ui_components/
+cd uqlab-streamlit
+tar -czf ui_components_backup_$(date +%Y%m%d).tar.gz src/uqlab/ui_components/
 ```
 
 ### Step 3: Remove Duplicate
 ```bash
-cd walaris-cen
-rm -rf src/walaris/ui_components/
+cd uqlab-streamlit
+rm -rf src/uqlab/ui_components/
 ```
 
 ### Step 4: Verify Main App Still Works
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 python -c "from ui_components import build_base_experiment_config; print('✅ Imports work')"
 ```
 
 ### Step 5: Update Documentation
-- Update any docs referencing `src/walaris/ui_components/`
+- Update any docs referencing `src/uqlab/ui_components/`
 - Add note about consolidation in CHANGELOG
 
 ## Benefits of Consolidation
@@ -143,7 +143,7 @@ python -c "from ui_components import build_base_experiment_config; print('✅ Im
 
 If issues arise:
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 tar -xzf ui_components_backup_YYYYMMDD.tar.gz
 ```
 

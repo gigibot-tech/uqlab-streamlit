@@ -8,7 +8,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-# walaris-cen/ (parent of backend/)
+# uqlab-streamlit/ (parent of backend/)
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 SRC_DIR = PROJECT_ROOT / "src"
 SCRIPTS_DIR = PROJECT_ROOT / "scripts"

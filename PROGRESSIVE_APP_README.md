@@ -92,7 +92,7 @@
 ### Running the App
 
 ```bash
-# From walaris-cen directory
+# From uqlab-streamlit directory
 streamlit run streamlit_app_progressive.py
 
 # Or with custom API URL
@@ -249,7 +249,7 @@ Failed to fetch dataset stats: Connection refused
 ```
 ModuleNotFoundError: No module named 'ui_components'
 ```
-**Solution**: Run from `walaris-cen` directory or ensure `src/` is in PYTHONPATH
+**Solution**: Run from `uqlab-streamlit` directory or ensure `src/` is in PYTHONPATH
 
 #### Session State Reset
 **Issue**: Configuration lost after page refresh

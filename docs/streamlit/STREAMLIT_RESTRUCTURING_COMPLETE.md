@@ -132,7 +132,7 @@ Created `test_legacy_imports.py` to verify structure:
 
 ### Structural Tests (Passed ✅)
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 python3 test_legacy_imports.py
 ```
 

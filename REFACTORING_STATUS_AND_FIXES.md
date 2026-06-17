@@ -70,7 +70,7 @@ ModuleNotFoundError: No module named 'pydantic'
 
 **Fix:**
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 source .venv/bin/activate  # or .venv/Scripts/activate on Windows
 python3 streamlit_app_progressive.py
 ```
@@ -163,19 +163,19 @@ def test_launch_workflow_experiments(mock_api):
 ### Manual Testing Steps
 1. **Activate virtual environment:**
    ```bash
-   cd walaris-cen
+   cd uqlab-streamlit
    source .venv/bin/activate
    ```
 
 2. **Start backend (in separate terminal):**
    ```bash
-   cd walaris-cen/backend
+   cd uqlab-streamlit/backend
    uvicorn app.main:app --reload
    ```
 
 3. **Start progressive app:**
    ```bash
-   cd walaris-cen
+   cd uqlab-streamlit
    streamlit run streamlit_app_progressive.py
    ```
 
@@ -224,7 +224,7 @@ def test_launch_workflow_experiments(mock_api):
 ### Immediate (Required)
 1. **Activate venv and test app:**
    ```bash
-   cd walaris-cen
+   cd uqlab-streamlit
    source .venv/bin/activate
    streamlit run streamlit_app_progressive.py
    ```

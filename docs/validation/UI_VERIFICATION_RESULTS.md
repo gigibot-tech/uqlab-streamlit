@@ -34,14 +34,14 @@ However, **Streamlit caches Python modules** and the running instance has not re
 ```bash
 # Stop current Streamlit (Ctrl+C in terminal)
 # Then restart:
-cd walaris-cen
+cd uqlab-streamlit
 source .venv/bin/activate
 streamlit run streamlit_app.py
 ```
 
 Or use the restart script:
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 ./run_streamlit.sh
 ```
 

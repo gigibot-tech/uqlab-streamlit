@@ -28,8 +28,8 @@ Training data inspection was showing **incorrect noise statistics** for all expe
    # training_data_inspection.py searched these paths:
    1. data/experiments/{experiment_id}/results/training_data.csv  # ❌ Never created
    2. data/experiments/{experiment_id}/results/per_sample_signals.csv  # ✅ Found (but wrong data!)
-   3. /tmp/walaris_experiments/{experiment_id}/results/training_data.csv
-   4. /tmp/walaris_experiments/{experiment_id}/results/per_sample_signals.csv
+   3. /tmp/uqlab_experiments/{experiment_id}/results/training_data.csv
+   4. /tmp/uqlab_experiments/{experiment_id}/results/per_sample_signals.csv
    ```
 
 ## Solution Implemented

@@ -63,7 +63,7 @@ Just click "Launch fast sweep (5 runs)" instead of single experiment.
 ### Option 3: Run Script with Sweep
 
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 source .venv/bin/activate
 
 # Create 5 experiments with different noise levels
@@ -165,7 +165,7 @@ Experiments List:
 
 1. **Delete single experiment** (optional):
    ```sql
-   sqlite3 data/walaris.db
+   sqlite3 data/uqlab.db
    DELETE FROM experiments WHERE name = 'exp_20260604_...';
    ```
 

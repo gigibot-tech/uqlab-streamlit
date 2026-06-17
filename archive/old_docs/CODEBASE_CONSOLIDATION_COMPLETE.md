@@ -7,7 +7,7 @@
 
 ## Executive Summary
 
-Successfully consolidated the `walaris-cen` codebase by:
+Successfully consolidated the `uqlab-streamlit` codebase by:
 1. ✅ Archiving legacy code (~6 folders, ~500KB)
 2. ✅ Moving MLOps folders (1-7) to proper package structure
 3. ✅ Archiving research notebooks
@@ -39,7 +39,7 @@ archive/legacy_src/
 
 **Before:**
 ```
-walaris-cen/
+uqlab-streamlit/
 ├── 1_data/
 ├── 2_models/
 ├── 3_training/
@@ -52,7 +52,7 @@ walaris-cen/
 
 **After:**
 ```
-src/walaris/
+src/uqlab/
 ├── data/           # From 1_data/
 ├── models/         # From 2_models/
 ├── training/       # From 3_training/
@@ -97,30 +97,30 @@ The codebase uses **symlinks** for convenience - this is **intentional design**:
 
 ### UI Components
 ```
-ui_components -> src/walaris/ui_components  (symlink)
+ui_components -> src/uqlab/ui_components  (symlink)
 ```
 - **Benefit:** Streamlit app can use `from ui_components import ...`
-- **Source of Truth:** `src/walaris/ui_components/`
+- **Source of Truth:** `src/uqlab/ui_components/`
 
 ### UQ Packages
 ```
-uq_classification -> src/walaris/classification  (symlink)
-uq_benchmarks -> src/walaris/benchmarks          (symlink)
+uq_classification -> src/uqlab/classification  (symlink)
+uq_benchmarks -> src/uqlab/benchmarks          (symlink)
 ```
 - **Benefit:** Backward compatibility with old imports
-- **Source of Truth:** `src/walaris/classification/` and `src/walaris/benchmarks/`
+- **Source of Truth:** `src/uqlab/classification/` and `src/uqlab/benchmarks/`
 
 ---
 
 ## Final Directory Structure
 
 ```
-walaris-cen/
+uqlab-streamlit/
 ├── README.md
 ├── pyproject.toml
 ├── requirements.txt
 │
-├── src/walaris/              # Main Python package ✅
+├── src/uqlab/              # Main Python package ✅
 │   ├── __init__.py
 │   ├── data/                 # Data layer (from 1_data/)
 │   ├── models/               # Models (from 2_models/)
@@ -143,9 +143,9 @@ walaris-cen/
 │       ├── core/             # Core backend logic
 │       └── tables.py         # Database tables
 │
-├── ui_components -> src/walaris/ui_components  # Symlink ✅
-├── uq_classification -> src/walaris/classification  # Symlink ✅
-├── uq_benchmarks -> src/walaris/benchmarks  # Symlink ✅
+├── ui_components -> src/uqlab/ui_components  # Symlink ✅
+├── uq_classification -> src/uqlab/classification  # Symlink ✅
+├── uq_benchmarks -> src/uqlab/benchmarks  # Symlink ✅
 │
 ├── streamlit_app.py          # Main Streamlit app
 ├── progressive_app.py        # Progressive disclosure app
@@ -174,10 +174,10 @@ walaris-cen/
 ### Recommended (New)
 ```python
 # Use package imports
-from walaris.data import loaders
-from walaris.models import architectures
-from walaris.training import trainer
-from walaris.evaluation import metrics
+from uqlab.data import loaders
+from uqlab.models import architectures
+from uqlab.training import trainer
+from uqlab.evaluation import metrics
 ```
 
 ### Supported (Backward Compatibility)
@@ -209,7 +209,7 @@ grep -r "from src\." --include="*.py"
 grep -r "from 1_data" --include="*.py"
 
 # Update to new imports
-sed -i 's/from src\.data/from walaris.data/g' **/*.py
+sed -i 's/from src\.data/from uqlab.data/g' **/*.py
 ```
 
 ### 2. Update Documentation
@@ -269,14 +269,14 @@ cp -r archive/research/uq_disentanglement_comparison-72CC ./
 - `CODEBASE_CONSOLIDATION_COMPLETE.md` (this file)
 
 ### Moved
-- `1_data/` → `src/walaris/data/`
-- `2_models/` → `src/walaris/models/`
-- `3_training/` → `src/walaris/training/`
-- `4_evaluation/` → `src/walaris/evaluation/`
-- `5_api/` → `src/walaris/api/`
-- `6_ui/` → `src/walaris/ui/`
-- `7_orchestration/` → `src/walaris/orchestration/`
-- `shared/` → `src/walaris/shared/`
+- `1_data/` → `src/uqlab/data/`
+- `2_models/` → `src/uqlab/models/`
+- `3_training/` → `src/uqlab/training/`
+- `4_evaluation/` → `src/uqlab/evaluation/`
+- `5_api/` → `src/uqlab/api/`
+- `6_ui/` → `src/uqlab/ui/`
+- `7_orchestration/` → `src/uqlab/orchestration/`
+- `shared/` → `src/uqlab/shared/`
 - `src/data/` → `archive/legacy_src/data/`
 - `src/models/` → `archive/legacy_src/models/`
 - `src/metrics/` → `archive/legacy_src/metrics/`
@@ -286,9 +286,9 @@ cp -r archive/research/uq_disentanglement_comparison-72CC ./
 - `uq_disentanglement_comparison-72CC/` → `archive/research/`
 
 ### Preserved (Symlinks)
-- `ui_components` → `src/walaris/ui_components`
-- `uq_classification` → `src/walaris/classification`
-- `uq_benchmarks` → `src/walaris/benchmarks`
+- `ui_components` → `src/uqlab/ui_components`
+- `uq_classification` → `src/uqlab/classification`
+- `uq_benchmarks` → `src/uqlab/benchmarks`
 
 ---
 
@@ -305,7 +305,7 @@ cp -r archive/research/uq_disentanglement_comparison-72CC ./
 
 ## Conclusion
 
-The `walaris-cen` codebase is now **properly organized** with:
+The `uqlab-streamlit` codebase is now **properly organized** with:
 - ✅ Clean Python package structure
 - ✅ Archived legacy code
 - ✅ Preserved backward compatibility

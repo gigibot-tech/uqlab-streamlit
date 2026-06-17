@@ -6,13 +6,13 @@
 
 ## What Was Done
 
-Successfully reorganized the `walaris-cen` codebase from scattered folders into a clean MLOps structure following industry best practices.
+Successfully reorganized the `uqlab-streamlit` codebase from scattered folders into a clean MLOps structure following industry best practices.
 
 ## Before → After
 
 ### Before (Scattered Structure)
 ```
-src/walaris/
+src/uqlab/
 ├── classification/        # Mixed concerns
 ├── benchmarks/           # Separate folder
 ├── notebook_support/     # Separate folder
@@ -21,7 +21,7 @@ src/walaris/
 
 ### After (MLOps Structure)
 ```
-src/walaris/
+src/uqlab/
 ├── 1_data/              # Data loading & preprocessing
 ├── 2_models/            # Model architectures
 │   ├── classification_models.py  ← FROM classification/models.py
@@ -104,10 +104,10 @@ src/walaris/
 
 ```python
 # Old way (still works, with deprecation warning)
-from walaris.classification import SomeModel
+from uqlab.classification import SomeModel
 
 # New way (recommended)
-from walaris.2_models.classification_models import SomeModel
+from uqlab.2_models.classification_models import SomeModel
 ```
 
 ## What's Left in Old Folders
@@ -151,24 +151,24 @@ Update imports in:
 
 From:
 ```python
-from walaris.classification import ...
-from walaris.benchmarks import ...
-from walaris.notebook_support import ...
+from uqlab.classification import ...
+from uqlab.benchmarks import ...
+from uqlab.notebook_support import ...
 ```
 
 To:
 ```python
-from walaris.2_models import ...
-from walaris.4_evaluation.benchmarks import ...
-from walaris.shared.notebook_utils import ...
+from uqlab.2_models import ...
+from uqlab.4_evaluation.benchmarks import ...
+from uqlab.shared.notebook_utils import ...
 ```
 
 ### 3. Test Everything
 ```bash
 # Test imports
-python -c "from walaris.2_models import *"
-python -c "from walaris.4_evaluation import *"
-python -c "from walaris.shared.notebook_utils import *"
+python -c "from uqlab.2_models import *"
+python -c "from uqlab.4_evaluation import *"
+python -c "from uqlab.shared.notebook_utils import *"
 
 # Run test suite
 pytest tests/
@@ -183,7 +183,7 @@ cd backend && uvicorn app.main:app --reload
 ### 4. Clean Up (After Testing)
 Once everything works, remove empty old folders:
 ```bash
-cd src/walaris
+cd src/uqlab
 rm -rf classification/  # After merging data_loader.py
 rm -rf benchmarks/      # Only __init__.py left
 rm -rf notebook_support/ # Only __init__.py left
@@ -197,7 +197,7 @@ rm -rf notebook_support/ # Only __init__.py left
 ## Structure Reference
 
 ```
-src/walaris/
+src/uqlab/
 ├── 1_data/              # Data loading, preprocessing, augmentation
 ├── 2_models/            # Model architectures, factories, feature extractors
 ├── 3_training/          # Training loops, optimizers, schedulers

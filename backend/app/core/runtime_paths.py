@@ -1,7 +1,7 @@
 """
 Persistent data paths for the FastAPI backend (no ``uqlab`` import required).
 
-Override with env ``WALARIS_DATA_DIR``. Default: ``<repo>/data/``.
+Override with env ``UQLAB_DATA_DIR``. Default: ``<repo>/data/``.
 """
 
 from __future__ import annotations
@@ -11,12 +11,12 @@ from pathlib import Path
 from typing import Union
 from uuid import UUID
 
-# backend/app/core/runtime_paths.py -> walaris-cen/
+# backend/app/core/runtime_paths.py -> uqlab-streamlit/
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 def data_root() -> Path:
-    raw = os.environ.get("WALARIS_DATA_DIR", "").strip()
+    raw = os.environ.get("UQLAB_DATA_DIR", "").strip()
     root = Path(raw).expanduser() if raw else _REPO_ROOT / "data"
     root.mkdir(parents=True, exist_ok=True)
     return root.resolve()
@@ -51,7 +51,7 @@ def resolve_experiment_results_dir(
         raw = Path(results_path)
         candidates.append(raw if raw.name == "results" else raw / "results")
     candidates.append(experiment_results_dir(eid))
-    candidates.append(Path("/tmp/walaris_experiments") / eid / "results")
+    candidates.append(Path("/tmp/uqlab_experiments") / eid / "results")
     seen: set[str] = set()
     for path in candidates:
         key = str(path.resolve())

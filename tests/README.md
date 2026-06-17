@@ -1,6 +1,6 @@
 # Test Suite
 
-This directory contains unit and integration tests for the walaris-cen uncertainty quantification project.
+This directory contains unit and integration tests for the uqlab-streamlit uncertainty quantification project.
 
 ## Running Tests
 

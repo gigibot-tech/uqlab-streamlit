@@ -267,7 +267,7 @@ evaluation:
 Run the validation script:
 
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 python scripts/run_fast_uncertainty_classification.py \
     configs/test/test_my_custom_model.yaml \
     /tmp/test_my_custom_model

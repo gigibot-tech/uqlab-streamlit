@@ -1,6 +1,6 @@
 # Code Flow Documentation - Jupyter Notebook Style
 
-This document shows the code execution flow through the walaris-cen codebase, similar to how you'd see it in a Jupyter notebook with clear cell-by-cell execution.
+This document shows the code execution flow through the uqlab-streamlit codebase, similar to how you'd see it in a Jupyter notebook with clear cell-by-cell execution.
 
 ## 📊 Overview: How Everything Connects
 
@@ -11,7 +11,7 @@ ui_components/
     ↓
 backend/app/api/routes/
     ↓
-src/data/ & src/walaris/
+src/data/ & src/uqlab/
     ↓
 Training & Evaluation
 ```
@@ -310,7 +310,7 @@ class CIFAR10NDataset(Dataset):
 
 ## 🧠 Cell 6: Model Architecture
 
-**File**: `src/walaris/classification/models.py`
+**File**: `src/uqlab/classification/models.py`
 
 ```python
 # CELL 6: Model Definition
@@ -387,7 +387,7 @@ def train_model(config):
     )
     
     # 2. Initialize model
-    from src.walaris.classification.models import DINOv2Classifier
+    from src.uqlab.classification.models import DINOv2Classifier
     
     model = DINOv2Classifier(
         model_name=config["model"]["architecture"],
@@ -493,7 +493,7 @@ def estimate_uncertainty(model, data_loader, mc_passes=20):
 
 ## 📈 Cell 9: Signal Calculation
 
-**File**: `src/walaris/notebook_support/signals.py`
+**File**: `src/uqlab/notebook_support/signals.py`
 
 ```python
 # CELL 9: Calculate Uncertainty Signals
@@ -538,7 +538,7 @@ def calculate_signals(uncertainty_results, labels):
 
 ## ✅ Cell 10: Evaluation & Validation
 
-**File**: `src/walaris/notebook_support/signals.py`
+**File**: `src/uqlab/notebook_support/signals.py`
 
 ```python
 # CELL 10: Validate Signals with UDE
@@ -590,7 +590,7 @@ def calculate_ude_scores(signals, ground_truth_labels, predicted_labels):
 
 ## 📊 Cell 11: Results Visualization
 
-**File**: `src/walaris/ui_components/signal_diagnostic_viz.py`
+**File**: `src/uqlab/ui_components/signal_diagnostic_viz.py`
 
 ```python
 # CELL 11: Visualize Results
@@ -727,7 +727,7 @@ def plot_signal_diagnostics(signals, ude_scores, sample_groups):
 ## 📁 File Organization
 
 ```
-walaris-cen/
+uqlab-streamlit/
 ├── streamlit_app.py                    # Cell 1: Entry point
 ├── streamlit_app_progressive.py        # Cell 1: Progressive UI
 │
@@ -746,13 +746,13 @@ walaris-cen/
 │   ├── data/                          # Cell 5: Data loading
 │   │   └── cifar10n_loader.py        # CIFAR-10N dataset
 │   │
-│   ├── walaris/classification/        # Cell 6: Models
+│   ├── uqlab/classification/        # Cell 6: Models
 │   │   └── models.py                  # DINOv2Classifier
 │   │
 │   ├── metrics/                       # Cell 8: Uncertainty
 │   │   └── mc_dropout_uq.py          # MC Dropout
 │   │
-│   └── walaris/notebook_support/      # Cell 9-10: Analysis
+│   └── uqlab/notebook_support/      # Cell 9-10: Analysis
 │       └── signals.py                 # Signal calculation & UDE
 │
 └── scripts/                           # Cell 7: Training

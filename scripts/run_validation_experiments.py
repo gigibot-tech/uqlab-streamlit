@@ -32,7 +32,7 @@ import json
 from datetime import datetime
 import shutil
 
-# Project root (package lives in src/walaris)
+# Project root (package lives in src/uqlab)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _SRC = PROJECT_ROOT / "src"
 for _p in (_SRC, PROJECT_ROOT):

@@ -13,7 +13,7 @@ exp_dirs = sorted([d for d in Path(batch_dir).glob("experiments/exp_*") if d.is_
 
 The actual directory structure is:
 ```
-/tmp/walaris_experiments/batch_{id}/
+/tmp/uqlab_experiments/batch_{id}/
 ├── experiments/
 │   ├── exp_1_under_train_per_class_5/
 │   ├── exp_2_under_train_per_class_10/
@@ -78,14 +78,14 @@ All 7 signals are now correctly loaded with both aleatoric and epistemic AUROC v
 
 ## Files Modified
 
-1. **walaris-cen/ui_components.py** (lines 1783-1870)
+1. **uqlab-streamlit/ui_components.py** (lines 1783-1870)
    - Fixed path construction for experiment directories
    - Fixed config parameter extraction to look in `data` section
    - Added comprehensive debugging output
    - Added detailed error handling and informative messages
    - Initialized `exp_dirs` to avoid unbound variable issues
 
-2. **walaris-cen/test_signal_loading.py** (new file)
+2. **uqlab-streamlit/test_signal_loading.py** (new file)
    - Test script to verify signal data loading
    - Can be run standalone to diagnose issues
    - Usage: `python3 test_signal_loading.py [batch_id]`

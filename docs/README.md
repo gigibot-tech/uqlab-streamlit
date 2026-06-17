@@ -1,4 +1,4 @@
-# Walaris documentation index
+# UQLab documentation index
 
 Documentation moved from the project root into topic folders.
 

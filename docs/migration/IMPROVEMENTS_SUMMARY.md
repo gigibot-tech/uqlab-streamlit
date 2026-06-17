@@ -2,7 +2,7 @@
 
 ## Overview
 
-Comprehensive code quality improvements have been added to the walaris-cen project. All improvements are **100% optional** and **backward compatible** - existing code continues to work without any changes.
+Comprehensive code quality improvements have been added to the uqlab-streamlit project. All improvements are **100% optional** and **backward compatible** - existing code continues to work without any changes.
 
 ## What Was Added
 
@@ -152,7 +152,7 @@ config.validate()
 ## File Structure
 
 ```
-walaris-cen/
+uqlab-streamlit/
 ├── uq_classification/
 │   ├── __init__.py (updated - version 2.2.0)
 │   ├── config_schema.py (NEW - 318 lines)
@@ -214,7 +214,7 @@ mypy .
 ### 1. Test Config Validation
 
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 python -c "
 from uq_classification.config_schema import ExperimentConfig
 config = ExperimentConfig()
@@ -226,7 +226,7 @@ print('✅ Config validation works!')
 ### 2. Test Unit Tests
 
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 pytest tests/test_config_schema.py -v
 # Should show all tests passing
 ```
@@ -234,7 +234,7 @@ pytest tests/test_config_schema.py -v
 ### 3. Test Type Checking
 
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 mypy uq_classification/config_schema.py
 # Should show "Success: no issues found"
 ```
@@ -273,7 +273,7 @@ pip install mypy
 **"Import errors in tests"**
 ```bash
 # Run from project root
-cd walaris-cen
+cd uqlab-streamlit
 pytest
 ```
 

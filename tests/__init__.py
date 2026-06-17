@@ -1,5 +1,5 @@
 """
-Test suite for walaris-cen uncertainty quantification project.
+Test suite for uqlab-streamlit uncertainty quantification project.
 
 Test organization:
 - test_config_schema.py: Configuration validation tests

@@ -9,7 +9,7 @@
 ## Folder Structure & Responsibilities
 
 ```
-walaris-cen/
+uqlab-streamlit/
 ├── src/uqlab/
 │   ├── 6_ui/                    # UI Layer (Streamlit apps)
 │   │   ├── api_client.py        # ✅ HTTP communication only

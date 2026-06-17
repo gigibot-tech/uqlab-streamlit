@@ -456,7 +456,7 @@ experiment (id, name, config, ...)
 
 ### Before (Current)
 ```
-walaris-cen/
+uqlab-streamlit/
 ├── backend/
 │   └── app/
 │       ├── api/routes/experiments.py
@@ -469,7 +469,7 @@ walaris-cen/
 
 ### After (Hybrid)
 ```
-walaris-cen/
+uqlab-streamlit/
 ├── backend/
 │   └── app/
 │       ├── api/routes/

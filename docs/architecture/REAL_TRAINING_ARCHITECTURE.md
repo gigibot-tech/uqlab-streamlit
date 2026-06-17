@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the modular, production-ready architecture for real ML training in the walaris-cen project using clean architecture principles and design patterns.
+This document describes the modular, production-ready architecture for real ML training in the uqlab-streamlit project using clean architecture principles and design patterns.
 
 ## Architecture Layers
 
@@ -231,13 +231,13 @@ dependencies = [
 
 ### Start Backend
 ```bash
-cd walaris-cen/backend
+cd uqlab-streamlit/backend
 python -m uvicorn app.main:app --reload
 ```
 
 ### Start Streamlit
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 ./run_streamlit.sh
 ```
 

@@ -1,4 +1,4 @@
-# Python Files Inventory - walaris-cen
+# Python Files Inventory - uqlab-streamlit
 
 **Generated**: 2026-06-08  
 **Total Python Files**: 150
@@ -6,7 +6,7 @@
 ## Package Structure
 
 ```
-walaris-cen/
+uqlab-streamlit/
 ├── src/
 │   ├── uqlab/                    # ML Core Package (Steps 1-7 MLOps pipeline)
 │   └── uqlab_orchestrator/       # Orchestration Package (Experiment coordination)

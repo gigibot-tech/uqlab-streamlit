@@ -15,7 +15,7 @@ Train a DINOv2-based classifier with MC Dropout.
 
 **Usage**:
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 python examples/example_dinov2.py
 ```
 
@@ -37,7 +37,7 @@ Train a simple CNN with MC Dropout.
 
 **Usage**:
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 python examples/example_cnn.py
 ```
 
@@ -59,7 +59,7 @@ Train a ResNet18-based classifier with MC Dropout.
 
 **Usage**:
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 python examples/example_resnet.py
 ```
 
@@ -82,7 +82,7 @@ Run a batch experiment with parameter sweep via API.
 **Setup**:
 1. Start the FastAPI backend:
    ```bash
-   cd walaris-cen/backend
+   cd uqlab-streamlit/backend
    uvicorn app.main:app --reload
    ```
 
@@ -100,7 +100,7 @@ Run a batch experiment with parameter sweep via API.
 
 **Usage**:
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 python examples/example_batch_sweep.py
 ```
 
@@ -117,7 +117,7 @@ python examples/example_batch_sweep.py
 
 1. Install dependencies:
    ```bash
-   cd walaris-cen
+   cd uqlab-streamlit
    pip install -r requirements.txt
    ```
 

@@ -288,7 +288,7 @@ st.session_state.eval_config = {
 ### File Structure
 
 ```
-walaris-cen/
+uqlab-streamlit/
 ├── streamlit_app_progressive.py          # New main app
 ├── ui_components/
 │   └── progressive/

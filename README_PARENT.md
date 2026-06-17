@@ -1,11 +1,11 @@
-# Walaris-CEN: Uncertainty Quantification Platform
+# UQLab-CEN: Uncertainty Quantification Platform
 
 Complete uncertainty quantification platform with Streamlit UI, FastAPI backend, and the UQLab core framework.
 
 ## 🏗️ Repository Structure
 
 ```
-walaris-cen/
+uqlab-streamlit/
 ├── src/
 │   └── uqlab/                    # Core UQ framework (Git submodule)
 │       ├── 1_data/               # Data loaders and preprocessing
@@ -83,8 +83,8 @@ docker --version
 
 #### 1. Clone with Submodules
 ```bash
-git clone --recurse-submodules https://github.com/YOUR_ORG/walaris-cen.git
-cd walaris-cen
+git clone --recurse-submodules https://github.com/YOUR_ORG/uqlab-streamlit.git
+cd uqlab-streamlit
 
 # If you already cloned without submodules:
 git submodule update --init --recursive
@@ -321,7 +321,7 @@ flake8 src/
 
 ## 📧 Contact
 
-- **Issues**: https://github.com/YOUR_ORG/walaris-cen/issues
+- **Issues**: https://github.com/YOUR_ORG/uqlab-streamlit/issues
 - **Email**: your-email@example.com
 - **Documentation**: https://your-docs-site.com
 

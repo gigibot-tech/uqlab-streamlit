@@ -96,7 +96,7 @@ When training data is available, users see:
 Training data is loaded from experiment results files:
 - Primary: `data/experiments/{experiment_id}/results/training_data.csv`
 - Fallback: `data/experiments/{experiment_id}/results/per_sample_signals.csv`
-- Alternative paths in `/tmp/walaris_experiments/` are also checked
+- Alternative paths in `/tmp/uqlab_experiments/` are also checked
 
 ### Required Columns
 

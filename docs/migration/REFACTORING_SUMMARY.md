@@ -155,7 +155,7 @@ The original `ui_components.py` has been renamed to `ui_components_old.py` for r
 
 1. **Test the Application**
    ```bash
-   cd walaris-cen
+   cd uqlab-streamlit
    streamlit run streamlit_app.py
    ```
 
@@ -181,7 +181,7 @@ The original `ui_components.py` has been renamed to `ui_components_old.py` for r
 If issues arise, you can quickly rollback:
 
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 rm -rf ui_components/
 mv ui_components_old.py ui_components.py
 ```

@@ -1,6 +1,6 @@
 # Code Quality Improvements Guide
 
-This document describes the optional code quality improvements added to the walaris-cen project. All improvements are **backward compatible** and **optional** - the existing code continues to work without any changes.
+This document describes the optional code quality improvements added to the uqlab-streamlit project. All improvements are **backward compatible** and **optional** - the existing code continues to work without any changes.
 
 ## Overview
 
@@ -308,7 +308,7 @@ Type checking is optional - code works without mypy.
 Tests import from `uq_classification` package. Make sure you're running from project root:
 
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 pytest
 ```
 

@@ -23,7 +23,7 @@ The repository demonstrates **excellent Separation of Concerns** with clear boun
 - Total Python files scanned: 66
 - Direct `uqlab` imports: **0**
 - Direct `src.uqlab` imports: **0**
-- Direct `walaris` imports: **0**
+- Direct `uqlab` imports: **0**
 
 **How Backend Uses UQLab**:
 

@@ -128,7 +128,7 @@ Frozen models provide several benefits:
 The app should now work correctly:
 
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 source .venv/bin/activate
 streamlit run streamlit_app_progressive.py
 ```

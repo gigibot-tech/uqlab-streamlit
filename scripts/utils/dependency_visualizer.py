@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Streamlit Dependency Visualization App for walaris-cen project.
+Streamlit Dependency Visualization App for uqlab-streamlit project.
 
 This app provides interactive visualization and querying of Python dependencies.
 
@@ -359,7 +359,7 @@ class DependencyVisualizer:
 def main():
     """Main Streamlit app."""
     st.title("🔍 Python Dependency Analyzer")
-    st.markdown("Interactive visualization and analysis of Python dependencies in walaris-cen")
+    st.markdown("Interactive visualization and analysis of Python dependencies in uqlab-streamlit")
     
     # Initialize visualizer
     viz = DependencyVisualizer()

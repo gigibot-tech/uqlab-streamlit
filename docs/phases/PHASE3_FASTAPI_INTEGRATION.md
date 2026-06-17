@@ -237,7 +237,7 @@ user = session.get(User, current_user.id)
 ### Manual Testing
 ```bash
 # 1. Start backend
-cd walaris-cen/backend
+cd uqlab-streamlit/backend
 uvicorn app.main:app --reload
 
 # 2. Test endpoints

@@ -16,7 +16,7 @@
 
 2. **`1_data/loaders.py`** (689 LoC)
    - Consolidated from `src/data/cifar10n_loader.py` (340 LoC)
-   - Consolidated from `src/walaris/classification/data_loader.py` (589 LoC)
+   - Consolidated from `src/uqlab/classification/data_loader.py` (589 LoC)
    - **Consolidation:** Merged 929 LoC → 689 LoC (240 LoC saved, 26% reduction)
    - Features:
      - `CIFAR10NDataset` - unified noisy label dataset

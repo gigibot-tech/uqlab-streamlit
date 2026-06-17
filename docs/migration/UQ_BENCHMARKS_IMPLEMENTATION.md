@@ -10,7 +10,7 @@ A **new, clean package** (`uq_benchmarks`) that integrates formal uncertainty qu
 ## Package Structure
 
 ```
-walaris-cen/uq_benchmarks/
+uqlab-streamlit/uq_benchmarks/
 ├── __init__.py                 # Package exports and version
 ├── setup.py                    # Installation configuration
 ├── README.md                   # Comprehensive documentation

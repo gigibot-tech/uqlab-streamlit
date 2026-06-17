@@ -51,7 +51,7 @@ def test_api_config_structure():
         print(f"   Name: {result['name']}")
         
         # Check the saved config file
-        exp_dir = Path(f"/tmp/walaris_experiments/{result['id']}")
+        exp_dir = Path(f"/tmp/uqlab_experiments/{result['id']}")
         config_file = exp_dir / "config.yaml"
         
         if config_file.exists():
@@ -90,7 +90,7 @@ def test_recent_experiments():
         print(f"Found {len(experiments)} recent experiments:\n")
         
         for exp in experiments[:5]:
-            exp_dir = Path(f"/tmp/walaris_experiments/{exp['id']}")
+            exp_dir = Path(f"/tmp/uqlab_experiments/{exp['id']}")
             config_file = exp_dir / "config.yaml"
             
             if config_file.exists():

@@ -1,4 +1,4 @@
-# Dependency Map - walaris-cen
+# Dependency Map - uqlab-streamlit
 
 **Generated**: 2026-06-08  
 **Purpose**: Map which applications use which packages and files

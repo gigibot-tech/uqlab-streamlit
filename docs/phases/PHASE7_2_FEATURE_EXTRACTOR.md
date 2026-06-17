@@ -392,7 +392,7 @@ This feature extractor enables:
 ## Files Modified
 
 ### Created
-- `walaris-cen/uq_classification/feature_extractor.py` (485 lines)
+- `uqlab-streamlit/uq_classification/feature_extractor.py` (485 lines)
   - `FeatureExtractor` base class
   - `DINOv2FeatureExtractor` implementation
   - `CNNFeatureExtractor` implementation
@@ -400,14 +400,14 @@ This feature extractor enables:
   - `create_feature_extractor()` factory function
 
 ### Modified
-- `walaris-cen/uq_classification/__init__.py`
+- `uqlab-streamlit/uq_classification/__init__.py`
   - Added feature extractor imports
   - Updated `__all__` exports
   - Bumped version to 2.3.0
   - Added documentation reference
 
 ### Documentation
-- `walaris-cen/PHASE7_2_FEATURE_EXTRACTOR.md` (this file)
+- `uqlab-streamlit/PHASE7_2_FEATURE_EXTRACTOR.md` (this file)
 
 ## Summary
 

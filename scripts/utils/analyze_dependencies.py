@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Comprehensive Python Dependency Analysis Tool for walaris-cen project.
+Comprehensive Python Dependency Analysis Tool for uqlab-streamlit project.
 
 This script scans all Python files in a directory, parses imports using AST,
 maps import relationships, builds a dependency graph, and exports data to JSON.

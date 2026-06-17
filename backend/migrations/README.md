@@ -19,7 +19,7 @@
 
 ### Option 1: Using the migration script
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 python3 backend/run_migration.py
 ```
 
@@ -114,13 +114,13 @@ Stores parameter sweep experiments.
 
 ### Option 1: Using the migration script
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 python3 backend/run_benchmark_migration.py
 ```
 
 ### Option 2: Manual SQL execution
 ```bash
-cd walaris-cen/backend
+cd uqlab-streamlit/backend
 sqlite3 app.db < migrations/add_benchmark_tables.sql
 ```
 

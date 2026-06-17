@@ -50,12 +50,12 @@ class Settings(BaseSettings):
     PROJECT_NAME: str
     
     # ML Script Configuration (project root level)
-    # Path: walaris-cen/scripts/run_fast_uncertainty_classification.py
+    # Path: uqlab-streamlit/scripts/run_fast_uncertainty_classification.py
     # Can be overridden via environment variable for custom locations
     DTAG_ROOT: str = str(Path(__file__).resolve().parents[3] / "scripts")
     
-    # Persistent data root (experiments + default SQLite). Override via WALARIS_DATA_DIR.
-    WALARIS_DATA_DIR: str = ""
+    # Persistent data root (experiments + default SQLite). Override via UQLAB_DATA_DIR.
+    UQLAB_DATA_DIR: str = ""
 
     # Database configuration - modular for future persistence
     # Use file SQLite by default, can switch to PostgreSQL via env vars
@@ -79,8 +79,8 @@ class Settings(BaseSettings):
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
         if self.USE_SQLITE:
-            if self.WALARIS_DATA_DIR:
-                os.environ["WALARIS_DATA_DIR"] = self.WALARIS_DATA_DIR
+            if self.UQLAB_DATA_DIR:
+                os.environ["UQLAB_DATA_DIR"] = self.UQLAB_DATA_DIR
             from app.core.runtime_paths import sqlite_db_path
 
             db_path = sqlite_db_path()

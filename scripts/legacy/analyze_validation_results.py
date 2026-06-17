@@ -32,19 +32,19 @@ EPISTEMIC_SIGNALS = ["inverse_mass", "dominance", "inverse_logit_magnitude"]
 ALEATORIC_SIGNALS = ["inverse_coherence"]
 
 def find_project_root() -> Path:
-    """Find the walaris-cen project root."""
+    """Find the uqlab-streamlit project root."""
     current = Path(__file__).resolve().parent
-    if current.name == "walaris-cen":
+    if current.name == "uqlab-streamlit":
         return current
     
     # Try parent directories
     for parent in current.parents:
-        if parent.name == "walaris-cen":
+        if parent.name == "uqlab-streamlit":
             return parent
-        if (parent / "walaris-cen").exists():
-            return parent / "walaris-cen"
+        if (parent / "uqlab-streamlit").exists():
+            return parent / "uqlab-streamlit"
     
-    raise FileNotFoundError("Could not find walaris-cen project root")
+    raise FileNotFoundError("Could not find uqlab-streamlit project root")
 
 def load_sweep_data(sweep_name: str, project_root: Path) -> pd.DataFrame:
     """Load metrics.csv for a specific sweep."""

@@ -2,7 +2,7 @@
 
 **Analysis Date:** 2026-05-22  
 **Total Experiments Analyzed:** 114  
-**Data Source:** `/tmp/walaris_experiments`
+**Data Source:** `/tmp/uqlab_experiments`
 
 ---
 
@@ -269,8 +269,8 @@ Runtime: ~2-3 hours
 After running the sweep:
 
 ```bash
-cd walaris-cen
-python3 analyze_results.py /tmp/walaris_experiments
+cd uqlab-streamlit
+python3 analyze_results.py /tmp/uqlab_experiments
 
 # Look for:
 # 1. Does inverse_coherence AUROC increase with noise? (C1)

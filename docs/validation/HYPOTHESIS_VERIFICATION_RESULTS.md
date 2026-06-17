@@ -2,7 +2,7 @@
 
 **Analysis Date:** 2026-05-22  
 **Total Experiments Analyzed:** 114  
-**Data Source:** `/tmp/walaris_experiments`
+**Data Source:** `/tmp/uqlab_experiments`
 
 ---
 

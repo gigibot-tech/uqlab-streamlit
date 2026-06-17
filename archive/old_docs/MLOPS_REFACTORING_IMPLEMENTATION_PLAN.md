@@ -58,7 +58,7 @@ Many small files in `backend/app/` (8-200 LoC) - should be merged into logical m
 ## New MLOps Structure
 
 ```
-walaris-cen/
+uqlab-streamlit/
 ├── 1_data/                    # Stage 1: Data Management
 │   ├── loaders.py            # 400 LoC - Dataset loaders
 │   ├── preprocessing.py      # 300 LoC - Transforms & augmentation
@@ -114,7 +114,7 @@ walaris-cen/
 
 **Current State:**
 - `src/data/cifar10n_loader.py` (~200 LoC)
-- `src/walaris/classification/data_loader.py` (589 LoC)
+- `src/uqlab/classification/data_loader.py` (589 LoC)
 - Duplicate noise injection logic
 - Scattered dataset stats
 
@@ -166,7 +166,7 @@ def inject_label_noise(labels: np.ndarray, rate: float) -> np.ndarray:
 **Backward Compatibility:**
 ```python
 # src/data/cifar10n_loader.py (shim)
-from walaris_cen.data.loaders import CIFAR10NDataset
+from uqlab_cen.data.loaders import CIFAR10NDataset
 __all__ = ['CIFAR10NDataset']
 ```
 
@@ -179,7 +179,7 @@ __all__ = ['CIFAR10NDataset']
 **Goal:** Organize model architectures and uncertainty methods
 
 **Current State:**
-- `src/walaris/classification/feature_extractor.py` (491 LoC)
+- `src/uqlab/classification/feature_extractor.py` (491 LoC)
 - `src/models/load_dinov2_model.py` (678 LoC)
 - MC Dropout logic scattered across files
 
@@ -655,7 +655,7 @@ class ExperimentRunner:
 ### Step 1: Create New Structure (No Breaking Changes)
 
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 mkdir -p {1_data,2_models,3_training,4_evaluation,5_api,6_ui,7_orchestration,shared}
 ```
 
@@ -681,14 +681,14 @@ Keep old imports working during migration:
 # Example: src/data/cifar10n_loader.py
 """
 Backward compatibility shim.
-Import from walaris_cen.data.loaders instead.
+Import from uqlab_cen.data.loaders instead.
 """
-from walaris_cen.data.loaders import *
+from uqlab_cen.data.loaders import *
 import warnings
 
 warnings.warn(
     "Importing from src.data.cifar10n_loader is deprecated. "
-    "Use walaris_cen.data.loaders instead.",
+    "Use uqlab_cen.data.loaders instead.",
     DeprecationWarning,
     stacklevel=2
 )
@@ -703,7 +703,7 @@ Use IDE refactoring tools:
 from src.data.cifar10n_loader import CIFAR10NDataset
 
 # New import
-from walaris_cen.data.loaders import CIFAR10NDataset
+from uqlab_cen.data.loaders import CIFAR10NDataset
 ```
 
 ### Step 5: Testing Strategy
@@ -822,7 +822,7 @@ from ui_components.signals import plot_signals
 # ... 20 more imports
 
 # AFTER: Single import point (20 LoC)
-from walaris_cen.ui import (
+from uqlab_cen.ui import (
     plot_heatmap,
     plot_signals,
     # ... all exports

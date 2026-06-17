@@ -3,7 +3,7 @@
 ## Current Status
 ```
 ✅ API online
-❌ 0 experiments in DB (/Users/andrearachetta/Documents/old_pilots/walaris-cen/data/walaris.db)
+❌ 0 experiments in DB (/Users/andrearachetta/Documents/old_pilots/uqlab-streamlit/data/uqlab.db)
 ```
 
 ## How Experiments Appear in Streamlit
@@ -126,7 +126,7 @@ Enable auto-refresh to see progress updates:
 
 ### 1. Database (SQLite)
 ```
-/Users/andrearachetta/Documents/old_pilots/walaris-cen/data/walaris.db
+/Users/andrearachetta/Documents/old_pilots/uqlab-streamlit/data/uqlab.db
 ```
 
 **Tables**:
@@ -135,7 +135,7 @@ Enable auto-refresh to see progress updates:
 
 ### 2. Results Files (Disk)
 ```
-/tmp/walaris_experiments/{experiment_id}/
+/tmp/uqlab_experiments/{experiment_id}/
 ├── results/
 │   ├── per_sample_signals.csv    ← Signal values per sample
 │   ├── summary.json               ← Accuracy, AUROC, etc.
@@ -165,7 +165,7 @@ Enable auto-refresh to see progress updates:
 ### Option C: Use Validation Presets (Notebooks)
 
 ```bash
-cd walaris-cen/notebooks/validation
+cd uqlab-streamlit/notebooks/validation
 jupyter lab architecture_comparison_label_noise.ipynb
 ```
 
@@ -174,7 +174,7 @@ These notebooks have pre-configured sweeps that populate `results/validation/`
 ### Option D: Run Script Directly
 
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 source .venv/bin/activate
 
 python scripts/run_fast_uncertainty_classification.py \
@@ -192,7 +192,7 @@ python scripts/run_fast_uncertainty_classification.py \
 
 ```bash
 # Terminal 1: Start API
-cd walaris-cen/backend
+cd uqlab-streamlit/backend
 uvicorn app.main:app --reload
 
 # Terminal 2: Check API
@@ -203,13 +203,13 @@ curl http://localhost:8000/api/v1/experiments/no-auth
 ### Check 2: Database Exists?
 
 ```bash
-ls -la /Users/andrearachetta/Documents/old_pilots/walaris-cen/data/walaris.db
+ls -la /Users/andrearachetta/Documents/old_pilots/uqlab-streamlit/data/uqlab.db
 # Should show file with size > 0
 ```
 
 If missing:
 ```bash
-cd walaris-cen/backend
+cd uqlab-streamlit/backend
 alembic upgrade head  # Creates tables
 ```
 

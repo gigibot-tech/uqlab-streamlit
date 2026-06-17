@@ -11,7 +11,7 @@ from pathlib import Path
 def test_signal_loading(batch_id):
     """Test loading signal data from a batch experiment."""
     
-    batch_dir = Path(f"/tmp/walaris_experiments/batch_{batch_id}")
+    batch_dir = Path(f"/tmp/uqlab_experiments/batch_{batch_id}")
     
     print(f"Testing batch: {batch_id}")
     print(f"Batch directory: {batch_dir}")
@@ -164,7 +164,7 @@ if __name__ == "__main__":
     else:
         # Use the most recent batch
         import os
-        batches = sorted([d for d in Path("/tmp/walaris_experiments").glob("batch_*") if d.is_dir()])
+        batches = sorted([d for d in Path("/tmp/uqlab_experiments").glob("batch_*") if d.is_dir()])
         if batches:
             batch_id = batches[-1].name.replace("batch_", "")
             print(f"Using most recent batch: {batch_id}\n")

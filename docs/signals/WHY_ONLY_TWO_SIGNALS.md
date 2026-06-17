@@ -31,7 +31,7 @@ If you just ran a batch experiment and still see only 2 signals:
    ```bash
    # Stop the backend (Ctrl+C if running in terminal)
    # Then restart it
-   cd walaris-cen/backend
+   cd uqlab-streamlit/backend
    uvicorn app.main:app --reload
    ```
 
@@ -44,7 +44,7 @@ If you just ran a batch experiment and still see only 2 signals:
 Run this diagnostic script:
 
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 python check_batch_data.py
 ```
 

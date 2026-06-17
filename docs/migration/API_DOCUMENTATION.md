@@ -785,9 +785,9 @@ ws.onmessage = (event) => {
 ### Python SDK
 
 ```python
-from walaris_client import WalarisClient
+from uqlab_client import UQLabClient
 
-client = WalarisClient(
+client = UQLabClient(
     base_url="http://localhost:8000",
     token="your-jwt-token"
 )
@@ -810,9 +810,9 @@ print(f"Aleatoric AUROC: {result.aleatoric_auroc}")
 ### JavaScript SDK
 
 ```javascript
-import { WalarisClient } from '@walaris/client';
+import { UQLabClient } from '@uqlab/client';
 
-const client = new WalarisClient({
+const client = new UQLabClient({
   baseUrl: 'http://localhost:8000',
   token: 'your-jwt-token'
 });

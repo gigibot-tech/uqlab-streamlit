@@ -2,7 +2,7 @@
 
 ## Summary
 
-After codebase consolidation, here's the current state of configs and imports in `walaris-cen`.
+After codebase consolidation, here's the current state of configs and imports in `uqlab-streamlit`.
 
 ## 1. Configuration Files
 
@@ -24,17 +24,17 @@ configs/
 **Status**: ✅ **Still valid and used by [`run_fast.py`](run_fast.py:1)**
 
 ### New Python Configs (Post-Consolidation)
-Located in [`src/walaris/shared/config/`](src/walaris/shared/config:1):
-- [`classification.py`](src/walaris/shared/config/classification.py:1) - Main config classes
-- [`schemas.py`](src/walaris/shared/config/schemas.py:1) - Pydantic schemas
+Located in [`src/uqlab/shared/config/`](src/uqlab/shared/config:1):
+- [`classification.py`](src/uqlab/shared/config/classification.py:1) - Main config classes
+- [`schemas.py`](src/uqlab/shared/config/schemas.py:1) - Pydantic schemas
 
 **Status**: ✅ **Active - Used by new MLOps structure**
 
 ### Multiple ExperimentConfig Classes
 Found in 3 locations:
-1. [`src/walaris/shared/config/classification.py`](src/walaris/shared/config/classification.py:1) - **Primary**
-2. [`src/walaris/shared/config/schemas.py`](src/walaris/shared/config/schemas.py:1) - Pydantic version
-3. [`src/walaris/4_evaluation/benchmarks/datatypes.py`](src/walaris/4_evaluation/benchmarks/datatypes.py:1) - Benchmark-specific
+1. [`src/uqlab/shared/config/classification.py`](src/uqlab/shared/config/classification.py:1) - **Primary**
+2. [`src/uqlab/shared/config/schemas.py`](src/uqlab/shared/config/schemas.py:1) - Pydantic version
+3. [`src/uqlab/4_evaluation/benchmarks/datatypes.py`](src/uqlab/4_evaluation/benchmarks/datatypes.py:1) - Benchmark-specific
 
 **Recommendation**: Consolidate these into a single source of truth.
 
@@ -69,31 +69,31 @@ from uq_classification.evaluation import binary_auroc, save_per_sample_csv
 ```
 
 **How it works**:
-1. `uq_classification` is a **symlink** → `src/walaris/classification`
-2. [`classification/__init__.py`](src/walaris/classification/__init__.py:1) has **backward compatibility redirects**
+1. `uq_classification` is a **symlink** → `src/uqlab/classification`
+2. [`classification/__init__.py`](src/uqlab/classification/__init__.py:1) has **backward compatibility redirects**
 3. Imports are redirected to new locations in MLOps structure
 
 **Maps to**:
-- `uq_classification.models` → [`2_models/classification_models.py`](src/walaris/2_models/classification_models.py:1)
-- `uq_classification.model_factory` → [`2_models/factory.py`](src/walaris/2_models/factory.py:1)
-- `uq_classification.feature_extractor` → [`2_models/feature_extractors.py`](src/walaris/2_models/feature_extractors.py:1)
-- `uq_classification.config` → [`shared/config/classification.py`](src/walaris/shared/config/classification.py:1)
-- `uq_classification.utils` → [`shared/utils/classification.py`](src/walaris/shared/utils/classification.py:1)
-- `uq_classification.data_loader` → [`classification/data_loader.py`](src/walaris/classification/data_loader.py:1) ⚠️ *needs merge*
-- `uq_classification.signal_formula_specs` → [`4_evaluation/signals/formulas.py`](src/walaris/4_evaluation/signals/formulas.py:1)
-- `uq_classification.evaluation` → [`4_evaluation/evaluator.py`](src/walaris/4_evaluation/evaluator.py:1)
+- `uq_classification.models` → [`2_models/classification_models.py`](src/uqlab/2_models/classification_models.py:1)
+- `uq_classification.model_factory` → [`2_models/factory.py`](src/uqlab/2_models/factory.py:1)
+- `uq_classification.feature_extractor` → [`2_models/feature_extractors.py`](src/uqlab/2_models/feature_extractors.py:1)
+- `uq_classification.config` → [`shared/config/classification.py`](src/uqlab/shared/config/classification.py:1)
+- `uq_classification.utils` → [`shared/utils/classification.py`](src/uqlab/shared/utils/classification.py:1)
+- `uq_classification.data_loader` → [`classification/data_loader.py`](src/uqlab/classification/data_loader.py:1) ⚠️ *needs merge*
+- `uq_classification.signal_formula_specs` → [`4_evaluation/signals/formulas.py`](src/uqlab/4_evaluation/signals/formulas.py:1)
+- `uq_classification.evaluation` → [`4_evaluation/evaluator.py`](src/uqlab/4_evaluation/evaluator.py:1)
 
-#### ✅ Working: `walaris.*` Imports
+#### ✅ Working: `uqlab.*` Imports
 ```python
-from walaris.run_artifacts import save_zwischen_result
+from uqlab.run_artifacts import save_zwischen_result
 ```
 
-**Status**: ✅ **Works** - File exists at [`src/walaris/run_artifacts.py`](src/walaris/run_artifacts.py:1)
+**Status**: ✅ **Works** - File exists at [`src/uqlab/run_artifacts.py`](src/uqlab/run_artifacts.py:1)
 
 ## 3. Current Directory Structure
 
 ```
-walaris-cen/
+uqlab-streamlit/
 ├── configs/                    # ✅ YAML configs (still used)
 │   ├── experiment/
 │   └── test/
@@ -104,7 +104,7 @@ walaris-cen/
 │   ├── models/                 # ✅ RESTORED from archive
 │   ├── experiments/            # ✅ RESTORED from archive
 │   ├── utils/                  # ✅ RESTORED from archive
-│   └── walaris/                # ✅ NEW MLOps structure
+│   └── uqlab/                # ✅ NEW MLOps structure
 │       ├── 1_data/
 │       ├── 2_models/
 │       ├── 3_training/
@@ -125,16 +125,16 @@ walaris-cen/
 ## 4. What Models/Configs Are Used Now?
 
 ### Primary Models (New Structure)
-Located in [`src/walaris/2_models/`](src/walaris/2_models:1):
-- **DINOv2 Feature Extractor** - [`feature_extractors.py`](src/walaris/2_models/feature_extractors.py:1)
-- **Classification Models** - [`classification_models.py`](src/walaris/2_models/classification_models.py:1)
-- **Model Factory** - [`factory.py`](src/walaris/2_models/factory.py:1)
-- **Uncertainty Models** - [`uncertainty.py`](src/walaris/2_models/uncertainty.py:1)
+Located in [`src/uqlab/2_models/`](src/uqlab/2_models:1):
+- **DINOv2 Feature Extractor** - [`feature_extractors.py`](src/uqlab/2_models/feature_extractors.py:1)
+- **Classification Models** - [`classification_models.py`](src/uqlab/2_models/classification_models.py:1)
+- **Model Factory** - [`factory.py`](src/uqlab/2_models/factory.py:1)
+- **Uncertainty Models** - [`uncertainty.py`](src/uqlab/2_models/uncertainty.py:1)
 
 ### Primary Configs (New Structure)
-Located in [`src/walaris/shared/config/`](src/walaris/shared/config:1):
-- **ExperimentConfig** - [`classification.py`](src/walaris/shared/config/classification.py:1)
-- **Pydantic Schemas** - [`schemas.py`](src/walaris/shared/config/schemas.py:1)
+Located in [`src/uqlab/shared/config/`](src/uqlab/shared/config:1):
+- **ExperimentConfig** - [`classification.py`](src/uqlab/shared/config/classification.py:1)
+- **Pydantic Schemas** - [`schemas.py`](src/uqlab/shared/config/schemas.py:1)
 
 ### Legacy Configs (Still Used)
 - **YAML files** in [`configs/`](configs:1) - Used by `run_fast.py` and scripts
@@ -148,8 +148,8 @@ Located in [`src/walaris/shared/config/`](src/walaris/shared/config:1):
 
 ### ⚠️ Pending (Optional Improvements)
 1. **Merge data loaders**: 
-   - [`classification/data_loader.py`](src/walaris/classification/data_loader.py:1) (589 lines)
-   - [`1_data/loaders.py`](src/walaris/1_data/loaders.py:1) (718 lines)
+   - [`classification/data_loader.py`](src/uqlab/classification/data_loader.py:1) (589 lines)
+   - [`1_data/loaders.py`](src/uqlab/1_data/loaders.py:1) (718 lines)
 
 2. **Consolidate ExperimentConfig**: Choose one primary location
 
@@ -166,7 +166,7 @@ Use the new MLOps structure directly:
 from uq_classification.models import SomeModel
 
 # Use:
-from walaris.2_models.classification_models import SomeModel
+from uqlab.2_models.classification_models import SomeModel
 ```
 
 ### For Existing Code
@@ -179,7 +179,7 @@ from src.data.cifar10n_loader import CIFAR10NDataset
 
 ### Config Strategy
 - **Short term**: Keep using YAML configs in `configs/`
-- **Long term**: Migrate to Python configs in `src/walaris/shared/config/`
+- **Long term**: Migrate to Python configs in `src/uqlab/shared/config/`
 
 ## 7. Summary
 

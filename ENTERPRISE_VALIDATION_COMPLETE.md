@@ -7,7 +7,7 @@ Implemented comprehensive configuration validation system to make the progressiv
 ## What Was Implemented
 
 ### 1. **Pydantic Validation Models** ✅
-**File**: [`src/uqlab/shared/config/workflow_validation.py`](walaris-cen/src/uqlab/shared/config/workflow_validation.py:1)
+**File**: [`src/uqlab/shared/config/workflow_validation.py`](uqlab-streamlit/src/uqlab/shared/config/workflow_validation.py:1)
 
 Created type-safe validation models:
 - `WorkflowDatasetConfig` - Validates dataset and noise configuration
@@ -23,7 +23,7 @@ Created type-safe validation models:
 - ✅ Pydantic v2 compatible
 
 ### 2. **Fixed Config Conversion Logic** ✅
-**File**: [`streamlit_app_progressive.py:239-276`](walaris-cen/streamlit_app_progressive.py:239)
+**File**: [`streamlit_app_progressive.py:239-276`](uqlab-streamlit/streamlit_app_progressive.py:239)
 
 Fixed the aleatoric noise configuration bug:
 
@@ -49,7 +49,7 @@ else:
 ```
 
 ### 3. **Comprehensive Unit Tests** ✅
-**File**: [`tests/test_workflow_validation.py`](walaris-cen/tests/test_workflow_validation.py:1)
+**File**: [`tests/test_workflow_validation.py`](uqlab-streamlit/tests/test_workflow_validation.py:1)
 
 Created 497 lines of tests covering:
 - ✅ Dataset configuration validation
@@ -66,7 +66,7 @@ Created 497 lines of tests covering:
 - Clear test names and documentation
 
 ### 4. **Validation Integration** ✅
-**File**: [`streamlit_app_progressive.py:38-48`](walaris-cen/streamlit_app_progressive.py:38)
+**File**: [`streamlit_app_progressive.py:38-48`](uqlab-streamlit/streamlit_app_progressive.py:38)
 
 Integrated validation into the app:
 ```python
@@ -82,8 +82,8 @@ except ImportError:
 
 ### 5. **Documentation** ✅
 **Files**:
-- [`CONFIG_VALIDATION_FIX.md`](walaris-cen/CONFIG_VALIDATION_FIX.md:1) - Problem analysis and solution
-- [`GRANITE_SWITCH_INSPIRATION.md`](walaris-cen/GRANITE_SWITCH_INSPIRATION.md:1) - Design patterns from Granite-Switch
+- [`CONFIG_VALIDATION_FIX.md`](uqlab-streamlit/CONFIG_VALIDATION_FIX.md:1) - Problem analysis and solution
+- [`GRANITE_SWITCH_INSPIRATION.md`](uqlab-streamlit/GRANITE_SWITCH_INSPIRATION.md:1) - Design patterns from Granite-Switch
 
 ## Validation Rules Implemented
 
@@ -215,7 +215,7 @@ if errors:
 
 ### Run Unit Tests
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 pytest tests/test_workflow_validation.py -v
 ```
 
@@ -294,7 +294,7 @@ if errors:
 
 ### Modified
 1. `streamlit_app_progressive.py` - Fixed config conversion + added validation import
-2. `walaris-cen/fix_python314_complete.sh` - Python 3.14 fix script
+2. `uqlab-streamlit/fix_python314_complete.sh` - Python 3.14 fix script
 
 **Total**: 1,473+ lines of validation code and documentation
 

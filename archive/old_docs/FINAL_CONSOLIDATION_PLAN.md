@@ -8,7 +8,7 @@
 
 ### NEW Structure (1-7) - KEEP THIS
 ```
-src/walaris/
+src/uqlab/
 ├── 1_data/          # Data loading & preprocessing
 ├── 2_models/        # Model architectures
 ├── 3_training/      # Training logic
@@ -21,7 +21,7 @@ src/walaris/
 
 ### OLD Structure - MERGE INTO NEW
 ```
-src/walaris/
+src/uqlab/
 ├── classification/        # 589 lines data_loader.py + models + evaluation
 ├── benchmarks/           # Benchmark implementations
 ├── notebook_support/     # Plotting & analysis utilities
@@ -144,7 +144,7 @@ src/walaris/
 
 ### Phase 1: Create Directory Structure
 ```bash
-cd walaris-cen/src/walaris
+cd uqlab-streamlit/src/uqlab
 
 # Create missing subdirectories in NEW structure
 mkdir -p 2_models
@@ -189,7 +189,7 @@ Create `consolidate.sh` script to perform all moves
 ## Final Structure
 
 ```
-src/walaris/
+src/uqlab/
 ├── 1_data/
 │   ├── loaders.py              # MERGED: classification/data_loader.py + existing
 │   └── preprocessing.py

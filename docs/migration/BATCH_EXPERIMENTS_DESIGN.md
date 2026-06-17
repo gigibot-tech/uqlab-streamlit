@@ -2,14 +2,14 @@
 
 ## Overview
 
-This document defines the architecture for batch experiment execution in [`walaris-cen`](walaris-cen), enabling parameter sweep experiments with AUROC aggregation and visualization.
+This document defines the architecture for batch experiment execution in [`uqlab-streamlit`](uqlab-streamlit), enabling parameter sweep experiments with AUROC aggregation and visualization.
 
 The design is aligned with the current single-experiment flow implemented around:
-- [`TrainingConfig`](walaris-cen/backend/app/domain/models.py:8)
-- [`TrainingResult`](walaris-cen/backend/app/domain/models.py:74)
-- [`DirectExecutor`](walaris-cen/backend/app/services/executors/direct_executor.py:28)
-- [`TrainingStage`](walaris-cen/backend/app/domain/value_objects.py:9)
-- existing experiment endpoints in [`experiments.py`](walaris-cen/backend/app/api/routes/experiments.py:114)
+- [`TrainingConfig`](uqlab-streamlit/backend/app/domain/models.py:8)
+- [`TrainingResult`](uqlab-streamlit/backend/app/domain/models.py:74)
+- [`DirectExecutor`](uqlab-streamlit/backend/app/services/executors/direct_executor.py:28)
+- [`TrainingStage`](uqlab-streamlit/backend/app/domain/value_objects.py:9)
+- existing experiment endpoints in [`experiments.py`](uqlab-streamlit/backend/app/api/routes/experiments.py:114)
 
 ## Goals
 
@@ -60,7 +60,7 @@ flowchart TD
 ## Architectural Principles
 
 1. Reuse existing single-experiment execution wherever possible
-2. Introduce a dedicated batch orchestration layer above [`TrainingOrchestrator`](walaris-cen/backend/app/api/routes/experiments.py:21)
+2. Introduce a dedicated batch orchestration layer above [`TrainingOrchestrator`](uqlab-streamlit/backend/app/api/routes/experiments.py:21)
 3. Preserve experiment-level outputs for debugging and reproducibility
 4. Store machine-readable aggregation artifacts in stable formats
 5. Keep V1 sequential to reduce concurrency and resource complexity
@@ -72,7 +72,7 @@ flowchart TD
 
 ## Existing Baseline
 
-The existing domain exposes a flattened experiment config in [`TrainingConfig`](walaris-cen/backend/app/domain/models.py:8), which maps to YAML via [`TrainingConfig.to_yaml_dict()`](walaris-cen/backend/app/domain/models.py:33).
+The existing domain exposes a flattened experiment config in [`TrainingConfig`](uqlab-streamlit/backend/app/domain/models.py:8), which maps to YAML via [`TrainingConfig.to_yaml_dict()`](uqlab-streamlit/backend/app/domain/models.py:33).
 
 That baseline remains the source of truth for a single child experiment. Batch execution wraps this model with sweep metadata and a set of generated child runs.
 
@@ -125,10 +125,10 @@ Represents one batch request.
 
 ### Notes
 
-- `status` should reuse the existing [`JobStatus`](walaris-cen/backend/app/api/routes/experiments.py:22) enum if semantically compatible.
+- `status` should reuse the existing [`JobStatus`](uqlab-streamlit/backend/app/api/routes/experiments.py:22) enum if semantically compatible.
 - `base_config_yaml` stores the fixed config shared by all child runs.
 - `sweep_definitions_json` stores a list, even in V1.
-- `storage_root` points to the batch folder, for example `/tmp/walaris_experiments/batch_<id>`.
+- `storage_root` points to the batch folder, for example `/tmp/uqlab_experiments/batch_<id>`.
 - `results_summary_json` is a cached snapshot for fast status queries.
 
 ## `batch_experiment_run`
@@ -232,7 +232,7 @@ sweep_definitions:
 ## Sweep Definition Fields
 
 ### `parameter`
-A dotless config field name in V1, matching a field from [`TrainingConfig`](walaris-cen/backend/app/domain/models.py:8).
+A dotless config field name in V1, matching a field from [`TrainingConfig`](uqlab-streamlit/backend/app/domain/models.py:8).
 
 Examples:
 - `under_train_per_class`
@@ -263,8 +263,8 @@ Must be positive and non-zero.
 
 ## Parameter Validation Rules
 
-1. The parameter must exist on [`TrainingConfig`](walaris-cen/backend/app/domain/models.py:8)
-2. The generated values must satisfy field constraints from [`TrainingConfig`](walaris-cen/backend/app/domain/models.py:12)
+1. The parameter must exist on [`TrainingConfig`](uqlab-streamlit/backend/app/domain/models.py:8)
+2. The generated values must satisfy field constraints from [`TrainingConfig`](uqlab-streamlit/backend/app/domain/models.py:12)
 3. V1 accepts exactly one sweep definition
 4. Generated value count must be capped to avoid runaway batches
 5. Sweep values must be unique after normalization
@@ -343,8 +343,8 @@ Creates the batch and optionally enqueues it.
 
 1. Validate request
 2. Expand sweep values
-3. Create [`BatchExperiment`](walaris-cen/BATCH_EXPERIMENTS_DESIGN.md) row with status `pending`
-4. Create all [`BatchExperimentRun`](walaris-cen/BATCH_EXPERIMENTS_DESIGN.md) child rows with resolved configs
+3. Create [`BatchExperiment`](uqlab-streamlit/BATCH_EXPERIMENTS_DESIGN.md) row with status `pending`
+4. Create all [`BatchExperimentRun`](uqlab-streamlit/BATCH_EXPERIMENTS_DESIGN.md) child rows with resolved configs
 5. Materialize storage root and `batch_config.yaml`
 6. If `auto_start` is true, start orchestration asynchronously
 7. Return batch metadata
@@ -399,7 +399,7 @@ Returns batch status and run-level progress summary.
   "completed_runs": 3,
   "successful_runs": 3,
   "failed_runs": 0,
-  "storage_root": "/tmp/walaris_experiments/batch_uuid",
+  "storage_root": "/tmp/uqlab_experiments/batch_uuid",
   "sweep_summary": {
     "parameter": "hidden_dim",
     "value_type": "int",
@@ -463,14 +463,14 @@ Returns aggregated results and visualization metadata.
       "aleatoric_auroc": 0.81,
       "epistemic_auroc": 0.88,
       "train_size": 2500,
-      "results_path": "/tmp/walaris_experiments/batch_uuid/experiments/exp_1_hidden_dim_64"
+      "results_path": "/tmp/uqlab_experiments/batch_uuid/experiments/exp_1_hidden_dim_64"
     }
   ],
   "artifacts": {
-    "plot_json": "/tmp/walaris_experiments/batch_uuid/aggregated_results/auroc_curves.json",
-    "plot_png": "/tmp/walaris_experiments/batch_uuid/aggregated_results/auroc_curves.png",
-    "comparison_csv": "/tmp/walaris_experiments/batch_uuid/aggregated_results/comparison_table.csv",
-    "summary_json": "/tmp/walaris_experiments/batch_uuid/aggregated_results/summary.json"
+    "plot_json": "/tmp/uqlab_experiments/batch_uuid/aggregated_results/auroc_curves.json",
+    "plot_png": "/tmp/uqlab_experiments/batch_uuid/aggregated_results/auroc_curves.png",
+    "comparison_csv": "/tmp/uqlab_experiments/batch_uuid/aggregated_results/comparison_table.csv",
+    "summary_json": "/tmp/uqlab_experiments/batch_uuid/aggregated_results/summary.json"
   }
 }
 ```
@@ -496,7 +496,7 @@ Recommended new services:
 Generates concrete parameter values and resolved child configs.
 
 #### Inputs
-- base [`TrainingConfig`](walaris-cen/backend/app/domain/models.py:8)
+- base [`TrainingConfig`](uqlab-streamlit/backend/app/domain/models.py:8)
 - one or more sweep definitions
 
 #### Outputs
@@ -574,7 +574,7 @@ flowchart TD
 This gives:
 - minimal duplication
 - consistent result parsing
-- same progress stage semantics from [`TrainingStage`](walaris-cen/backend/app/domain/value_objects.py:9)
+- same progress stage semantics from [`TrainingStage`](uqlab-streamlit/backend/app/domain/value_objects.py:9)
 
 ## Implementation Pattern Options
 
@@ -604,8 +604,8 @@ Choose **Option A for V1**.
 Create one existing `UncertaintyExperiment` row per child run and link it from `batch_experiment_run.experiment_id`.
 
 This allows:
-- direct reuse of current config serialization patterns in [`_create_experiment_impl`](walaris-cen/backend/app/api/routes/experiments.py:137)
-- reuse of result parsing assumptions from [`DirectExecutor._read_results()`](walaris-cen/backend/app/services/executors/direct_executor.py:186)
+- direct reuse of current config serialization patterns in [`_create_experiment_impl`](uqlab-streamlit/backend/app/api/routes/experiments.py:137)
+- reuse of result parsing assumptions from [`DirectExecutor._read_results()`](uqlab-streamlit/backend/app/services/executors/direct_executor.py:186)
 - easier debugging through existing experiment tooling
 
 ---
@@ -633,7 +633,7 @@ Recommended default:
   - `completed_with_errors` if at least one fails
   - `failed` only if orchestration itself crashes before completing the queue
 
-If the existing [`JobStatus`](walaris-cen/backend/app/api/routes/experiments.py:22) enum lacks `completed_with_errors`, add batch-specific mapping logic or extend the enum.
+If the existing [`JobStatus`](uqlab-streamlit/backend/app/api/routes/experiments.py:22) enum lacks `completed_with_errors`, add batch-specific mapping logic or extend the enum.
 
 ## Progress Calculation
 
@@ -654,7 +654,7 @@ Progress:
 
 ## WebSocket Extension
 
-The existing WebSocket endpoint in [`websocket.py`](walaris-cen/backend/app/api/routes/websocket.py:18) is experiment-specific.
+The existing WebSocket endpoint in [`websocket.py`](uqlab-streamlit/backend/app/api/routes/websocket.py:18) is experiment-specific.
 
 Recommended extension:
 - new endpoint `/ws/batch-experiments/{batch_id}/progress`
@@ -684,7 +684,7 @@ Recommended extension:
 ## Required Structure
 
 ```text
-/tmp/walaris_experiments/batch_{id}/
+/tmp/uqlab_experiments/batch_{id}/
 ├── batch_config.yaml
 ├── batch_metadata.json
 ├── experiments/
@@ -724,7 +724,7 @@ Operational metadata:
 The fully resolved child config passed to the ML script.
 
 ### `experiments/exp_N_param_value/summary.json`
-Produced by the existing training pipeline and parsed by [`DirectExecutor._read_results()`](walaris-cen/backend/app/services/executors/direct_executor.py:186).
+Produced by the existing training pipeline and parsed by [`DirectExecutor._read_results()`](uqlab-streamlit/backend/app/services/executors/direct_executor.py:186).
 
 ### `aggregated_results/comparison_table.csv`
 Tabular summary of all runs.
@@ -872,7 +872,7 @@ This makes the API stable even if charting libraries change later.
 
 ## 11.1 Placement
 
-Add a new section to [`streamlit_app.py`](walaris-cen/streamlit_app.py:98) under the experiments area:
+Add a new section to [`streamlit_app.py`](uqlab-streamlit/streamlit_app.py:98) under the experiments area:
 
 - Single Experiment
 - Batch Experiments
@@ -881,7 +881,7 @@ Use tabs or an expander structure.
 
 ## 11.2 New UI Components
 
-Recommended additions in [`ui_components.py`](walaris-cen/ui_components.py:16):
+Recommended additions in [`ui_components.py`](uqlab-streamlit/ui_components.py:16):
 
 - `render_batch_experiment_config`
 - `render_sweep_parameter_selector`
@@ -899,8 +899,8 @@ Recommended additions in [`ui_components.py`](walaris-cen/ui_components.py:16):
 
 #### Base config
 Reuse existing single experiment controls:
-- epistemic controls from [`render_epistemic_config`](walaris-cen/ui_components.py:105)
-- aleatoric controls from [`render_aleatoric_config`](walaris-cen/ui_components.py:201)
+- epistemic controls from [`render_epistemic_config`](uqlab-streamlit/ui_components.py:105)
+- aleatoric controls from [`render_aleatoric_config`](uqlab-streamlit/ui_components.py:201)
 - model config
 - training config
 - evaluation config
@@ -981,19 +981,19 @@ Reuse existing single experiment controls:
 ## 12.1 Current Reuse Points
 
 ### Config reuse
-[`TrainingConfig`](walaris-cen/backend/app/domain/models.py:8) should remain the canonical config definition.
+[`TrainingConfig`](uqlab-streamlit/backend/app/domain/models.py:8) should remain the canonical config definition.
 
 ### Result reuse
-[`TrainingResult`](walaris-cen/backend/app/domain/models.py:74) should remain the canonical child result structure.
+[`TrainingResult`](uqlab-streamlit/backend/app/domain/models.py:74) should remain the canonical child result structure.
 
 ### Execution reuse
-[`DirectExecutor.execute()`](walaris-cen/backend/app/services/executors/direct_executor.py:70) remains the low-level runner.
+[`DirectExecutor.execute()`](uqlab-streamlit/backend/app/services/executors/direct_executor.py:70) remains the low-level runner.
 
 ### Result parsing reuse
-[`DirectExecutor._read_results()`](walaris-cen/backend/app/services/executors/direct_executor.py:186) defines the minimum required child output contract.
+[`DirectExecutor._read_results()`](uqlab-streamlit/backend/app/services/executors/direct_executor.py:186) defines the minimum required child output contract.
 
 ### API style reuse
-[`experiments.py`](walaris-cen/backend/app/api/routes/experiments.py:27) provides the route pattern and request-response modeling style.
+[`experiments.py`](uqlab-streamlit/backend/app/api/routes/experiments.py:27) provides the route pattern and request-response modeling style.
 
 ## 12.2 Recommended Code Additions
 
@@ -1012,8 +1012,8 @@ Reuse existing single experiment controls:
 - add SQLModel tables and migration for batch entities
 
 ### Frontend
-- extend [`streamlit_app.py`](walaris-cen/streamlit_app.py:98)
-- extend [`ui_components.py`](walaris-cen/ui_components.py:16)
+- extend [`streamlit_app.py`](uqlab-streamlit/streamlit_app.py:98)
+- extend [`ui_components.py`](uqlab-streamlit/ui_components.py:16)
 
 ---
 
@@ -1150,7 +1150,7 @@ Recompute after each completed run so the UI can update progressively.
 Use Plotly line-plus-marker chart with two series.
 
 ### Storage
-Use dedicated batch directory under `/tmp/walaris_experiments/batch_<id>`.
+Use dedicated batch directory under `/tmp/uqlab_experiments/batch_<id>`.
 
 ### API shape
 Store sweep definitions as a list, but validate exactly one definition in V1.

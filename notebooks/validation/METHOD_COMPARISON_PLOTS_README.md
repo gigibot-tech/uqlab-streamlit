@@ -47,7 +47,7 @@ This section contains:
 
 1. **Open Jupyter Lab/Notebook**:
    ```bash
-   cd walaris-cen
+   cd uqlab-streamlit
    jupyter lab
    ```
 
@@ -120,7 +120,7 @@ Streamlit uses the same logic via `ui_components/hypothesis_validation.py` (Plot
 If you get `ModuleNotFoundError: No module named 'ui_components'`:
 1. Ensure you're running from the correct directory
 2. Check that `sys.path.append('../..')` is executed before imports
-3. Verify the notebook is in `walaris-cen/notebooks/validation/`
+3. Verify the notebook is in `uqlab-streamlit/notebooks/validation/`
 
 ### Missing Data
 

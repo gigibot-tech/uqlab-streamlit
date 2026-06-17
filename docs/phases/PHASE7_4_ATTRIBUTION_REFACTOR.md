@@ -198,19 +198,19 @@ signals = compute_attribution_structure_signals(
 
 ## Files Modified
 
-1. ✅ `walaris-cen/uq_classification/attribution_signals.py`
+1. ✅ `uqlab-streamlit/uq_classification/attribution_signals.py`
    - Renamed parameter: `eval_features` → `eval_inputs`
    - Enhanced docstrings with architecture-agnostic examples
    - Updated all internal references
 
-2. ✅ `walaris-cen/scripts/run_fast_uncertainty_classification.py`
+2. ✅ `uqlab-streamlit/scripts/run_fast_uncertainty_classification.py`
    - Added clarifying comments about input format
    - Maintained backward compatibility
 
-3. ✅ `walaris-cen/uq_classification/archive/watsonx_experiments/watsonx_parameterized.py`
+3. ✅ `uqlab-streamlit/uq_classification/archive/watsonx_experiments/watsonx_parameterized.py`
    - Updated parameter name with comment
 
-4. ✅ `walaris-cen/uq_classification/archive/watsonx_experiments/watsonx_dualxda_example.py`
+4. ✅ `uqlab-streamlit/uq_classification/archive/watsonx_experiments/watsonx_dualxda_example.py`
    - Updated parameter name with comment
 
 ## Next Steps

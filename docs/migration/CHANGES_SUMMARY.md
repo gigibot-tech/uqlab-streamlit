@@ -183,12 +183,12 @@ Cache files: `features_{noise_type}_{model_name}_n{count}_{hash}.pt`
 
 ## 6. Files Modified
 
-1. `walaris-cen/AUROC_METRICS_EXPLAINED.md` - **NEW**: Comprehensive AUROC documentation
-2. `walaris-cen/uq_classification/config.py` - Added `use_untrained_resnet` flag
-3. `walaris-cen/uq_classification/data_loader.py` - Added ResNet-50 feature extraction
-4. `walaris-cen/ui_components/experiment_config.py` - Added UI checkbox and config support
-5. `walaris-cen/streamlit_app.py` - Updated to pass new flag through
-6. `walaris-cen/CHANGES_SUMMARY.md` - **NEW**: This file
+1. `uqlab-streamlit/AUROC_METRICS_EXPLAINED.md` - **NEW**: Comprehensive AUROC documentation
+2. `uqlab-streamlit/uq_classification/config.py` - Added `use_untrained_resnet` flag
+3. `uqlab-streamlit/uq_classification/data_loader.py` - Added ResNet-50 feature extraction
+4. `uqlab-streamlit/ui_components/experiment_config.py` - Added UI checkbox and config support
+5. `uqlab-streamlit/streamlit_app.py` - Updated to pass new flag through
+6. `uqlab-streamlit/CHANGES_SUMMARY.md` - **NEW**: This file
 
 ## 7. Backward Compatibility
 

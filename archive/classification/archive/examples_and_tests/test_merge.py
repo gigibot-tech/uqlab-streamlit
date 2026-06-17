@@ -1,4 +1,4 @@
-"""Lightweight post-merge integration test for walaris-cen/uq_classification.
+"""Lightweight post-merge integration test for uqlab-streamlit/uq_classification.
 
 Goals:
 - Verify new exports from package __init__ work
@@ -17,9 +17,9 @@ import traceback
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-WALARIS_CEN_ROOT = Path(__file__).resolve().parent.parent
-if str(WALARIS_CEN_ROOT) not in sys.path:
-    sys.path.insert(0, str(WALARIS_CEN_ROOT))
+UQLAB_CEN_ROOT = Path(__file__).resolve().parent.parent
+if str(UQLAB_CEN_ROOT) not in sys.path:
+    sys.path.insert(0, str(UQLAB_CEN_ROOT))
 
 import matplotlib
 matplotlib.use("Agg")
@@ -172,7 +172,7 @@ def test_decision_boundary_with_synthetic_data():
 
 
 def main() -> int:
-    print("=== walaris-cen uq_classification merge test ===")
+    print("=== uqlab-streamlit uq_classification merge test ===")
     print(f"Package directory: {PACKAGE_DIR}")
     print(f"Project root: {PROJECT_ROOT}")
 

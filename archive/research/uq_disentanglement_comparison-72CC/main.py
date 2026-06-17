@@ -1,4 +1,4 @@
-"""Legacy entry point — delegates to walaris.disentanglement_paper.main."""
+"""Legacy entry point — delegates to uqlab.disentanglement_paper.main."""
 
 from uqlab.disentanglement_paper.main import main
 

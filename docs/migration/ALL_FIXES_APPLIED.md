@@ -54,7 +54,7 @@ python -c "import numpy; print(f'NumPy: {numpy.__version__}')"
 
 ### Check for remaining torch.load without weights_only:
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 grep -r "torch\.load" --include="*.py" | grep -v "weights_only"
 # Should only show comments or already-fixed lines
 ```

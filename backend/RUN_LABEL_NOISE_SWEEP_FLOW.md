@@ -1,6 +1,6 @@
 # Run Label Noise Sweep Flow
 
-This document describes the exact functional flow for a **label noise sweep** in `walaris-cen`, from UI configuration through backend orchestration into `run_fast_uncertainty_classification.py`.
+This document describes the exact functional flow for a **label noise sweep** in `uqlab-streamlit`, from UI configuration through backend orchestration into `run_fast_uncertainty_classification.py`.
 
 ## Scope
 
@@ -16,7 +16,7 @@ Before the label-noise sweep logic starts, FastAPI wires all of these endpoints 
 
 The backend app is created in:
 
-- `walaris-cen/backend/app/main.py`
+- `uqlab-streamlit/backend/app/main.py`
 
 At startup:
 
@@ -37,7 +37,7 @@ So every API route is mounted under:
 
 The shared API router is defined in:
 
-- `walaris-cen/backend/app/api/main.py`
+- `uqlab-streamlit/backend/app/api/main.py`
 
 It includes these relevant route groups:
 
@@ -147,7 +147,7 @@ There are two main UI paths that can produce this behavior:
 ### Unified Builder path
 
 Entry point:
-- `walaris-cen/ui_components/unified_builder.py`
+- `uqlab-streamlit/ui_components/unified_builder.py`
 
 The unified builder renders:
 - epistemic controls
@@ -171,7 +171,7 @@ When the form is submitted:
 ### Single/batch UI path
 
 Relevant file:
-- `walaris-cen/ui_components/experiment_config.py`
+- `uqlab-streamlit/ui_components/experiment_config.py`
 
 The aleatoric section is rendered by:
 - `render_aleatoric_config(...)`
@@ -194,7 +194,7 @@ Important behavior:
 
 For batch sweeps, the backend entry point is:
 
-- `walaris-cen/backend/app/api/routes/batch_experiments.py`
+- `uqlab-streamlit/backend/app/api/routes/batch_experiments.py`
 
 Relevant request model:
 - `BatchExperimentCreate`
@@ -385,7 +385,7 @@ Inside the service:
 
 The actual invocation happens in:
 
-- `walaris-cen/backend/app/services/executors/direct_executor.py`
+- `uqlab-streamlit/backend/app/services/executors/direct_executor.py`
 
 Specifically:
 
@@ -447,7 +447,7 @@ That `TrainingResult` is then persisted back into:
 ## 5. The YAML config is loaded by `run_fast_uncertainty_classification.py`
 
 Entry point:
-- `walaris-cen/scripts/run_fast_uncertainty_classification.py`
+- `uqlab-streamlit/scripts/run_fast_uncertainty_classification.py`
 
 Main function:
 - `main()`

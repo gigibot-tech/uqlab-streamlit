@@ -125,7 +125,7 @@ Swept parameter: aleatoric_noise_percentage
 Values: [0, 10, 20, 30, 40]
 
 # Verify all experiments have correct values
-cd /tmp/walaris_experiments
+cd /tmp/uqlab_experiments
 for dir in */; do
     echo "$dir: $(grep 'aleatoric_noise_percentage' $dir/config.yaml)"
 done

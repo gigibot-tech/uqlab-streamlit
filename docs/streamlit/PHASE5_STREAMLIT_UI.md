@@ -295,13 +295,13 @@ response = requests.post(
 
 ### 1. Start Backend
 ```bash
-cd walaris-cen/backend
+cd uqlab-streamlit/backend
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### 2. Start Streamlit
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 streamlit run streamlit_app.py
 ```
 

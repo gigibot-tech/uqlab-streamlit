@@ -5,12 +5,12 @@
 The current structure mixes concerns and makes it hard to follow the ML pipeline:
 
 ```
-walaris-cen/
+uqlab-streamlit/
 ├── src/
 │   ├── data/                    # Data loading
-│   ├── walaris/classification/  # Models
+│   ├── uqlab/classification/  # Models
 │   ├── metrics/                 # Uncertainty
-│   └── walaris/notebook_support/# Analysis
+│   └── uqlab/notebook_support/# Analysis
 ├── scripts/                     # Training scripts
 ├── backend/                     # API
 └── ui_components/               # UI
@@ -29,7 +29,7 @@ walaris-cen/
 Organize by **ML pipeline stages** following MLOps best practices:
 
 ```
-walaris-cen/
+uqlab-streamlit/
 │
 ├── 📊 1_data/                   # DATA STAGE
 │   ├── __init__.py
@@ -308,11 +308,11 @@ Need to create a new plot?        → Go to 5_monitoring/
 ### 3. Reusable Components
 ```python
 # All stages are independent and reusable
-from walaris_cen.data.loaders import CIFAR10NLoader
-from walaris_cen.models.architectures import DINOv2Classifier
-from walaris_cen.training.trainers import StandardTrainer
-from walaris_cen.evaluation.uncertainty import MCDropout
-from walaris_cen.monitoring.visualization import plot_signals
+from uqlab_cen.data.loaders import CIFAR10NLoader
+from uqlab_cen.models.architectures import DINOv2Classifier
+from uqlab_cen.training.trainers import StandardTrainer
+from uqlab_cen.evaluation.uncertainty import MCDropout
+from uqlab_cen.monitoring.visualization import plot_signals
 ```
 
 ### 4. Testable
@@ -371,14 +371,14 @@ All stages can access shared utilities:
 
 ```python
 # Shared configuration
-from walaris_cen.shared.config import settings
+from uqlab_cen.shared.config import settings
 
 # Shared logging
-from walaris_cen.shared.utils import get_logger
+from uqlab_cen.shared.utils import get_logger
 logger = get_logger(__name__)
 
 # Shared constants
-from walaris_cen.shared.constants import CLASS_NAMES, NOISE_TYPES
+from uqlab_cen.shared.constants import CLASS_NAMES, NOISE_TYPES
 ```
 
 ---
@@ -388,7 +388,7 @@ from walaris_cen.shared.constants import CLASS_NAMES, NOISE_TYPES
 **File**: `api/routes/experiments.py`
 
 ```python
-from walaris_cen.pipeline.orchestrator import MLPipeline
+from uqlab_cen.pipeline.orchestrator import MLPipeline
 
 @router.post("/experiments/no-auth")
 async def create_experiment(experiment: ExperimentCreate):
@@ -411,13 +411,13 @@ async def create_experiment(experiment: ExperimentCreate):
 **File**: `ui/streamlit_app.py`
 
 ```python
-from walaris_cen.ui.components import (
+from uqlab_cen.ui.components import (
     DatasetSelector,
     ModelConfig,
     TrainingConfig,
     ResultsViewer
 )
-from walaris_cen.ui.utils import APIClient
+from uqlab_cen.ui.utils import APIClient
 
 # Use components
 dataset = DatasetSelector().render()
@@ -455,7 +455,7 @@ mkdir -p 6_pipeline
 
 # Keep backward compatibility
 # src/data/cifar10n_loader.py:
-from walaris_cen.data.loaders.cifar10n import CIFAR10NDataset
+from uqlab_cen.data.loaders.cifar10n import CIFAR10NDataset
 __all__ = ['CIFAR10NDataset']
 ```
 
@@ -465,14 +465,14 @@ __all__ = ['CIFAR10NDataset']
 from src.data.cifar10n_loader import CIFAR10NDataset
 
 # New import (preferred)
-from walaris_cen.data.loaders import CIFAR10NDataset
+from uqlab_cen.data.loaders import CIFAR10NDataset
 ```
 
 ### Phase 4: Remove Old Structure
 ```bash
 # After all imports updated
 rm -rf src/data/
-rm -rf src/walaris/
+rm -rf src/uqlab/
 # etc.
 ```
 

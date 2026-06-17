@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `walaris-cen` codebase has **multiple organizational issues** that need consolidation:
+The `uqlab-streamlit` codebase has **multiple organizational issues** that need consolidation:
 
 1. ✅ **UI Components**: Symlink architecture (CORRECT - no action needed)
 2. ⚠️ **Three UQ Packages**: `uq_classification`, `uq_benchmarks`, `uq_disentanglement_comparison`
@@ -15,14 +15,14 @@ The `walaris-cen` codebase has **multiple organizational issues** that need cons
 
 ### Current State
 ```
-walaris-cen/
-├── ui_components -> src/walaris/ui_components  # Symlink
-└── src/walaris/ui_components/                  # Actual code
+uqlab-streamlit/
+├── ui_components -> src/uqlab/ui_components  # Symlink
+└── src/uqlab/ui_components/                  # Actual code
 ```
 
 ### Status: **CORRECT ARCHITECTURE**
 - Symlink provides convenience for Streamlit app
-- Single source of truth in `src/walaris/ui_components/`
+- Single source of truth in `src/uqlab/ui_components/`
 - No action needed
 
 ---
@@ -31,7 +31,7 @@ walaris-cen/
 
 ### Current State
 ```
-walaris-cen/
+uqlab-streamlit/
 ├── uq_classification/              # Legacy package
 ├── uq_benchmarks/                  # Benchmarking package
 └── uq_disentanglement_comparison/  # Research comparison package
@@ -53,7 +53,7 @@ walaris-cen/
 
 ### Current State
 ```
-walaris-cen/
+uqlab-streamlit/
 ├── 1_data/           # Data layer
 ├── 2_models/         # Model architectures
 ├── 3_training/       # Training pipeline
@@ -69,9 +69,9 @@ These folders are at **root level** but should be organized within the project s
 
 ### Proposed Solutions
 
-#### Option A: Move to `src/walaris/` (RECOMMENDED)
+#### Option A: Move to `src/uqlab/` (RECOMMENDED)
 ```
-src/walaris/
+src/uqlab/
 ├── data/           # From 1_data/
 ├── models/         # From 2_models/
 ├── training/       # From 3_training/
@@ -85,7 +85,7 @@ src/walaris/
 **Benefits:**
 - ✅ Proper Python package structure
 - ✅ Installable with `pip install -e .`
-- ✅ Clean imports: `from walaris.data import ...`
+- ✅ Clean imports: `from uqlab.data import ...`
 - ✅ Follows Python best practices
 
 #### Option B: Move to `backend/app/`
@@ -113,7 +113,7 @@ backend/app/
 - ❌ Harder to install/distribute
 - ❌ Confusing structure
 
-### Recommendation: **Option A** (Move to `src/walaris/`)
+### Recommendation: **Option A** (Move to `src/uqlab/`)
 
 ---
 
@@ -128,7 +128,7 @@ src/
 ├── experiments/    # Experiment code
 ├── triage/         # Triage utilities
 ├── utils/          # General utilities
-└── walaris/        # Main package
+└── uqlab/        # Main package
 ```
 
 ### Problem
@@ -196,9 +196,9 @@ Create decision matrix:
 
 2. **Move MLOps Folders**
    ```bash
-   # Move to src/walaris/
-   mv 1_data/ src/walaris/data/
-   mv 2_models/ src/walaris/models/
+   # Move to src/uqlab/
+   mv 1_data/ src/uqlab/data/
+   mv 2_models/ src/uqlab/models/
    # ... etc
    ```
 
@@ -208,7 +208,7 @@ Create decision matrix:
    grep -r "from 1_data" --include="*.py"
    
    # Update to new paths
-   sed -i '' 's/from 1_data/from walaris.data/g' **/*.py
+   sed -i '' 's/from 1_data/from uqlab.data/g' **/*.py
    ```
 
 4. **Update Documentation**
@@ -220,8 +220,8 @@ Create decision matrix:
 
 1. **Verify Imports**
    ```bash
-   python -c "from walaris.data import ..."
-   python -c "from walaris.models import ..."
+   python -c "from uqlab.data import ..."
+   python -c "from uqlab.models import ..."
    ```
 
 2. **Run Tests**
@@ -240,12 +240,12 @@ Create decision matrix:
 ## Proposed Final Structure
 
 ```
-walaris-cen/
+uqlab-streamlit/
 ├── README.md
 ├── pyproject.toml
 ├── requirements.txt
 │
-├── src/walaris/              # Main Python package
+├── src/uqlab/              # Main Python package
 │   ├── __init__.py
 │   ├── data/                 # Data layer (from 1_data/)
 │   ├── models/               # Models (from 2_models/)
@@ -266,7 +266,7 @@ walaris-cen/
 │       ├── core/             # Core backend logic
 │       └── tables.py         # Database tables
 │
-├── ui_components -> src/walaris/ui_components  # Symlink
+├── ui_components -> src/uqlab/ui_components  # Symlink
 ├── streamlit_app.py          # Main Streamlit app
 ├── progressive_app.py        # Progressive disclosure app
 │

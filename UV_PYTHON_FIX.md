@@ -28,7 +28,7 @@ source .venv/bin/activate
 ### Step 3: Install Dependencies with UV
 
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 
 # Install backend dependencies
 uv pip install -r backend/requirements.txt
@@ -52,7 +52,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```bash
 cd /Users/andrearachetta/Documents/old_pilots
 source .venv/bin/activate
-cd walaris-cen
+cd uqlab-streamlit
 streamlit run streamlit_app_progressive.py
 ```
 
@@ -73,7 +73,7 @@ uv venv --python 3.12
 
 # Install dependencies
 source .venv/bin/activate
-cd walaris-cen
+cd uqlab-streamlit
 uv pip install -r backend/requirements.txt
 uv pip install -r streamlit_requirements.txt
 uv pip install -e .
@@ -103,7 +103,7 @@ python --version  # Should show 3.12.x
 uv pip list | grep -i sqlalchemy
 
 # Test backend
-cd walaris-cen/backend
+cd uqlab-streamlit/backend
 uvicorn app.main:app --reload
 ```
 
@@ -114,12 +114,12 @@ Should start without the SQLAlchemy error.
 ## One-Line Fix
 
 ```bash
-cd /Users/andrearachetta/Documents/old_pilots && rm -rf .venv && uv venv --python 3.12 && source .venv/bin/activate && cd walaris-cen && uv pip install -r backend/requirements.txt && uv pip install -r streamlit_requirements.txt && uv pip install -e .
+cd /Users/andrearachetta/Documents/old_pilots && rm -rf .venv && uv venv --python 3.12 && source .venv/bin/activate && cd uqlab-streamlit && uv pip install -r backend/requirements.txt && uv pip install -r streamlit_requirements.txt && uv pip install -e .
 ```
 
 Then start backend:
 ```bash
-cd walaris-cen/backend && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+cd uqlab-streamlit/backend && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ---

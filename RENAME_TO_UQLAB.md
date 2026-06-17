@@ -1,13 +1,13 @@
-# Renaming `walaris` → `uqlab` (Uncertainty Quantification Lab)
+# Renaming `uqlab` → `uqlab` (Uncertainty Quantification Lab)
 
 ## Overview
-Rename the main package from `walaris` to `uqlab` for better clarity and branding.
+Rename the main package from `uqlab` to `uqlab` for better clarity and branding.
 
 ## Changes Required
 
 ### 1. Directory Rename
 ```bash
-mv src/walaris src/uqlab
+mv src/uqlab src/uqlab
 ```
 
 ### 2. Symlink Updates
@@ -20,9 +20,9 @@ ln -s src/uqlab/benchmarks uq_benchmarks
 
 ### 3. Import Updates
 Replace all occurrences of:
-- `from walaris.` → `from uqlab.`
-- `import walaris.` → `import uqlab.`
-- `walaris/` → `uqlab/` (in paths)
+- `from uqlab.` → `from uqlab.`
+- `import uqlab.` → `import uqlab.`
+- `uqlab/` → `uqlab/` (in paths)
 
 ### 4. Config Consolidation
 Move `src/uqlab/shared/config.py` → `src/uqlab/shared/config/global_config.py`
@@ -51,7 +51,7 @@ Move `src/uqlab/shared/config.py` → `src/uqlab/shared/config/global_config.py`
 ## Execution Plan
 
 1. **Backup** - Create backup before changes
-2. **Rename directory** - `src/walaris` → `src/uqlab`
+2. **Rename directory** - `src/uqlab` → `src/uqlab`
 3. **Update imports** - Find/replace in all files
 4. **Update symlinks** - Recreate with new paths
 5. **Consolidate config** - Move to shared/config/

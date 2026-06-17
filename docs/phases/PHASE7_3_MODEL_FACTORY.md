@@ -240,7 +240,7 @@ All tests passed! ✓
 
 ### 8. Files Created
 
-- `walaris-cen/uq_classification/model_factory.py` (467 lines)
+- `uqlab-streamlit/uq_classification/model_factory.py` (467 lines)
   - `CNNMCDropout` class
   - `ResNet18MCDropout` class
   - `build_model()` factory function

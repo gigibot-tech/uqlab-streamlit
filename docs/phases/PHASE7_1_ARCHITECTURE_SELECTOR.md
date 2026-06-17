@@ -196,7 +196,7 @@ ModelConfig(
 
 Run validation script:
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 python3 validate_config_changes.py
 ```
 
@@ -223,13 +223,13 @@ This configuration update enables:
 - `typing.Literal`: For type-safe architecture selection
 
 ### Files Modified
-- `walaris-cen/uq_classification/config.py`: Main configuration file
+- `uqlab-streamlit/uq_classification/config.py`: Main configuration file
 
 ### Files Created
-- `walaris-cen/configs/example_cnn_mcdropout.yaml`: Example CNN config
-- `walaris-cen/configs/example_resnet18_mcdropout.yaml`: Example ResNet18 config
-- `walaris-cen/validate_config_changes.py`: Validation script
-- `walaris-cen/PHASE7_1_ARCHITECTURE_SELECTOR.md`: This documentation
+- `uqlab-streamlit/configs/example_cnn_mcdropout.yaml`: Example CNN config
+- `uqlab-streamlit/configs/example_resnet18_mcdropout.yaml`: Example ResNet18 config
+- `uqlab-streamlit/validate_config_changes.py`: Validation script
+- `uqlab-streamlit/PHASE7_1_ARCHITECTURE_SELECTOR.md`: This documentation
 
 ## Summary
 

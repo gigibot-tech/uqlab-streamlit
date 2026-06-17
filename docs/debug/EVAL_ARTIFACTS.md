@@ -8,7 +8,7 @@
 | **Custom experiments (API)** | Same preset sweeps + optional custom API grids |
 | **Tools** | Model selector, UQ benchmarks |
 
-Config for preset sweeps: `src/walaris/validation_config.py` (single YAML schema).
+Config for preset sweeps: `src/uqlab/validation_config.py` (single YAML schema).
 
 Runner: `scripts/run_validation_experiments.py` → `run_fast_uncertainty_classification.py`.
 
@@ -44,7 +44,7 @@ run_fast_uncertainty_classification  →  signal_table + AUROC
 
 ```python
 from pathlib import Path
-from walaris.run_artifacts import load_run_directory, load_per_sample_table
+from uqlab.run_artifacts import load_run_directory, load_per_sample_table
 
 artifacts = load_run_directory(Path("results/validation/label_noise_sweep/cnn_mcdropout_noise50"))
 print(artifacts.eval_sizes)

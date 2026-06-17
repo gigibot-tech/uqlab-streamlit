@@ -1,6 +1,6 @@
-# Experiment Tracker Integration Plan for walaris-cen
+# Experiment Tracker Integration Plan for uqlab-streamlit
 
-**Project:** walaris-cen Streamlit Redesign  
+**Project:** uqlab-streamlit Streamlit Redesign  
 **Version:** 1.0  
 **Date:** 2026-06-03  
 **Status:** Planning Phase
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-This document provides a comprehensive analysis of the [CSEM experiment_tracker](https://github.com/csem/experiment_tracker) library and outlines a strategic plan to integrate its components into the walaris-cen Streamlit redesign. The experiment_tracker provides battle-tested components for experiment management, parallel coordinate plots, and data loading that can significantly accelerate our development timeline.
+This document provides a comprehensive analysis of the [CSEM experiment_tracker](https://github.com/csem/experiment_tracker) library and outlines a strategic plan to integrate its components into the uqlab-streamlit Streamlit redesign. The experiment_tracker provides battle-tested components for experiment management, parallel coordinate plots, and data loading that can significantly accelerate our development timeline.
 
 ### Key Findings
 
@@ -158,7 +158,7 @@ Columns: metric names (e.g., "epistemic_auroc", "aleatoric_auroc")
 
 ### 2.2 Direct Reuse: Parallel Coordinates Plot
 
-**Adaptation for walaris-cen:**
+**Adaptation for uqlab-streamlit:**
 
 ```python
 # ui_components/hyperparameters/parallel_coordinates.py
@@ -177,7 +177,7 @@ def render_parallel_coordinates(
     """
     Render parallel coordinates using experiment_tracker.
     
-    Converts walaris-cen API data to experiment_tracker format.
+    Converts uqlab-streamlit API data to experiment_tracker format.
     """
     # Convert API response to param_df format
     param_df = _convert_to_param_df(experiments, parameters)
@@ -188,7 +188,7 @@ def render_parallel_coordinates(
     # Call experiment_tracker function
     fig = et_parallel_coordinates(param_df, perf_df)
     
-    # Customize for walaris-cen
+    # Customize for uqlab-streamlit
     fig.update_layout(height=height, title="Hyperparameter Exploration")
     
     # Display in Streamlit
@@ -217,10 +217,10 @@ def render_parallel_coordinates(
 │                                                                   │
 │  ┌──────────────────┐  ┌────────────────────────────────────┐  │
 │  │  Custom Sidebar  │  │      Main Content Area             │  │
-│  │  (walaris-cen)   │  │                                    │  │
+│  │  (uqlab-streamlit)   │  │                                    │  │
 │  │                  │  │  ┌──────────────────────────────┐  │  │
 │  │ • Filters        │  │  │  Custom Master-Detail        │  │  │
-│  │ • Quick Metrics  │  │  │  (walaris-cen)               │  │  │
+│  │ • Quick Metrics  │  │  │  (uqlab-streamlit)               │  │  │
 │  │ • Settings       │  │  │                              │  │  │
 │  └──────────────────┘  │  │  ┌────────┬──────────────┐  │  │  │
 │                         │  │  │ Master │   Detail     │  │  │  │
@@ -230,7 +230,7 @@ def render_parallel_coordinates(
 │                         │                                    │  │
 │                         │  ┌──────────────────────────────┐  │  │
 │                         │  │  Custom Metrics Dashboard    │  │  │
-│                         │  │  (walaris-cen)               │  │  │
+│                         │  │  (uqlab-streamlit)               │  │  │
 │                         │  └──────────────────────────────┘  │  │
 │                         │                                    │  │
 │                         │  ┌──────────────────────────────┐  │  │
@@ -263,7 +263,7 @@ def render_parallel_coordinates(
 
 ### 4.1 Data Format Conversion
 
-#### walaris-cen API Format:
+#### uqlab-streamlit API Format:
 ```json
 {
   "id": "exp_123",
@@ -505,16 +505,16 @@ class APIExperimentLoader:
 # 2. Install in editable mode ✅
 
 # Next steps:
-mkdir -p walaris-cen/ui_components/shared
-touch walaris-cen/ui_components/shared/api_experiment_loader.py
-touch walaris-cen/ui_components/shared/data_converters.py
+mkdir -p uqlab-streamlit/ui_components/shared
+touch uqlab-streamlit/ui_components/shared/api_experiment_loader.py
+touch uqlab-streamlit/ui_components/shared/data_converters.py
 ```
 
 #### Day 3-4: Parallel Coordinates Integration
 ```bash
-mkdir -p walaris-cen/ui_components/hyperparameters
-touch walaris-cen/ui_components/hyperparameters/parallel_coordinates.py
-touch walaris-cen/ui_components/hyperparameters/param_selector.py
+mkdir -p uqlab-streamlit/ui_components/hyperparameters
+touch uqlab-streamlit/ui_components/hyperparameters/parallel_coordinates.py
+touch uqlab-streamlit/ui_components/hyperparameters/param_selector.py
 ```
 
 #### Day 5: Testing & Documentation
@@ -580,7 +580,7 @@ def render_parallel_coordinates(
 
 ### 9.1 Functional Requirements
 
-- ✅ Parallel coordinates plot displays walaris-cen experiments
+- ✅ Parallel coordinates plot displays uqlab-streamlit experiments
 - ✅ Interactive brushing/filtering works correctly
 - ✅ Color-coding by performance metrics functions
 - ✅ Data conversion is accurate and complete
@@ -655,7 +655,7 @@ The experiment_tracker library provides valuable, production-ready components:
 ## Appendix A: File Structure
 
 ```
-walaris-cen/
+uqlab-streamlit/
 ├── ui_components/
 │   ├── shared/
 │   │   ├── api_experiment_loader.py      # NEW: API adapter
@@ -699,8 +699,8 @@ dependencies = [
 ## Appendix C: References
 
 - **experiment_tracker GitHub:** https://github.com/csem/experiment_tracker
-- **walaris-cen STREAMLIT_REDESIGN_PLAN:** `walaris-cen/STREAMLIT_REDESIGN_PLAN.md`
-- **walaris-cen ARCHITECTURE_DIAGRAM:** `walaris-cen/ARCHITECTURE_DIAGRAM.md`
+- **uqlab-streamlit STREAMLIT_REDESIGN_PLAN:** `uqlab-streamlit/STREAMLIT_REDESIGN_PLAN.md`
+- **uqlab-streamlit ARCHITECTURE_DIAGRAM:** `uqlab-streamlit/ARCHITECTURE_DIAGRAM.md`
 
 ---
 

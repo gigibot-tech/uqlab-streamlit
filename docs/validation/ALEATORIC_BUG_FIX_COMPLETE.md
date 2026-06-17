@@ -118,7 +118,7 @@ config_dict = {
 
 ### 7. Config File Saved
 ```yaml
-# /tmp/walaris_experiments/{exp_id}/config.yaml
+# /tmp/uqlab_experiments/{exp_id}/config.yaml
 data:
   noise_type: worse_label
   aleatoric_noise_percentage: 20.0  # ✅ NOW CORRECT!
@@ -147,7 +147,7 @@ if aleatoric_noise_percentage > 0:
 # 3. Set slider to 20%
 # 4. Create experiment
 # 5. Check config file:
-cat /tmp/walaris_experiments/{exp_id}/config.yaml | grep aleatoric
+cat /tmp/uqlab_experiments/{exp_id}/config.yaml | grep aleatoric
 # Expected: aleatoric_noise_percentage: 20.0
 ```
 
@@ -159,7 +159,7 @@ cat /tmp/walaris_experiments/{exp_id}/config.yaml | grep aleatoric
 # 3. Set sweep: start=0, end=40, step=10
 # 4. Create batch
 # 5. Check generated experiments:
-for exp in /tmp/walaris_experiments/batch_*/experiments/*/config.yaml; do
+for exp in /tmp/uqlab_experiments/batch_*/experiments/*/config.yaml; do
     echo "=== $exp ==="
     grep "aleatoric_noise_percentage" $exp
 done

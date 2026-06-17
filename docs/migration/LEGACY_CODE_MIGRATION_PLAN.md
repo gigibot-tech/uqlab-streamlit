@@ -63,14 +63,14 @@ ui_components/
 
 ### Step 1: Create Legacy Folder
 ```bash
-mkdir -p walaris-cen/ui_components/legacy
+mkdir -p uqlab-streamlit/ui_components/legacy
 ```
 
 ### Step 2: Move Files
 ```bash
 # Move batch experiment files
-mv walaris-cen/ui_components/batch_config.py walaris-cen/ui_components/legacy/
-mv walaris-cen/ui_components/batch_2d_sweep.py walaris-cen/ui_components/legacy/
+mv uqlab-streamlit/ui_components/batch_config.py uqlab-streamlit/ui_components/legacy/
+mv uqlab-streamlit/ui_components/batch_2d_sweep.py uqlab-streamlit/ui_components/legacy/
 ```
 
 ### Step 3: Create `ui_components/legacy/__init__.py`
@@ -199,7 +199,7 @@ All three patterns work! The first is recommended for consistency.
 
 ### 1. Verify Imports
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 python -c "from ui_components import render_batch_sweep_config; print('✅ Import works')"
 ```
 

@@ -9,7 +9,7 @@ The uncertainty classification experiments require CIFAR-10N noisy labels. This 
 Run the download script:
 
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 python3 scripts/download_cifar10n.py
 ```
 
@@ -47,10 +47,10 @@ Check if files exist:
 
 ```bash
 # CIFAR-10N noisy labels (you downloaded)
-ls -lh walaris-cen/data/cifar10n/cifar-10-batches-py/CIFAR-10_human.pt
+ls -lh uqlab-streamlit/data/cifar10n/cifar-10-batches-py/CIFAR-10_human.pt
 
 # CIFAR-10 base dataset (auto-downloaded on first run)
-ls -lh walaris-cen/data/cifar10n/cifar-10-batches-py/data_batch_*
+ls -lh uqlab-streamlit/data/cifar10n/cifar-10-batches-py/data_batch_*
 ```
 
 ### Troubleshooting

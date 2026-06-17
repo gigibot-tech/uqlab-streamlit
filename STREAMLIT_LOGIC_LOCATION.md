@@ -48,7 +48,7 @@ ML Pipeline (training, evaluation, etc.)
 
 ### 2. ui_components/ - **Where ALL Logic Lives**
 
-Located at: `src/walaris/ui_components/`
+Located at: `src/uqlab/ui_components/`
 
 **File sizes (LoC analysis):**
 
@@ -96,15 +96,15 @@ Located at: `backend/app/`
 
 ### 4. ML Pipeline (Training & Evaluation)
 
-Located at: `scripts/` and `src/walaris/classification/`
+Located at: `scripts/` and `src/uqlab/classification/`
 
 **Key files:**
 
 | File | LoC | Purpose |
 |------|-----|---------|
 | `scripts/run_fast_uncertainty_classification.py` | 1,245 | Main training script |
-| `src/walaris/classification/data_loader.py` | 589 | Data loading & preprocessing |
-| `src/walaris/classification/feature_extractor.py` | 491 | Feature extraction (DINOv2) |
+| `src/uqlab/classification/data_loader.py` | 589 | Data loading & preprocessing |
+| `src/uqlab/classification/feature_extractor.py` | 491 | Feature extraction (DINOv2) |
 | `src/models/load_dinov2_model.py` | 678 | Model loading |
 
 **Total ML pipeline: ~3,000+ LoC**

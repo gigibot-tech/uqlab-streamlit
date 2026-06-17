@@ -11,7 +11,7 @@ changing `--under_supported_classes`, or using a milder support reduction.
 
 ## Root Cause
 
-The data sampling logic in [`data_loader.py`](walaris-cen/uq_classification/data_loader.py:43-123) creates three evaluation groups:
+The data sampling logic in [`data_loader.py`](uqlab-streamlit/uq_classification/data_loader.py:43-123) creates three evaluation groups:
 
 1. **Clean eval**: Clean samples from well-supported classes
 2. **Aleatoric eval**: Noisy samples from well-supported classes  
@@ -50,7 +50,7 @@ under_train_per_class + eval_per_group
 
 ## Solution
 
-Added **parameter validation** in [`batch_experiment_service.py`](walaris-cen/backend/app/services/batch_experiment_service.py:693-738) that:
+Added **parameter validation** in [`batch_experiment_service.py`](uqlab-streamlit/backend/app/services/batch_experiment_service.py:693-738) that:
 
 1. **Validates before creating batch** - Fails fast with helpful error message
 2. **Checks total samples needed** - `max(sweep_values) + eval_per_group`

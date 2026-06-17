@@ -2,7 +2,7 @@
 
 ## Current Location (Wrong)
 ```
-walaris-cen/ui_components/api_sweep_launch.py
+uqlab-streamlit/ui_components/api_sweep_launch.py
 ```
 
 **Problem**: This file contains API orchestration logic, not UI components.
@@ -32,7 +32,7 @@ walaris-cen/ui_components/api_sweep_launch.py
 
 **New Location**:
 ```
-walaris-cen/src/uqlab_orchestrator/api_client.py
+uqlab-streamlit/src/uqlab_orchestrator/api_client.py
 ```
 
 **Rationale**:
@@ -56,7 +56,7 @@ src/uqlab_orchestrator/
 
 **New Location**:
 ```
-walaris-cen/src/uqlab/api/client.py
+uqlab-streamlit/src/uqlab/api/client.py
 ```
 
 **Rationale**:
@@ -77,7 +77,7 @@ src/uqlab/api/
 
 **New Location**:
 ```
-walaris-cen/backend/app/client/sweep_launcher.py
+uqlab-streamlit/backend/app/client/sweep_launcher.py
 ```
 
 **Rationale**:
@@ -93,8 +93,8 @@ walaris-cen/backend/app/client/sweep_launcher.py
 
 ```bash
 # Move file
-mv walaris-cen/ui_components/api_sweep_launch.py \
-   walaris-cen/src/uqlab_orchestrator/api_client.py
+mv uqlab-streamlit/ui_components/api_sweep_launch.py \
+   uqlab-streamlit/src/uqlab_orchestrator/api_client.py
 ```
 
 ### Step 2: Rename and Refactor
@@ -159,7 +159,7 @@ result = client.launch_sweep(workflow, "1d_epistemic", points)
 ## Final Structure
 
 ```
-walaris-cen/
+uqlab-streamlit/
 ├── src/
 │   ├── uqlab/                          # ML/UQ logic
 │   │   ├── classification/
@@ -237,20 +237,20 @@ set -e
 echo "🔄 Migrating api_sweep_launch.py to uqlab_orchestrator..."
 
 # Create api_client.py in orchestrator
-mv walaris-cen/ui_components/api_sweep_launch.py \
-   walaris-cen/src/uqlab_orchestrator/api_client.py
+mv uqlab-streamlit/ui_components/api_sweep_launch.py \
+   uqlab-streamlit/src/uqlab_orchestrator/api_client.py
 
 # Update imports in progressive app
 sed -i '' 's/from ui_components.api_sweep_launch/from uqlab_orchestrator.api_client/g' \
-    walaris-cen/streamlit_app_progressive.py
+    uqlab-streamlit/streamlit_app_progressive.py
 
 # Also move experiment_config.py
-mv walaris-cen/ui_components/experiment_config.py \
-   walaris-cen/src/uqlab_orchestrator/config_builder.py
+mv uqlab-streamlit/ui_components/experiment_config.py \
+   uqlab-streamlit/src/uqlab_orchestrator/config_builder.py
 
 # Update imports
 sed -i '' 's/from ui_components.experiment_config/from uqlab_orchestrator.config_builder/g' \
-    walaris-cen/streamlit_app_progressive.py
+    uqlab-streamlit/streamlit_app_progressive.py
 
 echo "✅ Migration complete!"
 echo ""

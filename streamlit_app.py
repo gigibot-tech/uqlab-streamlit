@@ -6,7 +6,7 @@ Connects to the FastAPI backend to display dataset statistics and experiment res
 import sys
 from pathlib import Path
 
-# Ensure ``walaris`` (under src/) and legacy top-level shims resolve before imports.
+# Ensure ``uqlab`` (under src/) and legacy top-level shims resolve before imports.
 _PROJECT_ROOT = Path(__file__).resolve().parent
 _SRC = _PROJECT_ROOT / "src"
 for _path in (_SRC, _PROJECT_ROOT):

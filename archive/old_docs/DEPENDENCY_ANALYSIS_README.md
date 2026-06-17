@@ -1,6 +1,6 @@
 # Python Dependency Analysis & Visualization Tool
 
-A comprehensive tool for analyzing and visualizing Python dependencies in the walaris-cen project.
+A comprehensive tool for analyzing and visualizing Python dependencies in the uqlab-streamlit project.
 
 ## 🎯 Overview
 
@@ -22,7 +22,7 @@ This tool provides:
 ### 1. Run the Analyzer
 
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 python3 analyze_dependencies.py --directory . --output dependencies.json
 ```
 
@@ -34,7 +34,7 @@ This will:
 
 **Output:**
 ```
-Scanning directory: /path/to/walaris-cen
+Scanning directory: /path/to/uqlab-streamlit
 Found 274 local modules
 Analyzed 260 Python files
 Found 0 circular dependency chains
@@ -122,7 +122,7 @@ File: streamlit_app.py
 Results:
   Local imports: 5
     - ui_components (line 13)
-    - walaris.classification.config (line 14)
+    - uqlab.classification.config (line 14)
   External imports: 8
     - streamlit (line 1)
     - pandas (line 2)
@@ -251,7 +251,7 @@ python3 analyze_dependencies.py -d ./backend -o backend_deps.json
 ```json
 {
   "metadata": {
-    "root_directory": "/path/to/walaris-cen",
+    "root_directory": "/path/to/uqlab-streamlit",
     "total_files": 260,
     "total_local_modules": 274,
     "circular_dependencies_count": 0
@@ -315,7 +315,7 @@ python3 analyze_dependencies.py -d ./backend -o backend_deps.json
       ["src/metrics/mc_dropout_uq.py", 7]
     ],
     "most_dependencies": [
-      ["src/walaris/ui_components/__init__.py", 14]
+      ["src/uqlab/ui_components/__init__.py", 14]
     ],
     "cross_boundary_imports": 0
   }
@@ -375,7 +375,7 @@ The analyzer uses Python's `ast` module for accurate import detection:
 
 ## 📈 Current Project Statistics
 
-Based on the latest analysis of walaris-cen:
+Based on the latest analysis of uqlab-streamlit:
 
 ```
 Total Python files: 260
@@ -401,15 +401,15 @@ Most imported files:
   1. src/metrics/mc_dropout_uq.py (7 imports)
   2. src/triage/dualxda_axioms.py (7 imports)
   3. src/data/cifar10n_loader.py (6 imports)
-  4. src/walaris/notebook_support/signals.py (5 imports)
-  5. src/walaris/notebook_support/constants.py (4 imports)
+  4. src/uqlab/notebook_support/signals.py (5 imports)
+  5. src/uqlab/notebook_support/constants.py (4 imports)
 
 Files with most dependencies:
-  1. src/walaris/ui_components/__init__.py (14 local imports)
-  2. src/walaris/classification/__init__.py (9 local imports)
+  1. src/uqlab/ui_components/__init__.py (14 local imports)
+  2. src/uqlab/classification/__init__.py (9 local imports)
   3. src/metrics/acquisition_functions.py (6 local imports)
-  4. src/walaris/notebook_support/__init__.py (6 local imports)
-  5. src/walaris/classification/model_factory.py (4 local imports)
+  4. src/uqlab/notebook_support/__init__.py (6 local imports)
+  5. src/uqlab/classification/model_factory.py (4 local imports)
 ```
 
 ## 🐛 Troubleshooting
@@ -494,4 +494,4 @@ To extend the tool:
 
 ## 📝 License
 
-Part of the walaris-cen project.
+Part of the uqlab-streamlit project.

@@ -41,8 +41,8 @@ The training data inspection feature is **fully implemented and integrated** int
 - Searches multiple possible file locations:
   - `data/experiments/{experiment_id}/results/training_data.csv`
   - `data/experiments/{experiment_id}/results/per_sample_signals.csv`
-  - `/tmp/walaris_experiments/{experiment_id}/results/training_data.csv`
-  - `/tmp/walaris_experiments/{experiment_id}/results/per_sample_signals.csv`
+  - `/tmp/uqlab_experiments/{experiment_id}/results/training_data.csv`
+  - `/tmp/uqlab_experiments/{experiment_id}/results/per_sample_signals.csv`
 - Validates required columns: `clean_label`, `noisy_label`
 - Calculates overall statistics (total, clean, noisy samples, noise rate)
 - Computes per-class statistics for all 10 CIFAR-10 classes
@@ -219,8 +219,8 @@ The feature searches for training data in the following locations (in order):
 
 1. `data/experiments/{experiment_id}/results/training_data.csv`
 2. `data/experiments/{experiment_id}/results/per_sample_signals.csv`
-3. `/tmp/walaris_experiments/{experiment_id}/results/training_data.csv`
-4. `/tmp/walaris_experiments/{experiment_id}/results/per_sample_signals.csv`
+3. `/tmp/uqlab_experiments/{experiment_id}/results/training_data.csv`
+4. `/tmp/uqlab_experiments/{experiment_id}/results/per_sample_signals.csv`
 
 ### Required CSV Columns
 - `clean_label` (required)

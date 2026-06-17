@@ -58,7 +58,7 @@ Package is currently only installable via git submodule. Making it pip-installab
 Update documentation to reflect new uqlab naming and structure.
 
 **Acceptance Criteria:**
-- [ ] Update all references from "walaris" to "uqlab" in docs
+- [ ] Update all references from "uqlab" to "uqlab" in docs
 - [ ] Add architecture diagrams showing module relationships
 - [ ] Document training modes for each model type (DINOv2, ResNet)
 - [ ] Add examples for common use cases
@@ -66,7 +66,7 @@ Update documentation to reflect new uqlab naming and structure.
 - [ ] Add API reference documentation
 
 **Context:**
-Recent rename from "walaris" to "uqlab" requires documentation updates.
+Recent rename from "uqlab" to "uqlab" requires documentation updates.
 
 **Priority:** Low
 

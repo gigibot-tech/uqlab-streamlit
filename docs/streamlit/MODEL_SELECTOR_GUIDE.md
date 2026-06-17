@@ -64,7 +64,7 @@ Once loaded, you can:
 
 Checkpoints are saved to:
 ```
-/tmp/walaris_experiments/{experiment_id}/results/checkpoint.pt
+/tmp/uqlab_experiments/{experiment_id}/results/checkpoint.pt
 ```
 
 Each checkpoint includes:
@@ -86,7 +86,7 @@ Each checkpoint includes:
 
 Additional results are saved to:
 ```
-/tmp/walaris_experiments/{experiment_id}/results/results.pt
+/tmp/uqlab_experiments/{experiment_id}/results/results.pt
 ```
 
 Contains:
@@ -155,7 +155,7 @@ Returns list of all experiments with status and results.
 ### Load Checkpoint
 ```python
 checkpoint = torch.load(
-    f"/tmp/walaris_experiments/{experiment_id}/results/checkpoint.pt",
+    f"/tmp/uqlab_experiments/{experiment_id}/results/checkpoint.pt",
     map_location='cpu'
 )
 ```
@@ -210,7 +210,7 @@ Choose models based on:
 
 ### Checkpoint Not Found
 
-**Problem**: `❌ Checkpoint not found at /tmp/walaris_experiments/{id}/results/checkpoint.pt`
+**Problem**: `❌ Checkpoint not found at /tmp/uqlab_experiments/{id}/results/checkpoint.pt`
 
 **Solution**:
 - Experiment may have been cleaned up

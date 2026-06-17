@@ -1,6 +1,6 @@
 # Root Level Cleanup Analysis
 
-## Files at Root Level of `walaris-cen/`
+## Files at Root Level of `uqlab-streamlit/`
 
 ### ✅ KEEP - Active/Important Files
 
@@ -135,7 +135,7 @@ mv test_api.sh scripts/shell/
 
 After cleanup, root should only have:
 ```
-walaris-cen/
+uqlab-streamlit/
 ├── .env, .env.example          # Config
 ├── .gitignore, .bobignore      # Git/Bob config
 ├── docker-compose.yml          # Docker

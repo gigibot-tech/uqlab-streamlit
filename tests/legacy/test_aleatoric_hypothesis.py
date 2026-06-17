@@ -112,7 +112,7 @@ def main():
     print("=" * 80)
     
     # Find all experiments with aleatoric_noise_percentage
-    exp_dir = Path("/tmp/walaris_experiments")
+    exp_dir = Path("/tmp/uqlab_experiments")
     summary_files = list(exp_dir.glob("*/results/summary.json"))
     
     print(f"\nFound {len(summary_files)} experiment summaries")

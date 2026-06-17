@@ -234,13 +234,13 @@ running = session.exec(
 ### Option 1: Automatic (Recommended)
 SQLModel will create tables automatically on backend startup:
 ```bash
-cd walaris-cen/backend
+cd uqlab-streamlit/backend
 uvicorn app.main:app --reload
 ```
 
 ### Option 2: Manual Python Script
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 python3 backend/run_benchmark_migration.py
 ```
 
@@ -260,7 +260,7 @@ UQ Benchmarks Database Migration
 
 ### Option 3: Manual SQL
 ```bash
-cd walaris-cen/backend
+cd uqlab-streamlit/backend
 sqlite3 app.db < migrations/add_benchmark_tables.sql
 ```
 

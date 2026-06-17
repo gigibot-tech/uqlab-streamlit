@@ -3,12 +3,12 @@
 ## Issue
 
 There are duplicate `ui_components` directories:
-1. **`walaris-cen/ui_components/`** - Root level (OLD/DUPLICATE)
-2. **`walaris-cen/src/uqlab/ui_components/`** - Proper location (CURRENT)
+1. **`uqlab-streamlit/ui_components/`** - Root level (OLD/DUPLICATE)
+2. **`uqlab-streamlit/src/uqlab/ui_components/`** - Proper location (CURRENT)
 
 ## Analysis
 
-### Root-Level ui_components (walaris-cen/ui_components/)
+### Root-Level ui_components (uqlab-streamlit/ui_components/)
 ```
 ui_components/
 ├── __init__.py
@@ -22,7 +22,7 @@ ui_components/
 └── visualization/
 ```
 
-### Proper Location (walaris-cen/src/uqlab/ui_components/)
+### Proper Location (uqlab-streamlit/src/uqlab/ui_components/)
 ```
 src/uqlab/ui_components/
 ├── __init__.py
@@ -43,8 +43,8 @@ Need to check if anything imports from root-level `ui_components`:
 
 ```bash
 # Search for imports from root-level ui_components
-grep -r "from ui_components" --include="*.py" walaris-cen/
-grep -r "import ui_components" --include="*.py" walaris-cen/
+grep -r "from ui_components" --include="*.py" uqlab-streamlit/
+grep -r "import ui_components" --include="*.py" uqlab-streamlit/
 ```
 
 ## Recommended Actions
@@ -98,7 +98,7 @@ rm -rf ui_components/
 
 After cleanup:
 ```
-walaris-cen/
+uqlab-streamlit/
 ├── src/
 │   └── uqlab/
 │       └── ui_components/  # Only location for UI components

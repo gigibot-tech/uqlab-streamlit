@@ -21,7 +21,7 @@ The `backfill_signals.py` script reads the `summary.json` files from your result
 ### Step 1: Run the Migration (if not done yet)
 
 ```bash
-cd walaris-cen/backend
+cd uqlab-streamlit/backend
 python run_migration.py
 ```
 
@@ -30,7 +30,7 @@ This adds the `best_signals_json` column to your database.
 ### Step 2: Run the Backfill Script
 
 ```bash
-cd walaris-cen/backend
+cd uqlab-streamlit/backend
 python backfill_signals.py
 ```
 

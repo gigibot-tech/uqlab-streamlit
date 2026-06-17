@@ -252,7 +252,7 @@ if aleatoric_noise_percentage > 0:
 ### Run Backwards Compatibility Tests
 
 ```bash
-cd walaris-cen
+cd uqlab-streamlit
 .venv/bin/python test_backwards_compatibility.py
 ```
 
