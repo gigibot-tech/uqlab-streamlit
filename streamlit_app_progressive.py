@@ -30,8 +30,8 @@ from uqlab_orchestrator.experiment_config import (
     build_nested_experiment_config,
 )
 
-# Import orchestrator package for sweep generation
-from uqlab_orchestrator import BatchGenerator, SweepType
+# Import SweepType enum for type annotations
+from uqlab_orchestrator import SweepType
 
 # Add backend to path for domain models
 import sys
@@ -396,9 +396,8 @@ def _workflow_to_experiment_config(
 
 
 def _generate_sweep_configs(workflow: Dict[str, Any]) -> Tuple[SweepType, List[ExperimentConfig]]:
-    """Generate sweep configs using BatchGenerator."""
+    """Generate sweep configs - simplified direct approach."""
     base_config = _workflow_to_experiment_config(workflow)
-    generator = BatchGenerator()
     
     u = workflow["uncertainty_config"]
     mode = _sweep_mode(workflow)
@@ -408,14 +407,24 @@ def _generate_sweep_configs(workflow: Dict[str, Any]) -> Tuple[SweepType, List[E
     
     kind = u.get("sweep_kind", "label_noise")
     
+    # Epistemic sweep: vary under_train_per_class
     if kind == "dataset_size" and u.get("epistemic_sweep_enabled", True):
         values = u.get("epistemic_sweep_values") or aligned_under_train_sweep(mode)
-        configs = generator.generate_epistemic_sweep(base_config, values)
+        configs = []
+        for val in values:
+            config = copy.deepcopy(base_config)
+            config["under_train_per_class"] = val
+            configs.append(config)
         return SweepType.EPISTEMIC_1D, configs
     
+    # Aleatoric sweep: vary aleatoric_noise_percentage
     if kind == "label_noise" and u.get("aleatoric_sweep_enabled", True):
         values = u.get("aleatoric_sweep_values") or LABEL_NOISE_SWEEP.get(mode, LABEL_NOISE_SWEEP["quick"])
-        configs = generator.generate_aleatoric_sweep(base_config, values)
+        configs = []
+        for val in values:
+            config = copy.deepcopy(base_config)
+            config["aleatoric_noise_percentage"] = val
+            configs.append(config)
         return SweepType.ALEATORIC_1D, configs
     
     return SweepType.SINGLE_POINT, [base_config]
