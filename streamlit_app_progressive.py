@@ -57,59 +57,22 @@ from app.domain.models import (
     EvaluationConfig,
     PathsConfig,
 )
-# Note: The following modules are not yet implemented:
-# - uqlab.ui_components.results (partial implementation only)
-# - uqlab.ui_components.selectors.smart_experiment_selector (not created)
-# - uqlab.ui_components.visualization.signals.signal_sweep_paper_viz (not created)
-#
-# from uqlab.ui_components.results import render_experiment_results
-# from uqlab.ui_components.selectors.smart_experiment_selector import (
-#     render_smart_experiment_selector,
-#     render_sweep_launch_controls,
-#     render_sweep_launch_toolbar,
-# )
-# from uqlab.ui_components.visualization.signals.signal_sweep_paper_viz import (
-#     render_production_signal_sweep_grid,
-# )
+from uqlab.ui_components.orchestration.validation_runner import (
+    render_local_validation_viz,
+    render_preset_validation_sweeps,
+)
+from uqlab.ui_components.results.experiment_results_panel import (
+    render_experiment_results_panel,
+    render_experiment_stats_footer,
+)
+from uqlab.ui_components.selectors.paper_sweep_launch import (
+    build_paper_profile_workflow,
+    new_campaign_timestamp,
+    render_sidebar_paper_launch,
+)
+from uqlab.ui_components.selectors.sidebar_controls import render_sidebar_footer_debug
+from uqlab.ui_components.ui_debug import init_ui_debug, sync_results_auto_refresh, ui_on
 
-
-# ============================================================================
-# STUB FUNCTIONS FOR MISSING MODULES
-# These functions are placeholders for modules that haven't been implemented yet
-# ============================================================================
-
-def fetch_experiments_for_ui(api_base_url: str, get_headers_func) -> List[Dict]:
-    """Stub function - not yet implemented"""
-    return []
-
-def render_experiment_results_panel(api_base_url: str, get_headers_func, auto_refresh: bool, **kwargs) -> bool:
-    """Stub function - not yet implemented
-    
-    Accepts all parameters but ignores them:
-    - caption, empty_message, highlight_experiment_id, key_prefix
-    - detail_mode, show_batch_visualizations, show_signal_sweep_plots
-    - workflow, show_experiment_selection, show_launch_controls
-    """
-    st.warning("⚠️ Experiment results panel not yet implemented")
-    return auto_refresh
-
-def render_sweep_launch_toolbar(*args, **kwargs):
-    """Stub function - not yet implemented"""
-    st.warning("⚠️ Sweep launch toolbar not yet implemented")
-
-def render_sweep_launch_controls(*args, **kwargs):
-    """Stub function - not yet implemented"""
-    st.warning("⚠️ Sweep launch controls not yet implemented")
-
-def render_local_validation_viz(*args, **kwargs):
-    """Stub function - not yet implemented"""
-    st.warning("⚠️ Local validation visualization not yet implemented")
-
-def render_preset_validation_sweeps(*args, **kwargs):
-    """Stub function - not yet implemented"""
-    st.warning("⚠️ Preset validation sweeps not yet implemented")
-
-# ============================================================================
 try:
     from uqlab_orchestrator.config.validation_config import (
         LABEL_NOISE_SWEEP,
@@ -150,15 +113,15 @@ DEFAULT_WORKFLOW: Dict[str, Any] = {
     },
     "training_config": {
         "use_checkpoint": False,
-        "model_architecture": "dinov2-small",
+        "model_architecture": "resnet18",
         "hidden_dim": 256,
-        "dropout": 0.2,
+        "dropout": 0.0,
         "epochs": TRAINING_CONFIG["quick"]["epochs"],
         "learning_rate": 0.001,
         "batch_size": 256,
     },
     "uncertainty_config": {
-        "epistemic_enabled": True,
+        "epistemic_enabled": False,
         "under_supported": "random:2",
         "under_train_per_class": 50,
         "regular_train_per_class": 300,
@@ -182,6 +145,7 @@ DEFAULT_WORKFLOW: Dict[str, Any] = {
             "inverse_coherence",
             "msp_uncertainty",
             "predictive_entropy",
+            "mutual_info",
         ],
     },
 }
@@ -213,13 +177,50 @@ CIFAR10N_NOISE_OPTIONS = (
     "random_label3",
 )
 
+DATASET_CATALOG: Dict[str, Dict[str, str]] = {
+    "cifar10": {
+        "label": "CIFAR-10 (original)",
+        "short": "CIFAR-10",
+        "description": (
+            "Standard torchvision CIFAR-10 — **clean, verified labels**. "
+            "Paper sweeps (Fig. 3/4) inject synthetic label noise at train time."
+        ),
+    },
+    "cifar10n": {
+        "label": "CIFAR-10N (human noisy labels)",
+        "short": "CIFAR-10N",
+        "description": (
+            "Same 50k images as CIFAR-10, but labels come from **human annotators** "
+            "(Wei et al.). Choose a noise split below — not the same as synthetic sweep noise."
+        ),
+    },
+}
+
+CIFAR10N_NOISE_LABELS: Dict[str, str] = {
+    "clean_label": "Clean labels (baseline — matches CIFAR-10)",
+    "worse_label": "Worse label (~40% noisy)",
+    "aggre_label": "Aggregate label (~9% noisy)",
+    "random_label1": "Random label 1 (~20% noisy)",
+    "random_label2": "Random label 2 (~20% noisy)",
+    "random_label3": "Random label 3 (~20% noisy)",
+}
+
 
 def _is_clean_noise(noise_type: str) -> bool:
     return noise_type in ("none", "clean_label", "clean", "no_noise")
 
 
-def _fallback_dataset_stats(noise_type: str) -> dict:
+def _fallback_dataset_stats(dataset_name: str, noise_type: str) -> dict:
     """Offline stats when the FastAPI backend is not running."""
+    if dataset_name == "cifar10":
+        return {
+            "total_samples": 50_000,
+            "num_classes": 10,
+            "noise_rate": 0.0,
+            "dataset_name": "cifar10",
+            "noise_type": "clean_label",
+            "source": "fallback",
+        }
     noise_rates = {
         "none": 0.0,
         "clean_label": 0.0,
@@ -233,6 +234,8 @@ def _fallback_dataset_stats(noise_type: str) -> dict:
         "total_samples": 50_000,
         "num_classes": 10,
         "noise_rate": noise_rates.get(noise_type, 0.0),
+        "dataset_name": "cifar10n",
+        "noise_type": noise_type,
         "source": "fallback",
     }
 
@@ -268,6 +271,8 @@ def _ensure_workflow_initialized() -> None:
         st.session_state.highlight_experiment_id = None
     if "experiment_selection_in_sidebar" not in st.session_state:
         st.session_state.experiment_selection_in_sidebar = True
+    init_ui_debug()
+    sync_results_auto_refresh()
 
 
 def _normalize_dinov2_model(architecture_label: str) -> str:
@@ -295,37 +300,63 @@ def _workflow_to_experiment_config(
     uncertainty = workflow["uncertainty_config"]
     evaluation = workflow["evaluation_config"]
     dataset = workflow["dataset_config"]
+    dataset_name = dataset.get("dataset_name", "cifar10")
+    noise_type_in = dataset.get("noise_type", "clean_label")
     
-    # Override values if provided
-    under = under_train_per_class if under_train_per_class is not None else uncertainty.get("under_train_per_class", 50)
+    epistemic_on = bool(uncertainty.get("epistemic_enabled", False))
+    regular = uncertainty.get("regular_train_per_class") or 300
+    under_supported = uncertainty.get("under_supported") or (
+        "random:2" if epistemic_on else "random:1"
+    )
+
+    if under_train_per_class is not None:
+        under = int(under_train_per_class)
+    elif epistemic_on:
+        raw_under = uncertainty.get("under_train_per_class")
+        under = int(raw_under) if raw_under is not None else 50
+    else:
+        # Aleatoric-only: balanced training (equal samples per class)
+        # Ensure regular is not None before converting to int
+        under = int(regular) if regular is not None else 300
     
     # Calculate aleatoric noise percentage with proper validation
+    use_cifar10n_native_noise = (
+        dataset_name == "cifar10n"
+        and not _is_clean_noise(noise_type_in)
+    )
+
     if aleatoric_noise_percentage is not None:
-        # Explicit override (used in sweeps)
-        alea_pct = float(aleatoric_noise_percentage)
+        alea_pct: Optional[float] = float(aleatoric_noise_percentage)
+    elif use_cifar10n_native_noise and uncertainty.get("aleatoric_enabled", False):
+        # Let training script load CIFAR-10N human noise from noise_type.
+        alea_pct = None
     else:
-        # Determine from workflow config
         aleatoric_enabled = uncertainty.get("aleatoric_enabled", False)
         custom_noise = uncertainty.get("custom_noise_rate")
-        noise_type = dataset.get("noise_type", "clean_label")
-        
+
         if not aleatoric_enabled:
-            # Aleatoric disabled = no noise
             alea_pct = 0.0
         elif custom_noise is not None:
-            # Custom noise specified
             alea_pct = float(custom_noise) * 100.0
-        elif not _is_clean_noise(noise_type):
-            # Using dataset noise (CIFAR-10N)
+        elif not _is_clean_noise(noise_type_in):
             stats = dataset.get("stats", {})
             dataset_noise_rate = stats.get("noise_rate", 0.0)
             alea_pct = float(dataset_noise_rate) * 100.0
         else:
-            # Clean dataset, no custom noise = no noise
             alea_pct = 0.0
+
+    if dataset_name == "cifar10" or _is_clean_noise(noise_type_in):
+        noise_type_out = "clean_label"
+    elif use_cifar10n_native_noise and alea_pct is None:
+        noise_type_out = noise_type_in
+    elif alea_pct is not None and alea_pct > 0:
+        # Synthetic injection from clean base (paper Fig. 4 sweeps).
+        noise_type_out = "clean_label"
+    else:
+        noise_type_out = noise_type_in
     
     # Determine architecture from model selection
-    model_arch = training.get("model_architecture", "dinov2-small")
+    model_arch = training.get("model_architecture", "resnet18")
     if "resnet" in model_arch.lower():
         architecture = "resnet18_mcdropout"
         dinov2_model = "small"  # Not used for ResNet
@@ -337,10 +368,10 @@ def _workflow_to_experiment_config(
         seed=42,
         device="auto",
         data=DataConfig(
-            noise_type=dataset.get("noise_type", "worse_label"),
-            under_supported_classes=uncertainty.get("under_supported", "random:2"),
-            under_train_per_class=int(under),
-            regular_train_per_class=uncertainty.get("regular_train_per_class", 300),
+            noise_type=noise_type_out,
+            under_supported_classes=under_supported,
+            under_train_per_class=under,
+            regular_train_per_class=regular,
             aleatoric_noise_percentage=alea_pct,
             eval_per_group=evaluation["eval_per_group"],
         ),
@@ -348,7 +379,7 @@ def _workflow_to_experiment_config(
             architecture=architecture,
             dinov2_model=dinov2_model,
             hidden_dim=training.get("hidden_dim", 256),
-            dropout=training.get("dropout", 0.2),
+            dropout=training.get("dropout", 0.0),
             use_untrained_resnet=False,
         ),
         training=TrainingRuntimeConfig(
@@ -394,10 +425,11 @@ def _launch_workflow_experiments(
     workflow: Dict[str, Any],
     *,
     auto_start: bool,
+    timestamp: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Generate configs using BatchGenerator and submit to API."""
     sweep_type, configs = _generate_sweep_configs(workflow)
-    timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = timestamp or pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
     created_runs: List[Dict[str, Any]] = []
     errors: List[str] = []
     
@@ -473,22 +505,120 @@ def _launch_workflow_experiments(
         "experiment_id": created_runs[-1]["id"],
         "started": n_started == len(created_runs),
         "start_error": created_runs[-1].get("start_error") if n_failed_start else None,
+        "campaign_timestamp": timestamp,
     }
 
 
-def _render_progressive_results_section() -> None:
-    """API results table + unified experiment visualization (smart selector)."""
-    # Note: These functions don't exist in validation_runner, using stubs instead
-    # from uqlab.ui_components.orchestration.validation_runner import (
-    #     render_local_validation_viz,
-    #     render_preset_validation_sweeps,
-    # )
+def _merge_launch_results(
+    *results: Dict[str, Any],
+    sweep_axis: str = "paired",
+    campaign_timestamp: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Combine multiple launch results (e.g. Fig. 3 + Fig. 4 arms)."""
+    created_runs: List[Dict[str, Any]] = []
+    errors: List[str] = []
+    for res in results:
+        if res.get("created_runs"):
+            created_runs.extend(res["created_runs"])
+        if res.get("errors"):
+            errors.extend(res["errors"])
 
-    with st.expander("Launch local preset sweeps (Fig. 3 / Fig. 4)", expanded=False):
-        render_preset_validation_sweeps(key_prefix="prog_preset", show_viz=False)
-    render_local_validation_viz(key_prefix="prog_preset_viz")
+    if not created_runs:
+        failed = [r for r in results if not r.get("ok")]
+        detail = "\n".join(
+            f"{r.get('error', 'unknown')}: {r.get('detail', '')}" for r in failed
+        )
+        return {"ok": False, "error": "No experiments created", "detail": detail or None}
+
+    st.session_state.highlight_experiment_id = created_runs[-1]["id"]
+    n_started = sum(1 for r in created_runs if r.get("started"))
+    n_failed_start = sum(1 for r in created_runs if r.get("start_error"))
+
+    return {
+        "ok": True,
+        "sweep_axis": sweep_axis,
+        "n_created": len(created_runs),
+        "n_started": n_started,
+        "n_failed_start": n_failed_start,
+        "created_runs": created_runs,
+        "errors": errors,
+        "created": created_runs[-1],
+        "experiment_id": created_runs[-1]["id"],
+        "started": n_started == len(created_runs),
+        "start_error": created_runs[-1].get("start_error") if n_failed_start else None,
+        "campaign_timestamp": campaign_timestamp,
+    }
+
+
+def _paper_workflow(workflow: Dict[str, Any], profile: str) -> Dict[str, Any]:
+    mode = _sweep_mode(workflow)
+    return build_paper_profile_workflow(
+        workflow,
+        profile,
+        mode,
+        under_train_sweep=aligned_under_train_sweep,
+        label_noise_sweep=LABEL_NOISE_SWEEP,
+    )
+
+
+def _launch_paper_profile(
+    workflow: Dict[str, Any],
+    profile: str,
+    *,
+    auto_start: bool,
+    timestamp: Optional[str] = None,
+) -> Dict[str, Any]:
+    paper = _paper_workflow(workflow, profile)
+    return _launch_workflow_experiments(
+        paper,
+        auto_start=auto_start,
+        timestamp=timestamp or new_campaign_timestamp(),
+    )
+
+
+def _launch_paired_paper_profiles(
+    workflow: Dict[str, Any],
+    *,
+    auto_start: bool,
+) -> Dict[str, Any]:
+    ts = new_campaign_timestamp()
+    epis = _launch_paper_profile(workflow, "under_train", auto_start=auto_start, timestamp=ts)
+    alea = _launch_paper_profile(workflow, "noise", auto_start=auto_start, timestamp=ts)
+    return _merge_launch_results(epis, alea, sweep_axis="paired_fig3_fig4", campaign_timestamp=ts)
+
+
+def _render_progressive_results_section() -> None:
+    """API results + sweep grouping (gated by UI debug)."""
+    if not ui_on("results_section"):
+        sync_results_auto_refresh()
+        return
+
+    if ui_on("results_local_presets"):
+        with st.expander("Launch local preset sweeps (Fig. 3 / Fig. 4)", expanded=False):
+            render_preset_validation_sweeps(key_prefix="prog_preset", show_viz=False)
+    if ui_on("results_local_viz"):
+        # These are local preset sweep plots read from `results/validation/*/metrics.csv`.
+        # Always show both Fig. 3 (dataset_size) and Fig. 4 (label_noise) if data exists.
+        show_fig3 = True
+        show_fig4 = True
+
+        model_arch = st.session_state.get("workflow", {}).get("training_config", {}).get(
+            "model_architecture", "resnet18"
+        )
+        architecture_label = "DINOv2 + MLP"
+        if model_arch and "resnet" in str(model_arch).lower():
+            architecture_label = "ResNet18 MC Dropout"
+
+        render_local_validation_viz(
+            key_prefix="prog_preset_viz",
+            show_fig3=show_fig3,
+            show_fig4=show_fig4,
+            architecture_label=architecture_label,
+        )
+
     st.markdown("---")
-    st.markdown("### 📊 All API experiments (table)")
+    st.markdown("### 📊 Experiment results & progress")
+
     st.session_state.results_auto_refresh = render_experiment_results_panel(
         API_BASE_URL,
         get_headers,
@@ -498,7 +628,7 @@ def _render_progressive_results_section() -> None:
             "Enable auto-refresh while a run is **running**."
         ),
         empty_message=(
-            "No experiments in the database yet. Use **Launch Experiment** in Step 5 below."
+            "No experiments in the database yet. Use **Paper sweeps** in the sidebar."
         ),
         highlight_experiment_id=st.session_state.get("highlight_experiment_id"),
         key_prefix="prog_",
@@ -515,6 +645,8 @@ def _render_progressive_results_section() -> None:
 
 def _render_launch_result() -> None:
     """Show last launch outcome (persists across Streamlit reruns)."""
+    if not ui_on("launch_result_banner"):
+        return
     result = st.session_state.get("launch_result")
     if not result:
         return
@@ -642,87 +774,54 @@ def fetch_dataset_stats(
             st.warning(
                 f"Backend unavailable ({e}). Using offline dataset stats for the UI."
             )
-        return _fallback_dataset_stats(noise_type)
+        return _fallback_dataset_stats(dataset_name, noise_type)
 
 
 def main():
-    st.title("🔬 Uncertainty Quantification Experiment Builder")
-    st.caption(
-        "Configure Steps 1–4, then **Step 5** to launch sweeps and view results. "
-        "Pick a campaign in the **sidebar**."
-    )
+    if ui_on("page_title"):
+        st.title("🔬 Uncertainty Quantification Experiment Builder")
+        st.caption(
+            "Configure Steps 1–4, launch paper sweeps from the **sidebar**, "
+            "view **results** below."
+        )
 
     _ensure_workflow_initialized()
     workflow = st.session_state.workflow
 
-    # Sidebar - Progress Tracker
     with st.sidebar:
-        st.markdown("### ⚙️ Configuration Progress")
-        st.markdown("---")
+        render_sidebar_paper_launch(
+            workflow,
+            on_launch_both=lambda auto: _launch_paired_paper_profiles(
+                workflow, auto_start=auto
+            ),
+            on_launch_epis=lambda auto: _launch_paper_profile(
+                workflow, "under_train", auto_start=auto
+            ),
+            on_launch_alea=lambda auto: _launch_paper_profile(
+                workflow, "noise", auto_start=auto
+            ),
+            aligned_sweep_summary=aligned_sweep_summary,
+        )
+        render_sidebar_footer_debug()
 
-        steps = [
-            ("📊", "Dataset Selection", workflow["step1_complete"]),
-            ("🧠", "Training Setup", workflow["step2_complete"]),
-            ("🎲", "Uncertainty Config", workflow["step3_complete"]),
-            ("📊", "Evaluation Setup", workflow["step4_complete"]),
-        ]
-
-        for icon, name, complete in steps:
-            if complete:
-                st.markdown(f"✅ {icon} **{name}**")
-            else:
-                st.markdown(f"⬜ {icon} {name}")
-
-        experiments = fetch_experiments_for_ui(API_BASE_URL, get_headers)
-        if experiments:
-            from uqlab.ui_components.selectors.smart_experiment_selector import render_sidebar_experiment_selector
-
-            disk_only = sum(1 for e in experiments if e.get("_source") == "disk")
-            if disk_only and disk_only == len(experiments):
-                from uqlab.runtime_paths import sqlite_db_path
-
-                st.caption(
-                    f"On-disk only ({disk_only} run(s)) — API DB empty · `{sqlite_db_path()}`"
-                )
-            render_sidebar_experiment_selector(
-                experiments,
-                workflow,
-                key_prefix="sb",
-            )
-        elif experiments is None:
-            st.markdown("---")
-            st.caption("⚠️ API offline — experiment list unavailable")
-        else:
-            from uqlab.runtime_paths import sqlite_db_path
-
-            st.markdown("---")
-            st.caption(
-                f"API online · **0** experiments in DB (`{sqlite_db_path()}`). "
-                "Use **Step 5 Launch** or **Run both** (API), or **local preset sweeps** "
-                "(`results/validation/`, not this list)."
-            )
-
-        st.markdown("---")
-
-        if st.button("↺ Reset to recommended defaults", use_container_width=True):
-            st.session_state.workflow = _default_workflow()
-            st.session_state.launch_result = None
-            st.rerun()
-
-        if st.button("🔄 Start from scratch", help="Clear all steps", use_container_width=True):
-            st.session_state.workflow = _empty_workflow()
-            st.session_state.launch_result = None
-            st.rerun()
+    _render_launch_result()
     
     # ========== STEP 1: DATASET SELECTION ==========
-    if workflow['step1_complete']:
+    if not ui_on("step1_dataset"):
+        pass
+    elif workflow['step1_complete']:
         # Show collapsed summary
         st.markdown('<div class="step-complete">', unsafe_allow_html=True)
         col1, col2 = st.columns([4, 1])
         with col1:
             dataset_name = workflow['dataset_config']['dataset_name']
-            noise_type = workflow['dataset_config'].get('noise_type', 'none')
-            st.markdown(f"**✅ Step 1: Dataset** - {dataset_name.upper()} ({noise_type})")
+            noise_type = workflow['dataset_config'].get('noise_type', 'clean_label')
+            ds_label = DATASET_CATALOG.get(dataset_name, {}).get("short", dataset_name.upper())
+            if dataset_name == "cifar10n":
+                noise_label = CIFAR10N_NOISE_LABELS.get(noise_type, noise_type)
+                st.markdown(f"**✅ Step 1: Dataset** — {ds_label} · {noise_label}")
+            else:
+                st.markdown(f"**✅ Step 1: Dataset** — {ds_label} (clean labels)")
         with col2:
             if st.button("Edit", key="edit_step1"):
                 workflow['step1_complete'] = False
@@ -733,33 +832,49 @@ def main():
         st.markdown('<div class="step-active">', unsafe_allow_html=True)
         st.markdown("### 📊 Step 1: Dataset Selection")
         
-        # Dataset selection
-        dataset_choice = selectbox_without_default(
+        dataset_ids = list(DATASET_CATALOG.keys())
+        saved_ds = workflow["dataset_config"].get("dataset_name", "cifar10")
+        ds_index = dataset_ids.index(saved_ds) if saved_ds in dataset_ids else 0
+        dataset_choice = st.selectbox(
             "Choose a dataset",
-            ["cifar10"],
-            help_text="CIFAR-10: 50,000 training images, 10 classes"
+            dataset_ids,
+            index=ds_index,
+            format_func=lambda k: DATASET_CATALOG[k]["label"],
+            help="CIFAR-10 = clean torchvision labels. CIFAR-10N = same images with human noisy labels.",
         )
-        
-        if not dataset_choice:
-            st.info("👆 Please select a dataset to continue")
-            st.stop()
-        
-        # Noise type selection
-        noise_options = list(CIFAR10N_NOISE_OPTIONS)
-        saved_noise = workflow["dataset_config"].get("noise_type", "worse_label")
-        if saved_noise == "none":
-            saved_noise = "clean_label"
-        default_noise_idx = (
-            noise_options.index(saved_noise)
-            if saved_noise in noise_options
-            else noise_options.index("worse_label")
-        )
-        noise_choice = st.selectbox(
-            "Label noise type",
-            noise_options,
-            index=default_noise_idx,
-            help="CIFAR-10N provides synthetic noisy labels for uncertainty research",
-        )
+        st.caption(DATASET_CATALOG[dataset_choice]["description"])
+
+        if dataset_choice == "cifar10":
+            noise_choice = "clean_label"
+            st.info(
+                "ℹ️ **CIFAR-10 (original)** uses clean labels only. "
+                "Label noise for Fig. 4 sweeps is injected synthetically in Step 3 — "
+                "no CIFAR-10N split needed."
+            )
+        else:
+            noise_options = list(CIFAR10N_NOISE_OPTIONS)
+            saved_noise = workflow["dataset_config"].get("noise_type", "worse_label")
+            if saved_noise == "none":
+                saved_noise = "worse_label"
+            default_noise_idx = (
+                noise_options.index(saved_noise)
+                if saved_noise in noise_options
+                else noise_options.index("worse_label")
+            )
+            noise_choice = st.selectbox(
+                "CIFAR-10N noise split",
+                noise_options,
+                index=default_noise_idx,
+                format_func=lambda k: CIFAR10N_NOISE_LABELS.get(k, k),
+                help="Human-annotated label noise from the CIFAR-10N benchmark (Wei et al.).",
+            )
+            if _is_clean_noise(noise_choice):
+                st.caption("Clean split — equivalent to CIFAR-10 labels on the same images.")
+            else:
+                st.caption(
+                    "Training/eval will use the selected human-noise split. "
+                    "For paper-style synthetic sweeps, pick **CIFAR-10 (original)** instead."
+                )
         
         # Fetch and display stats
         with st.spinner("Loading dataset statistics..."):
@@ -798,7 +913,9 @@ def main():
         st.stop()  # Don't show next steps until this is complete
     
     # ========== STEP 2: TRAINING SETUP ==========
-    if workflow['step2_complete']:
+    if not ui_on("step2_training"):
+        pass
+    elif workflow['step2_complete']:
         # Show collapsed summary
         st.markdown('<div class="step-complete">', unsafe_allow_html=True)
         col1, col2 = st.columns([4, 1])
@@ -832,13 +949,26 @@ def main():
             
             col1, col2 = st.columns(2)
             with col1:
+                arch_options = ["dinov2-small", "dinov2-base", "resnet18", "resnet50"]
+                saved_arch = workflow["training_config"].get("model_architecture", "resnet18")
+                arch_index = (
+                    arch_options.index(saved_arch) if saved_arch in arch_options else 2
+                )
                 model_arch = st.selectbox(
                     "Model architecture",
-                    ["dinov2-small", "dinov2-base", "resnet18", "resnet50"],
-                    help="DINOv2 models are pre-trained vision transformers"
+                    arch_options,
+                    index=arch_index,
+                    help="DINOv2 models are pre-trained vision transformers",
                 )
-                hidden_dim = st.number_input("Hidden dimension", min_value=64, max_value=1024, value=256, step=64)
-                dropout = st.slider("Dropout rate", 0.0, 0.5, 0.2, 0.05)
+                hidden_dim = st.number_input(
+                    "Hidden dimension",
+                    min_value=64,
+                    max_value=1024,
+                    value=workflow["training_config"].get("hidden_dim", 256),
+                    step=64,
+                )
+                saved_dropout = float(workflow["training_config"].get("dropout", 0.0))
+                dropout = st.slider("Dropout rate", 0.0, 0.5, saved_dropout, 0.05)
             
             with col2:
                 epochs = st.number_input("Training epochs", min_value=1, max_value=100, value=12)
@@ -912,7 +1042,9 @@ def main():
         st.stop()
     
     # ========== STEP 3: UNCERTAINTY CONFIGURATION ==========
-    if workflow['step3_complete']:
+    if not ui_on("step3_uncertainty"):
+        pass
+    elif workflow['step3_complete']:
         # Show collapsed summary
         st.markdown('<div class="step-complete">', unsafe_allow_html=True)
         col1, col2 = st.columns([4, 1])
@@ -945,6 +1077,12 @@ def main():
         # Show active step
         st.markdown('<div class="step-active">', unsafe_allow_html=True)
         st.markdown("### 🎲 Step 3: Uncertainty Configuration")
+        
+        st.info("""
+        **Understanding Uncertainty Types:**
+        - **Fig. 3 (Dataset Size Sweep)**: Varies training data per class to measure **epistemic uncertainty** (model uncertainty from limited data)
+        - **Fig. 4 (Label Noise Sweep)**: Varies label noise percentage to measure **aleatoric uncertainty** (data uncertainty from noisy labels)
+        """)
 
         st.markdown("#### Fast sweep (default — same as Hypothesis Validation quick)")
         sweep_enabled = st.checkbox(
@@ -957,7 +1095,7 @@ def main():
             ["label_noise", "dataset_size"],
             index=0 if workflow["uncertainty_config"].get("sweep_kind", "label_noise") == "label_noise" else 1,
             horizontal=True,
-            help="Label noise → Fig. 4 style. Dataset size → Fig. 3 style.",
+            help="Label noise (Fig. 4) = aleatoric sweep. Dataset size (Fig. 3) = epistemic sweep.",
         )
         sweep_mode = st.radio(
             "Sweep mode",
@@ -969,20 +1107,36 @@ def main():
         if sweep_enabled:
             if sweep_kind == "label_noise":
                 st.caption(f"Will run **{len(LABEL_NOISE_SWEEP[sweep_mode])}** label-noise levels: {LABEL_NOISE_SWEEP[sweep_mode]}")
+                st.info(
+                    "**Fig. 4 (aleatoric):** Sweep **overrides** any noise settings below with the grid values above. "
+                    "Epistemic is auto-disabled. For paired Fig. 3 + Fig. 4, use **Paper sweeps** in the sidebar."
+                )
             else:
                 vals = aligned_under_train_sweep(sweep_mode)
                 st.caption(f"Will run **{len(vals)}** under-train sizes: {vals}")
+                st.info(
+                    "**Fig. 3 (epistemic):** Sweep **overrides** any under-training settings below with the grid values above. "
+                    "Aleatoric is auto-disabled."
+                )
         st.markdown("---")
-        
+
         col1, col2 = st.columns(2)
-        
-        # Epistemic Uncertainty (Dataset Size)
+
         with col1:
-            st.markdown("#### Epistemic Uncertainty")
+            st.markdown("#### Epistemic Uncertainty (Fig. 3)")
             st.caption("Model uncertainty due to limited training data")
             
-            epistemic_enabled = st.checkbox("Enable dataset size sweep", value=True)
-            
+            # Auto-disable epistemic if sweeping label_noise
+            if sweep_enabled and sweep_kind == "label_noise":
+                epistemic_enabled = False
+                st.caption("Epistemic controls hidden — not used for label-noise sweeps.")
+            else:
+                epistemic_enabled = st.checkbox(
+                    "Enable epistemic uncertainty (under-trained classes)",
+                    value=workflow["uncertainty_config"].get("epistemic_enabled", False),
+                    help="Fig. 3 style — limits training data on selected classes.",
+                )
+
             if epistemic_enabled:
                 under_supported_mode = st.radio(
                     "Under-supported classes",
@@ -1014,20 +1168,42 @@ def main():
             else:
                 under_supported = None
                 under_train_per_class = None
-                regular_train_per_class = None
-        
+                regular_train_per_class = 300
+
         # Aleatoric Uncertainty (Label Noise)
         with col2:
-            st.markdown("#### Aleatoric Uncertainty")
+            st.markdown("#### Aleatoric Uncertainty (Fig. 4)")
             st.caption("Data uncertainty due to label noise")
             
-            noise_type = workflow['dataset_config'].get('noise_type', 'none')
-            
-            if not _is_clean_noise(noise_type):
+            noise_type = workflow['dataset_config'].get('noise_type', 'clean_label')
+            dataset_name = workflow['dataset_config'].get('dataset_name', 'cifar10')
+            uses_cifar10n_noise = (
+                dataset_name == "cifar10n" and not _is_clean_noise(noise_type)
+            )
+
+            if sweep_enabled and sweep_kind == "label_noise":
+                st.caption(
+                    f"✓ Aleatoric axis: sweep grid `{LABEL_NOISE_SWEEP[sweep_mode]}` — "
+                    "no extra checkbox needed."
+                )
+                aleatoric_enabled = True
+                custom_noise = None
+            elif sweep_enabled and sweep_kind == "dataset_size":
+                aleatoric_enabled = False
+                custom_noise = None
+                st.caption("Aleatoric controls hidden — not used for dataset-size sweeps.")
+            elif uses_cifar10n_noise:
+                aleatoric_enabled = st.checkbox(
+                    f"Use CIFAR-10N noise ({CIFAR10N_NOISE_LABELS.get(noise_type, noise_type)})",
+                    value=True,
+                    help="Train with human-annotated noisy labels from the selected CIFAR-10N split.",
+                )
+                custom_noise = None
+            elif not _is_clean_noise(noise_type):
                 aleatoric_enabled = st.checkbox(
                     f"Use dataset noise ({noise_type})",
                     value=True,
-                    help=f"Use CIFAR-10N {noise_type} noise labels"
+                    help=f"Use CIFAR-10N {noise_type} noise labels",
                 )
                 custom_noise = None
             else:
@@ -1035,7 +1211,7 @@ def main():
                 if aleatoric_enabled:
                     custom_noise = st.slider(
                         "Custom noise rate (%)",
-                        0, 50, 10, 5
+                        0, 50, 10, 5,
                     ) / 100.0
                 else:
                     custom_noise = None
@@ -1066,11 +1242,17 @@ def main():
         if st.button("✓ Continue to Evaluation Setup", type="primary", use_container_width=True):
             workflow['step3_complete'] = True
             workflow['uncertainty_config'] = {
-                'epistemic_enabled': epistemic_enabled,
+                'epistemic_enabled': (
+                    False if (sweep_enabled and sweep_kind == "label_noise") else epistemic_enabled
+                ),
                 'under_supported': under_supported if epistemic_enabled else None,
                 'under_train_per_class': under_train_per_class if epistemic_enabled else None,
-                'regular_train_per_class': regular_train_per_class if epistemic_enabled else None,
-                'aleatoric_enabled': aleatoric_enabled,
+                'regular_train_per_class': (
+                    regular_train_per_class if epistemic_enabled else (regular_train_per_class or 300)
+                ),
+                'aleatoric_enabled': (
+                    True if (sweep_enabled and sweep_kind == "label_noise") else aleatoric_enabled
+                ),
                 'custom_noise_rate': custom_noise if aleatoric_enabled else None,
                 'sweep_enabled': sweep_enabled,
                 'sweep_kind': sweep_kind,
@@ -1095,7 +1277,9 @@ def main():
         st.stop()
     
     # ========== STEP 4: EVALUATION SETUP ==========
-    if workflow['step4_complete']:
+    if not ui_on("step4_evaluation"):
+        pass
+    elif workflow['step4_complete']:
         # Show collapsed summary
         st.markdown('<div class="step-complete">', unsafe_allow_html=True)
         col1, col2 = st.columns([4, 1])
@@ -1194,7 +1378,7 @@ def main():
                 baseline_signals.append("msp_uncertainty")
             if st.checkbox("predictive_entropy", value=True):
                 baseline_signals.append("predictive_entropy")
-            if st.checkbox("mutual_info", value=False):
+            if st.checkbox("mutual_info", value=True):
                 baseline_signals.append("mutual_info")
         
         all_signals = epistemic_signals + aleatoric_signals + baseline_signals
@@ -1216,158 +1400,67 @@ def main():
         st.markdown('</div>', unsafe_allow_html=True)
         st.stop()
     
-    # ========== STEP 5: REVIEW & LAUNCH ==========
-    st.markdown('<div class="step-active">', unsafe_allow_html=True)
-    st.markdown("### 🚀 Step 5: Review & Launch")
-    
-    sweep_type, sweep_configs = _generate_sweep_configs(workflow)
-    n_runs = len(sweep_configs)
+    # ========== STEP 5: REVIEW ==========
+    if ui_on("step5_launch"):
+        st.markdown('<div class="step-active">', unsafe_allow_html=True)
+        st.markdown("### 🚀 Step 5: Review")
 
-    if n_runs > 1:
-        st.success(
-            f"**Fast sweep ready:** {n_runs} experiments on `{sweep_type.value}` "
-            f"(mode `{_sweep_mode(workflow)}`) — same grid as Hypothesis Validation quick."
-        )
-    else:
-        st.warning(
-            "Sweep is **off** — only one run will be created. "
-            "Enable **Launch a parameter sweep** in Step 3 for paper-style curves."
-        )
+        sweep_type, sweep_configs = _generate_sweep_configs(workflow)
+        n_runs = len(sweep_configs)
 
-    # Configuration summary
-    st.markdown("#### Configuration Summary")
-    
-    with st.expander("📊 Dataset Configuration", expanded=True):
-        dataset_config = workflow['dataset_config']
-        st.write(f"**Dataset:** {dataset_config['dataset_name'].upper()}")
-        st.write(f"**Noise type:** {dataset_config.get('noise_type', 'none')}")
-        stats = dataset_config.get("stats") or _fallback_dataset_stats(
-            dataset_config.get("noise_type", "worse_label")
-        )
-        st.write(f"**Total samples:** {stats.get('total_samples', 0):,}")
-    
-    with st.expander("🧠 Training Configuration", expanded=True):
-        training_config = workflow['training_config']
-        if training_config.get('use_checkpoint'):
-            st.write(f"**Mode:** Using checkpoint")
-            st.write(f"**Checkpoint ID:** {training_config['checkpoint_id']}")
-        else:
-            st.write(f"**Mode:** Train new model")
-            st.write(f"**Architecture:** {training_config['model_architecture']}")
-            st.write(f"**Epochs:** {training_config['epochs']}")
-            st.write(f"**Learning rate:** {training_config['learning_rate']}")
-    
-    with st.expander("🎲 Uncertainty Configuration", expanded=True):
-        uncertainty_config = workflow['uncertainty_config']
-        if uncertainty_config.get("sweep_enabled"):
-            st.write(
-                f"**Sweep:** {uncertainty_config.get('sweep_kind')} "
-                f"({uncertainty_config.get('sweep_mode')}) → **{n_runs}** API runs"
-            )
-            if sweep_type == SweepType.ALEATORIC_1D:
-                st.write(f"**Noise % values:** {uncertainty_config.get('aleatoric_sweep_values')}")
-            elif sweep_type == SweepType.EPISTEMIC_1D:
-                st.write(f"**Under-train values:** {uncertainty_config.get('epistemic_sweep_values')}")
-        st.write(f"**Epistemic enabled:** {uncertainty_config['epistemic_enabled']}")
-        if uncertainty_config['epistemic_enabled']:
-            st.write(f"**Under-supported:** {uncertainty_config['under_supported']}")
-            st.write(f"**Under-supported samples:** {uncertainty_config['under_train_per_class']}")
-            st.write(f"**Regular samples:** {uncertainty_config['regular_train_per_class']}")
-        st.write(f"**Aleatoric enabled:** {uncertainty_config['aleatoric_enabled']}")
-    
-    with st.expander("📊 Evaluation Configuration", expanded=True):
-        evaluation_config = workflow['evaluation_config']
-        st.write(f"**Samples per group:** {evaluation_config['eval_per_group']}")
-        st.write(f"**MC dropout passes:** {evaluation_config['mc_passes']}")
-        st.write(f"**Signals:** {', '.join(evaluation_config['selected_signals'])}")
-    
-    st.markdown("#### 🚀 Launch paper sweeps (Fig. 3 + Fig. 4)")
-    st.caption(
-        "Paired **5+5** API runs (under-train + label noise). "
-        "Uses quick/full grid from Step 3 sweep mode."
-    )
-    render_sweep_launch_toolbar(
-        workflow,
-        API_BASE_URL,
-        get_headers,
-        key_prefix="step5_paper",
-    )
-    with st.expander("Paper sweep options (quick / full)", expanded=False):
-        render_sweep_launch_controls(
-            workflow,
-            API_BASE_URL,
-            get_headers,
-            key_prefix="step5_paper_opts",
-        )
-
-    st.markdown("#### Launch from Step 3 sweep settings")
-    auto_start = st.checkbox(
-        "Start training immediately after create",
-        value=True,
-        help="Calls POST /experiments/no-auth/{id}/start so the backend runs the ML script.",
-    )
-
-    col1, col2, col3 = st.columns([2, 1, 1])
-    launch_label = (
-        f"🚀 Launch fast sweep ({n_runs} runs)"
-        if n_runs > 1
-        else "🚀 Launch single experiment"
-    )
-    with col1:
-        launch_button = st.button(launch_label, type="primary", use_container_width=True)
-    with col2:
-        if st.button("Clear status", use_container_width=True):
-            st.session_state.launch_result = None
-            st.rerun()
-    with col3:
-        if st.button("← Reset defaults", use_container_width=True):
-            st.session_state.workflow = _default_workflow()
-            st.session_state.launch_result = None
-            st.rerun()
-
-    if launch_button:
-        with st.spinner(
-            f"Creating {n_runs} experiment(s) and starting training..."
-            if n_runs > 1
-            else "Creating experiment and starting training..."
+        uc = workflow.get("uncertainty_config", {})
+        if (
+            uc.get("sweep_enabled")
+            and uc.get("sweep_kind") == "label_noise"
+            and uc.get("epistemic_enabled")
         ):
-            try:
-                st.session_state.launch_result = _launch_workflow_experiments(
-                    workflow,
-                    auto_start=auto_start,
-                )
-            except requests.exceptions.RequestException as e:
-                detail = e.response.text if getattr(e, "response", None) is not None else ""
-                st.session_state.launch_result = {
-                    "ok": False,
-                    "error": str(e),
-                    "detail": detail,
-                }
-            except Exception as e:
-                st.session_state.launch_result = {
-                    "ok": False,
-                    "error": str(e),
-                    "detail": None,
-                }
+            st.warning(
+                "**Mixed uncertainty:** label-noise sweep with epistemic under-training enabled. "
+                "Consider disabling epistemic uncertainty in Step 3 for cleaner Fig. 4 results."
+            )
 
-    _render_launch_result()
+        if n_runs > 1:
+            st.success(
+                f"**Fast sweep ready:** {n_runs} experiments on `{sweep_type.value}` "
+                f"(mode `{_sweep_mode(workflow)}`) — same grid as Hypothesis Validation quick."
+            )
+        else:
+            st.warning(
+                "Sweep is **off** in Step 3 — only one run would be created. "
+                "Use **Paper sweeps** in the sidebar for Fig. 3 + Fig. 4 campaigns."
+            )
 
-    st.markdown('</div>', unsafe_allow_html=True)
+        mode = _sweep_mode(workflow)
+        summary = aligned_sweep_summary(mode)
+        with st.expander("Sweep grid preview", expanded=False):
+            st.caption(f"Mode: **{mode}**")
+            st.caption(f"Fig. 3 (under-train): `{summary['under_train_per_class']}`")
+            st.caption(f"Fig. 4 (label noise %): `{summary['label_noise_percent']}`")
 
-    if workflow.get("step4_complete"):
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # Results section at bottom — only when explicitly enabled in UI debug
+    if ui_on("results_section"):
         st.markdown("---")
+        st.markdown("### � Experiment Results & Progress")
+        st.caption(
+            f"Live data from `{API_BASE_URL}`. "
+            "Enable sub-toggles in UI debug to show sweeps, tables, etc."
+        )
         _render_progressive_results_section()
 
-    # Footer
-    st.markdown("---")
-    st.markdown(
-        """
-        <div style='text-align: center; color: gray;'>
-        <small>Uncertainty Quantification Experiment Builder | Progressive Disclosure UI</small>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    render_experiment_stats_footer(API_BASE_URL, get_headers)
+
+    if ui_on("footer"):
+        st.markdown("---")
+        st.markdown(
+            """
+            <div style='text-align: center; color: gray;'>
+            <small>Uncertainty Quantification Experiment Builder | Progressive Disclosure UI</small>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 
 if __name__ == "__main__":

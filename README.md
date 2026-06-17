@@ -33,11 +33,29 @@ uqlab-streamlit/
 
 ## 🚀 Quick Start
 
+### TL;DR - 3 Commands to Run
+
+```bash
+# 1. Install dependencies with uv (fast) or pip
+uv pip install -e src/uqlab && uv pip install -r requirements.txt
+
+# 2. Start backend on port 8000 (in terminal 1)
+cd backend && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# 3. Start frontend (in terminal 2)
+streamlit run streamlit_app_progressive.py
+```
+
+Open browser: Frontend at `http://localhost:8501`, Backend API at `http://localhost:8000`
+
+---
+
 ### Prerequisites
 
 - Python 3.10+
 - Git
 - Docker (optional, for backend)
+- [uv](https://github.com/astral-sh/uv) (recommended) or pip
 
 ### Installation
 
@@ -69,8 +87,8 @@ pip install -r requirements.txt
 #### 3. Run Streamlit App
 
 ```bash
-# Main dashboard
-streamlit run streamlit_app.py
+# Main dashboard (legacy)
+#streamlit run streamlit_app.py
 
 # Progressive/advanced UI
 streamlit run streamlit_app_progressive.py
