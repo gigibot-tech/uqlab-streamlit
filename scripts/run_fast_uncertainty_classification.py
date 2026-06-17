@@ -49,7 +49,7 @@ if str(SRC_DIR) not in sys.path:
 # ============================================================================
 
 # Data loading
-from uqlab.data_loaders.cifar10n_loader import CIFAR10NDataset
+from uqlab.data.loaders.cifar10n_loader import CIFAR10NDataset
 from torch.utils.data import Dataset
 from torchvision import datasets, transforms
 
@@ -794,7 +794,7 @@ Examples:
         print(f"   ✅ Both Aleatoric and Epistemic AUROC will be calculated")
     print("="*80 + "\n")
 
-    from uqlab.data_loaders.cifar10n_loader import (
+    from uqlab.data.loaders.cifar10n_loader import (
         apply_clean_training_labels,
         is_clean_training_noise_type,
     )

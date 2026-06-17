@@ -20,7 +20,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 import torch
-from uqlab.data_loaders.cifar10n_loader import CIFAR10NDataset
+from uqlab.data.loaders.cifar10n_loader import CIFAR10NDataset
 from uq_classification import (
     # Data
     sample_indices_for_fast_pilot,
