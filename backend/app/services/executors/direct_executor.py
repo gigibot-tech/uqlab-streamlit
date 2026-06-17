@@ -65,10 +65,10 @@ class DirectExecutor(TrainingExecutor):
     def _verify_imports(self):
         """Verify that all required modules can be imported."""
         try:
-            # Test critical imports
+            # Test critical imports (using new paths after refactoring)
             from uq_classification.models import EmbeddingDataset
             from uq_classification.config import ExperimentConfig
-            from uqlab.data_loaders.cifar10n_loader import CIFAR10NDataset
+            from uqlab.data.loaders.cifar10n_loader import CIFAR10NDataset
             assert EmbeddingDataset is not None and ExperimentConfig is not None
             logger.info("✅ Pre-flight check passed: All required modules can be imported")
         except ImportError as e:
