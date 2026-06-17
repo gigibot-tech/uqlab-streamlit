@@ -23,7 +23,7 @@ def data_root() -> Path:
 
 
 def sqlite_db_path() -> Path:
-    return data_root() / "walaris.db"
+    return data_root() / "uqlab.db"
 
 
 def experiments_root() -> Path:

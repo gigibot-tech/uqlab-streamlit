@@ -92,6 +92,7 @@ from uq_classification.evaluation import (
     binary_auroc,
     build_results_markdown,
     save_per_sample_csv,
+    save_training_data_csv,
     split_group_balanced_targets,
     train_signal_classifier,
 )
@@ -324,25 +325,52 @@ def compute_eval_signals(
         },
     )
 
-    print(f"MC Dropout ({mc_passes} passes, batched eval)...")
-    mc_predictions = mc_forward_efficient(
-        model,
-        eval_x,
-        mc_passes,
-        sample_batch_size=eval_batch_size,
-    ).cpu()
-    uq = calculate_mc_dropout_uncertainty(mc_predictions)
-    save_zwischen_result(
-        results_dir,
-        "04_mc_dropout",
-        {
-            "entropy": uq["entropy"].cpu(),
-            "mutual_info": uq["mutual_info"].cpu(),
-            "mean_variance": uq["mean_variance"].cpu(),
-            "mean_prediction": uq["mean_prediction"].cpu(),
-            "n_passes": mc_passes,
-        },
-    )
+    # MC Dropout uncertainty quantification (skip if mc_passes=0)
+    if mc_passes > 0:
+        print(f"MC Dropout ({mc_passes} passes, batched eval)...")
+        mc_predictions = mc_forward_efficient(
+            model,
+            eval_x,
+            mc_passes,
+            sample_batch_size=eval_batch_size,
+        ).cpu()
+        uq = calculate_mc_dropout_uncertainty(mc_predictions)
+        save_zwischen_result(
+            results_dir,
+            "04_mc_dropout",
+            {
+                "entropy": uq["entropy"].cpu(),
+                "mutual_info": uq["mutual_info"].cpu(),
+                "mean_variance": uq["mean_variance"].cpu(),
+                "mean_prediction": uq["mean_prediction"].cpu(),
+                "n_passes": mc_passes,
+            },
+        )
+    else:
+        print("⚠️  MC Dropout disabled (mc_passes=0) - using deterministic predictions only")
+        # Create dummy mc_predictions and UQ dict with zeros for compatibility
+        n_samples = eval_x.shape[0]
+        n_classes = det_logits.shape[1]
+        # mc_predictions shape: (n_passes=1, n_samples, n_classes) - use deterministic prediction
+        mc_predictions = mean_pred_det.unsqueeze(0)  # Add pass dimension
+        uq = {
+            "entropy": torch.zeros(n_samples),
+            "mutual_info": torch.zeros(n_samples),
+            "mean_variance": torch.zeros(n_samples),
+            "mean_prediction": mean_pred_det,  # Use deterministic prediction
+        }
+        save_zwischen_result(
+            results_dir,
+            "04_mc_dropout",
+            {
+                "entropy": uq["entropy"],
+                "mutual_info": uq["mutual_info"],
+                "mean_variance": uq["mean_variance"],
+                "mean_prediction": uq["mean_prediction"],
+                "n_passes": 0,
+                "note": "MC Dropout disabled - all uncertainty metrics are zero",
+            },
+        )
 
     signal_table = build_fast_pilot_signal_table(
         attribution_signals=attribution_signals,
@@ -707,24 +735,94 @@ Examples:
     eval_config = config.evaluation
     mc_passes = eval_config.mc_passes
     top_k = eval_config.top_k
+    
+    # Validate mc_passes - warn if 0 (MC Dropout disabled)
+    if mc_passes < 0:
+        raise ValueError(
+            f"mc_passes must be >= 0, got {mc_passes}. "
+            f"Set to 0 to disable MC Dropout (faster but no uncertainty), "
+            f"or use 5-10 for efficient uncertainty estimation (recommended: 10-50 for accuracy)."
+        )
+    elif mc_passes == 0:
+        logger.warning(
+            "⚠️  MC Dropout disabled (mc_passes=0): No uncertainty quantification will be performed. "
+            "This is faster but provides no epistemic uncertainty estimates. "
+            "Consider using mc_passes=5-10 for efficient uncertainty estimation."
+        )
 
     # Aleatoric control happens here:
+    # - `aleatoric_noise_percentage == 0` -> ALWAYS use clean labels (ignore noise_type)
     # - `aleatoric_noise_percentage > 0` -> custom random flips
-    # - otherwise -> use CIFAR-10N noise from `noise_type`
+    # - `aleatoric_noise_percentage is None` -> use CIFAR-10N noise from `noise_type`
     cifar10n_root = Path(config.paths.cifar10n_root)
     if not cifar10n_root.is_absolute():
         cifar10n_root = PROJECT_ROOT / cifar10n_root
+
+    # ============================================================================
+    # EXPERIMENT CONFIGURATION SUMMARY
+    # ============================================================================
+    print("\n" + "="*80)
+    print("EXPERIMENT CONFIGURATION")
+    print("="*80)
+    print(f"📊 Dataset Configuration:")
+    print(f"   • Noise type: {noise_type}")
+    print(f"   • Aleatoric noise: {aleatoric_noise_percentage}%")
+    print(f"   • Under-supported classes: {under_supported_classes_str or 'None'}")
+    print(f"   • Under-train per class: {under_train_per_class}")
+    print(f"   • Regular-train per class: {regular_train_per_class}")
+    print(f"   • Eval per group: {eval_per_group}")
+    print(f"\n🧠 Model Configuration:")
+    print(f"   • DINOv2 model: {dinov2_model}")
+    print(f"   • Hidden dim: {hidden_dim}")
+    print(f"   • Dropout: {dropout}")
+    print(f"\n🎯 Training Configuration:")
+    print(f"   • Epochs: {epochs}")
+    print(f"   • Learning rate: {learning_rate}")
+    print(f"   • Weight decay: {weight_decay}")
+    print(f"   • Train batch size: {train_batch_size}")
+    print(f"\n📈 Evaluation Configuration:")
+    print(f"   • MC passes: {mc_passes}")
+    print(f"   • Top-k attribution: {top_k}")
+    print(f"\n💡 Expected Behavior:")
+    if aleatoric_noise_percentage == 0:
+        print(f"   ⚠️  Aleatoric AUROC will be NaN (no noisy samples in eval set)")
+        print(f"   ✅ Epistemic AUROC will be calculated (under-supported vs regular classes)")
+    elif aleatoric_noise_percentage > 0 and not under_supported_classes:
+        print(f"   ✅ Aleatoric AUROC will be calculated (noisy vs clean samples)")
+        print(f"   ⚠️  Epistemic AUROC may be weak (no under-supported classes)")
+    else:
+        print(f"   ✅ Both Aleatoric and Epistemic AUROC will be calculated")
+    print("="*80 + "\n")
 
     from uqlab.data_loaders.cifar10n_loader import (
         apply_clean_training_labels,
         is_clean_training_noise_type,
     )
 
-    if aleatoric_noise_percentage > 0:
-        print(f"\n🎯 Loading CIFAR-10 for custom noise injection ({aleatoric_noise_percentage}%)")
+    # FIXED: When aleatoric_noise_percentage is explicitly set to 0, use clean labels
+    # regardless of noise_type setting
+    if aleatoric_noise_percentage == 0:
+        print(
+            "\n🎯 Fig. 3 / epistemic benchmark: clean labels only "
+            "(aleatoric_noise_percentage=0%)"
+        )
         dataset = CIFAR10NDataset(
             root=str(cifar10n_root),
-            noise_type=noise_type,
+            noise_type="clean_label",
+            train=True,
+            transform=dino_transform(),
+            download=True,
+        )
+        apply_clean_training_labels(dataset)
+        print(f"   ✅ {len(dataset)} training samples, 0% injected label noise")
+    elif aleatoric_noise_percentage > 0:
+        print(
+            f"\n🎯 Fig. 4 / aleatoric benchmark: injecting {aleatoric_noise_percentage}% "
+            "uniform label noise"
+        )
+        dataset = CIFAR10NDataset(
+            root=str(cifar10n_root),
+            noise_type="clean_label",
             train=True,
             transform=dino_transform(),
             download=True,
@@ -876,29 +974,61 @@ Examples:
             f"  4. Use correct under_supported_classes (recommended: [3, 5])"
         )
     
-    # Warn if individual groups are empty (but allow experiment to continue)
+    from uqlab.classification.benchmark_axes import (
+        expects_aleatoric_eval,
+        expects_epistemic_eval,
+    )
+
+    aleatoric_expected = expects_aleatoric_eval(aleatoric_noise_percentage)
+    epistemic_expected = expects_epistemic_eval(
+        under_supported_classes,
+        under_train_per_class=under_train_per_class,
+        regular_train_per_class=regular_train_per_class,
+    )
+
+    # Warn only when an expected benchmark axis has no eval samples.
     if len(split_spec.clean_eval_indices) == 0:
         logger.warning(
-            f"⚠️  Clean evaluation group is empty. "
-            f"AUROC for clean samples will return NaN."
+            "⚠️  Clean evaluation group is empty — clean AUROC will be NaN."
         )
     if len(split_spec.aleatoric_eval_indices) == 0:
-        logger.warning(
-            f"⚠️  Aleatoric evaluation group is empty. "
-            f"AUROC for aleatoric uncertainty will return NaN."
+        if aleatoric_expected:
+            raise RuntimeError(
+                f"❌ Aleatoric benchmark requested ({aleatoric_noise_percentage}% label noise) "
+                "but the aleatoric eval pool is empty. "
+                "Check aleatoric_noise_percentage and noise_type=clean_label in config."
+            )
+        logger.info(
+            "ℹ️  Aleatoric AUROC skipped (0% label noise — this is normal for Fig. 3 runs)."
         )
     if len(split_spec.epistemic_eval_indices) == 0:
-        logger.warning(
-            f"⚠️  Epistemic evaluation group is empty. "
-            f"AUROC for epistemic uncertainty will return NaN."
-        )
+        if epistemic_expected:
+            logger.warning(
+                "⚠️  Epistemic evaluation group is empty — epistemic AUROC will be NaN."
+            )
+        else:
+            logger.info(
+                "ℹ️  Epistemic AUROC skipped (balanced training — normal for Fig. 4 runs)."
+            )
 
     mode = get_data_loading_mode(config)
+    
+    # IMPORTANT: ResNet in feature_space mode works differently than DINOv2:
+    # - DINOv2: Uses pre-computed cached features (embeddings mode)
+    # - ResNet: Uses images directly but with frozen backbone (images mode)
+    # Both achieve "feature space" training, but through different mechanisms
+    if config.model.architecture == "resnet18_mcdropout" and mode == "embeddings":
+        logger.info(
+            "ResNet with feature_space mode: Using images with frozen backbone "
+            "(ResNet doesn't support feature caching like DINOv2)"
+        )
+        mode = "images"  # Use images, but model will have freeze_backbone=True
 
     feature_extractor = None
     feature_dim = None
 
     if mode == "embeddings":
+        # Only DINOv2 supports embeddings mode with feature caching
         feature_extractor = create_feature_extractor(
             config.model,
             device=device,
@@ -908,9 +1038,10 @@ Examples:
             noise_type=noise_type,
             batch_size=feature_batch_size,
         )
+        
         if not isinstance(feature_extractor, DINOv2FeatureExtractor):
             raise TypeError("Expected DINOv2FeatureExtractor for feature_space mode")
-
+        
         feature_extractor.organizer.load_or_compute_features()
 
         train_pack = feature_extractor.get_train_pack()
@@ -946,6 +1077,7 @@ Examples:
     else:
         raise ValueError(f"Unsupported data loading mode: {mode}")
 
+    # Build the model
     model = build_model(
         config=config.model,
         num_classes=10,
@@ -980,6 +1112,29 @@ Examples:
 
     model = model.to(device)
     model.eval()
+
+    # Save training data statistics to CSV
+    print("\n" + "="*80)
+    print("Saving training data statistics...")
+    print("="*80)
+    
+    # Convert config to dict for serialization
+    from dataclasses import asdict
+    config_dict = asdict(config)
+    # Convert Path objects to strings for JSON serialization
+    if config_dict.get('paths'):
+        for key, value in config_dict['paths'].items():
+            if isinstance(value, Path):
+                config_dict['paths'][key] = str(value)
+    # Convert Pydantic model to dict
+    if config_dict.get('model'):
+        config_dict['model'] = dict(config.model)
+    
+    save_training_data_csv(
+        output_path=results_dir / "training_data.csv",
+        train_dataset=train_dataset,
+        config=config_dict,
+    )
 
     eval_group_labels = eval_data["eval_group_labels"]
     eval_clean_labels = eval_data["eval_clean_labels"]

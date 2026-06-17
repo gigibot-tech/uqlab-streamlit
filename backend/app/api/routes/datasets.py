@@ -92,45 +92,41 @@ def _get_cifar10n_dataset():
 @router.get("/{dataset_name}/stats")
 async def get_dataset_stats_by_name(
     dataset_name: str,
-    noise_type: str = Query("worse_label", description="Noise type to analyze")
+    noise_type: str = Query("clean_label", description="Noise type to analyze (CIFAR-10N only)"),
 ) -> dict[str, Any]:
     """
     Get dataset statistics including noise distribution.
-    
-    Args:
-        dataset_name: Name of the dataset (currently only 'cifar10' supported)
-        noise_type: Type of noise to analyze (worse_label, random_label1, etc.)
-    
-    Returns:
-        Dictionary with dataset statistics including:
-        - total_samples: Total number of samples
-        - num_classes: Number of classes
-        - noise_rate: Percentage of noisy labels
-        - class_distribution: Samples per class
-        - noise_per_class: Noise statistics per class
+
+    - ``cifar10``: original CIFAR-10 with clean labels (noise_type ignored).
+    - ``cifar10n``: CIFAR-10N human-noisy labels; ``noise_type`` selects the split.
     """
-    # Validate dataset name
-    if dataset_name.lower() != "cifar10":
+    key = dataset_name.lower()
+    if key not in ("cifar10", "cifar10n"):
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported dataset: {dataset_name}. Currently only 'cifar10' is supported."
+            detail=f"Unsupported dataset: {dataset_name}. Available: cifar10, cifar10n.",
         )
-    
+
     CIFAR10NDataset, np = _get_cifar10n_dataset()
-    resolved_noise = _normalize_noise_type(noise_type)
+    resolved_noise = "clean_label" if key == "cifar10" else _normalize_noise_type(noise_type)
 
     try:
         dataset = CIFAR10NDataset(
             root=str(DATA_DIR), noise_type=resolved_noise, download=False, train=True
         )
-        return _dataset_stats_payload(dataset, np, requested_noise_type=noise_type)
+        payload = _dataset_stats_payload(
+            dataset, np, requested_noise_type=resolved_noise, dataset_name=key
+        )
+        return payload
     except Exception as e:
         logger.error(f"Error loading dataset stats: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Dataset error: {str(e)}")
 
 
-def _dataset_stats_payload(dataset, np, *, requested_noise_type: str) -> dict[str, Any]:
-    """Shared stats dict for CIFAR-10N dataset instances."""
+def _dataset_stats_payload(
+    dataset, np, *, requested_noise_type: str, dataset_name: str = "cifar10n"
+) -> dict[str, Any]:
+    """Shared stats dict for CIFAR-10 / CIFAR-10N dataset instances."""
     total_samples = len(dataset)
 
     if dataset.noise_mask is not None:
@@ -161,6 +157,7 @@ def _dataset_stats_payload(dataset, np, *, requested_noise_type: str) -> dict[st
     class_names = dataset.cifar10.classes
 
     return {
+        "dataset_name": dataset_name,
         "total_samples": total_samples,
         "num_classes": 10,
         "noisy_samples": noisy_samples,
@@ -186,7 +183,9 @@ async def get_dataset_stats(
         dataset = CIFAR10NDataset(
             root=str(DATA_DIR), noise_type=resolved_noise, download=False, train=True
         )
-        payload = _dataset_stats_payload(dataset, np, requested_noise_type=noise_type)
+        payload = _dataset_stats_payload(
+            dataset, np, requested_noise_type=noise_type, dataset_name="cifar10n"
+        )
         payload.pop("num_classes", None)
         return payload
     except Exception as e:

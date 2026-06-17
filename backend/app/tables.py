@@ -4,6 +4,7 @@ from enum import Enum
 from typing import Optional
 
 from pydantic import EmailStr
+from sqlalchemy import Column, JSON
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -25,6 +26,10 @@ class User(SQLModel, table=True):
     # New UQ Benchmarks relationships (Phase 4)
     benchmark_results: list["BenchmarkResult"] = Relationship(cascade_delete=True)
     benchmark_sweeps: list["BenchmarkSweep"] = Relationship(cascade_delete=True)
+    # Profile management
+    experiment_profiles: list["ExperimentProfile"] = Relationship(
+        back_populates="created_by", cascade_delete=True
+    )
 
 
 class Item(SQLModel, table=True):
@@ -64,6 +69,13 @@ class UncertaintyExperiment(SQLModel, table=True):
     results_path: str | None = Field(default=None, max_length=500)
     best_signals_json: str | None = None  # JSON string with all 7 signals (TEXT type)
 
+    # NOTE: Sweep metadata fields commented out until migration is run
+    # To enable Option 1 (explicit sweep grouping), run: alembic upgrade head
+    # sweep_group_id: str | None = Field(default=None, max_length=100, index=True)
+    # swept_parameter: str | None = Field(default=None, max_length=100)
+    # swept_value: str | None = Field(default=None, max_length=100)
+    # sweep_index: int | None = None
+
     created_at: datetime = Field(default_factory=datetime.utcnow)
     started_at: datetime | None = None
     completed_at: datetime | None = None
@@ -73,6 +85,39 @@ class UncertaintyExperiment(SQLModel, table=True):
 
     # Relationships
     created_by: User = Relationship(back_populates="experiments")
+
+
+class ExperimentProfile(SQLModel, table=True):
+    """Stores reusable experiment configuration profiles.
+    
+    Profiles can be:
+    - Paper presets (Fig. 3, Fig. 4, Paired)
+    - User-saved custom configurations
+    - Templates for quick experiment setup
+    """
+    __tablename__ = "experimentprofile"
+    
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    name: str = Field(max_length=255, index=True)
+    description: str | None = Field(default=None, max_length=1000)
+    
+    # Workflow configuration (same structure as session_state.workflow)
+    # Stores: dataset_config, training_config, uncertainty_config, evaluation_config
+    workflow_config: dict = Field(sa_column=Column(JSON))
+    
+    # Metadata
+    is_preset: bool = Field(default=False, index=True)  # True for paper presets
+    preset_type: str | None = Field(default=None, max_length=50)  # "fig3_quick", "fig4_full", etc.
+    
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    created_by_id: uuid.UUID = Field(
+        foreign_key="user.id", nullable=False, ondelete="CASCADE"
+    )
+    
+    # Relationships
+    created_by: User = Relationship(back_populates="experiment_profiles")
 
 
 class BatchExperiment(SQLModel, table=True):
@@ -249,3 +294,5 @@ class BenchmarkSweep(SQLModel, table=True):
     results: list["BenchmarkResult"] = Relationship(
         back_populates="sweep", cascade_delete=True
     )
+
+# Made with Bob

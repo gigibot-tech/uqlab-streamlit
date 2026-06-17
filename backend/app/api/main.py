@@ -6,6 +6,7 @@ from app.api.routes import (
     experiments,
     items,
     login,
+    profiles,
     uq_benchmarks,
     users,
     utils,
@@ -23,6 +24,9 @@ api_router.include_router(
 )
 api_router.include_router(
     batch_experiments.router, prefix="/batch-experiments", tags=["batch-experiments"]
+)
+api_router.include_router(
+    profiles.router, prefix="/profiles", tags=["profiles"]
 )
 api_router.include_router(
     uq_benchmarks.router, prefix="/uq-benchmarks", tags=["uq-benchmarks"]

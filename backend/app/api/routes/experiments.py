@@ -123,7 +123,11 @@ async def _create_experiment_impl(
     if experiment.preset is not None:
         training_config = TrainingConfig.preset_config(experiment.preset)
     elif experiment.config is not None:
-        training_config = TrainingConfig(**experiment.config.model_dump())
+        raw = experiment.config.model_dump()
+        if any(k in raw for k in ("data", "model", "training", "evaluation", "paths")):
+            training_config = TrainingConfig.from_legacy_flat_dict(raw)
+        else:
+            training_config = TrainingConfig(**raw)
     else:
         raise HTTPException(
             status_code=400,
@@ -391,6 +395,23 @@ async def _list_experiments_impl(
     )
     experiments = session.exec(statement).all()
     return experiments
+
+
+@router.get("/no-auth/{experiment_id}", response_model=ExperimentResponse)
+async def get_experiment_no_auth(
+    experiment_id: str,
+    session: SessionDep,
+) -> Any:
+    """Get experiment details (no authentication required for local testing)."""
+    try:
+        experiment_uuid = uuid.UUID(experiment_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid experiment ID format")
+    
+    experiment = session.get(UncertaintyExperiment, experiment_uuid)
+    if not experiment:
+        raise HTTPException(status_code=404, detail="Experiment not found")
+    return experiment
 
 
 @router.get("/{experiment_id}", response_model=ExperimentResponse)
