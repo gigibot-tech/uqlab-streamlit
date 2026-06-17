@@ -101,7 +101,7 @@ from uq_classification.evaluation import (
 from uqlab.run_artifacts import save_zwischen_result
 
 # UQLab classification - Attribution signals
-from uqlab.classification.attribution_signals import (
+from uq_classification.attribution_signals import (
     build_fast_pilot_signal_table,
     compute_attribution_structure_signals,
 )
@@ -974,7 +974,7 @@ Examples:
             f"  4. Use correct under_supported_classes (recommended: [3, 5])"
         )
     
-    from uqlab.classification.benchmark_axes import (
+    from uq_classification.benchmark_axes import (
         expects_aleatoric_eval,
         expects_epistemic_eval,
     )
