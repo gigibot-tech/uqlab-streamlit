@@ -433,6 +433,11 @@ def _launch_workflow_experiments(
     created_runs: List[Dict[str, Any]] = []
     errors: List[str] = []
     
+    # ========== DEBUG: Display request payload logging ==========
+    st.markdown("---")
+    st.markdown("### 🔍 **DEBUG: Request Payload Logging**")
+    st.info(f"**Total experiments to create:** {len(configs)}")
+    
     for i, config in enumerate(configs):
         # Generate name based on sweep type
         if sweep_type == SweepType.ALEATORIC_1D:
@@ -446,6 +451,29 @@ def _launch_workflow_experiments(
         try:
             # Submit to API
             payload = {"name": name, "config": config.model_dump()}
+            
+            # ========== DEBUG: Log the exact payload being sent ==========
+            with st.expander(f"📤 **Experiment {i+1}/{len(configs)}: {name}**", expanded=(i==0)):
+                st.markdown("**Full Request Payload:**")
+                st.json(payload)
+                
+                st.markdown("**Key Configuration Values:**")
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown(f"- **Architecture:** `{config.model.architecture}`")
+                    st.markdown(f"- **DINOv2 Model:** `{config.model.dinov2_model}`")
+                    st.markdown(f"- **Hidden Dim:** `{config.model.hidden_dim}`")
+                    st.markdown(f"- **Dropout:** `{config.model.dropout}`")
+                with col2:
+                    st.markdown(f"- **Under-train per class:** `{config.data.under_train_per_class}`")
+                    st.markdown(f"- **Regular train per class:** `{config.data.regular_train_per_class}`")
+                    st.markdown(f"- **Aleatoric noise %:** `{config.data.aleatoric_noise_percentage}`")
+                    st.markdown(f"- **Noise type:** `{config.data.noise_type}`")
+                
+                st.markdown("**Model Selection from Workflow:**")
+                st.code(f"workflow['training_config']['model_architecture'] = {workflow['training_config'].get('model_architecture', 'NOT SET')}", language="python")
+            # ========== END DEBUG ==========
+            
             create_resp = requests.post(
                 f"{API_BASE_URL}/api/v1/experiments/no-auth",
                 json=payload,
@@ -1411,6 +1439,28 @@ def main():
     if ui_on("step5_launch"):
         st.markdown('<div class="step-active">', unsafe_allow_html=True)
         st.markdown("### 🚀 Step 5: Review")
+        
+        # ========== DEBUG: Show workflow configuration before generating configs ==========
+        st.markdown("---")
+        st.markdown("#### 🔍 **DEBUG: Current Workflow Configuration**")
+        with st.expander("📋 View Full Workflow State", expanded=False):
+            st.json(workflow)
+        
+        # Show key model selection
+        training_cfg = workflow.get("training_config", {})
+        model_arch_selected = training_cfg.get("model_architecture", "NOT SET")
+        
+        st.info(f"**Selected Model Architecture:** `{model_arch_selected}`")
+        
+        if "resnet" in model_arch_selected.lower():
+            st.success("✅ ResNet selected - should use `architecture='resnet18_mcdropout'` and ignore `dinov2_model`")
+        elif "dinov2" in model_arch_selected.lower():
+            st.success(f"✅ DINOv2 selected - should use `architecture='dinov2_mlp'` and `dinov2_model='{model_arch_selected.split('-')[1] if '-' in model_arch_selected else 'small'}'`")
+        else:
+            st.warning(f"⚠️ Unknown architecture: {model_arch_selected}")
+        
+        st.markdown("---")
+        # ========== END DEBUG ==========
 
         sweep_type, sweep_configs = _generate_sweep_configs(workflow)
         n_runs = len(sweep_configs)
