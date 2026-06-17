@@ -146,8 +146,6 @@ class DirectExecutor(TrainingExecutor):
         try:
             # Import the main function (do this inside try block to catch import errors)
             import importlib
-            import sys
-            from pathlib import Path
             
             # Add scripts directory to path if not already there
             scripts_dir = Path(__file__).parent.parent.parent.parent.parent / "scripts"
