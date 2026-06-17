@@ -70,25 +70,25 @@ GROUP_NAMES: dict[int, str] = {
 }
 
 # UQ Classification package - Models
-from uq_classification.models import EmbeddingDataset
-from uq_classification.config import ExperimentConfig
-from uq_classification.model_factory import build_model
-from uq_classification.feature_extractor import create_feature_extractor, DINOv2FeatureExtractor
+from uqlab.evaluation.classification.models import EmbeddingDataset
+from uqlab.evaluation.classification.config import ExperimentConfig
+from uqlab.evaluation.classification.model_factory import build_model
+from uqlab.evaluation.classification.feature_extractor import create_feature_extractor, DINOv2FeatureExtractor
 
 # UQ Classification package - Utils
-from uq_classification.utils import auto_device, dino_transform, set_seed
+from uqlab.evaluation.classification.utils import auto_device, dino_transform, set_seed
 
 # UQ Classification package - Data loading
-from uq_classification.data_loader import (
+from uqlab.evaluation.classification.data_loader import (
     EmbeddingOrganizer,
     SplitSpec,
     sample_indices_for_fast_pilot,
 )
 
-from uq_classification.signal_formula_specs import build_signal_formula_manifest
+from uqlab.evaluation.classification.signal_formula_specs import build_signal_formula_manifest
 
 # UQ Classification package - Evaluation
-from uq_classification.evaluation import (
+from uqlab.evaluation.classification.evaluation import (
     binary_auroc,
     build_results_markdown,
     save_per_sample_csv,
@@ -101,7 +101,7 @@ from uq_classification.evaluation import (
 from uqlab.run_artifacts import save_zwischen_result
 
 # UQLab classification - Attribution signals
-from uq_classification.attribution_signals import (
+from uqlab.evaluation.classification.attribution_signals import (
     build_fast_pilot_signal_table,
     compute_attribution_structure_signals,
 )
@@ -421,7 +421,7 @@ def summarize_eval_signals(
             )
         )
 
-    from uq_classification.evaluation import evaluate_three_way_classification
+    from uqlab.evaluation.classification.evaluation import evaluate_three_way_classification
 
     clf_rows = evaluate_three_way_classification(
         signal_table=signal_table,
@@ -974,7 +974,7 @@ Examples:
             f"  4. Use correct under_supported_classes (recommended: [3, 5])"
         )
     
-    from uq_classification.benchmark_axes import (
+    from uqlab.evaluation.classification.benchmark_axes import (
         expects_aleatoric_eval,
         expects_epistemic_eval,
     )

@@ -4,7 +4,7 @@ import pytest
 import torch
 import numpy as np
 
-from uq_classification.evaluation import (
+from uqlab.evaluation.classification.evaluation import (
     binary_auroc,
     confusion_matrix,
     macro_f1,

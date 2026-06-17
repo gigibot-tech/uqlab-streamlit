@@ -53,7 +53,7 @@ from ui_components import (
 from uqlab.ui_components.visualization.analysis.uq_benchmarks import render_uq_benchmarks_tab
 
 # Import watsonx.ai cloud mode components
-from uq_classification.watsonx_streamlit import render_cloud_mode_toggle
+from uqlab.evaluation.classification.watsonx_streamlit import render_cloud_mode_toggle
 
 # Custom CSS for glowing arrow animation
 st.markdown("""

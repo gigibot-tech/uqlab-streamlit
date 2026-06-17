@@ -4,7 +4,7 @@ import pytest
 from pathlib import Path
 import tempfile
 
-from uq_classification.config_schema import (
+from uqlab.evaluation.classification.config_schema import (
     DataConfig,
     ModelConfig,
     TrainingConfig,

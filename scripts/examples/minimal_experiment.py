@@ -21,7 +21,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 import torch
 from uqlab.data.loaders.cifar10n_loader import CIFAR10NDataset
-from uq_classification import (
+from uqlab.evaluation.classification import (
     # Data
     sample_indices_for_fast_pilot,
     EmbeddingOrganizer,

@@ -11,7 +11,7 @@ Usage:
     python export_to_watsonx.py --checkpoint path/to/checkpoint.pt
     
 Or run after training in your training script:
-    from uq_classification.watsonx_export import export_all_for_watsonx
+    from uqlab.evaluation.classification.watsonx_export import export_all_for_watsonx
     export_all_for_watsonx(...)
 """
 
@@ -19,7 +19,7 @@ import argparse
 import logging
 import torch
 from pathlib import Path
-from uq_classification.watsonx_export import export_all_for_watsonx
+from uqlab.evaluation.classification.watsonx_export import export_all_for_watsonx
 
 # Set up logging
 logging.basicConfig(

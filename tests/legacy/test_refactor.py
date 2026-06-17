@@ -2,7 +2,7 @@
 """Quick test to verify the refactoring is correct."""
 
 import inspect
-from uq_classification.attribution_signals import compute_attribution_structure_signals
+from uqlab.evaluation.classification.attribution_signals import compute_attribution_structure_signals
 
 # Check function signature
 sig = inspect.signature(compute_attribution_structure_signals)
