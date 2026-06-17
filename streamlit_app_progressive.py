@@ -621,37 +621,7 @@ def _render_progressive_results_section() -> None:
         sync_results_auto_refresh()
         return
 
-    # Wrap local preset sweeps in legacy expander
-    if ui_on("results_local_presets") or ui_on("results_local_viz"):
-        with st.expander("📦 Legacy: Local Preset Sweeps (Fig. 3 / Fig. 4)", expanded=False):
-            st.caption("⚠️ **Legacy view** - Local validation preset sweeps from disk artifacts")
-            
-            if ui_on("results_local_presets"):
-                st.markdown("#### Launch Preset Sweeps")
-                render_preset_validation_sweeps(key_prefix="prog_preset", show_viz=False)
-            
-            if ui_on("results_local_viz"):
-                st.markdown("#### Validation Visualizations")
-                # These are local preset sweep plots read from `results/validation/*/metrics.csv`.
-                # Always show both Fig. 3 (dataset_size) and Fig. 4 (label_noise) if data exists.
-                show_fig3 = True
-                show_fig4 = True
-
-                model_arch = st.session_state.get("workflow", {}).get("training_config", {}).get(
-                    "model_architecture", "resnet18"
-                )
-                architecture_label = "DINOv2 + MLP"
-                if model_arch and "resnet" in str(model_arch).lower():
-                    architecture_label = "ResNet18 MC Dropout"
-
-                render_local_validation_viz(
-                    key_prefix="prog_preset_viz",
-                    show_fig3=show_fig3,
-                    show_fig4=show_fig4,
-                    architecture_label=architecture_label,
-                )
-
-    st.markdown("---")
+    # Legacy local preset sweeps section removed - use Paper sweeps in sidebar instead
     st.markdown("### 📊 Experiment results & progress")
 
     st.session_state.results_auto_refresh = render_experiment_results_panel(
