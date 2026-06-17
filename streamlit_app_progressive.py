@@ -397,12 +397,11 @@ def _workflow_to_experiment_config(
 
 def _generate_sweep_configs(workflow: Dict[str, Any]) -> Tuple[SweepType, List[ExperimentConfig]]:
     """Generate sweep configs - simplified direct approach."""
-    base_config = _workflow_to_experiment_config(workflow)
-    
     u = workflow["uncertainty_config"]
     mode = _sweep_mode(workflow)
     
     if not u.get("sweep_enabled", True):
+        base_config = _workflow_to_experiment_config(workflow)
         return SweepType.SINGLE_POINT, [base_config]
     
     kind = u.get("sweep_kind", "label_noise")
@@ -412,8 +411,7 @@ def _generate_sweep_configs(workflow: Dict[str, Any]) -> Tuple[SweepType, List[E
         values = u.get("epistemic_sweep_values") or aligned_under_train_sweep(mode)
         configs = []
         for val in values:
-            config = copy.deepcopy(base_config)
-            config["under_train_per_class"] = val
+            config = _workflow_to_experiment_config(workflow, under_train_per_class=val)
             configs.append(config)
         return SweepType.EPISTEMIC_1D, configs
     
@@ -422,11 +420,12 @@ def _generate_sweep_configs(workflow: Dict[str, Any]) -> Tuple[SweepType, List[E
         values = u.get("aleatoric_sweep_values") or LABEL_NOISE_SWEEP.get(mode, LABEL_NOISE_SWEEP["quick"])
         configs = []
         for val in values:
-            config = copy.deepcopy(base_config)
-            config["aleatoric_noise_percentage"] = val
+            config = _workflow_to_experiment_config(workflow, aleatoric_noise_percentage=val)
             configs.append(config)
         return SweepType.ALEATORIC_1D, configs
     
+    # Default: single config
+    base_config = _workflow_to_experiment_config(workflow)
     return SweepType.SINGLE_POINT, [base_config]
 
 
