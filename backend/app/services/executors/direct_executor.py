@@ -146,6 +146,14 @@ class DirectExecutor(TrainingExecutor):
         try:
             # Import the main function (do this inside try block to catch import errors)
             import importlib
+            import sys
+            from pathlib import Path
+            
+            # Add scripts directory to path if not already there
+            scripts_dir = Path(__file__).parent.parent.parent.parent.parent / "scripts"
+            if str(scripts_dir) not in sys.path:
+                sys.path.insert(0, str(scripts_dir))
+            
             import run_fast_uncertainty_classification
             # Force reload to pick up any changes to the script
             importlib.reload(run_fast_uncertainty_classification)
