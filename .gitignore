@@ -92,10 +92,16 @@ tmp/
 temp/
 *.tmp
 
-# Documentation build
+# Dead code archive (preserved for reference but not tracked)
+dead_code/
+
+# Documentation build (ignore generated files, keep source .md files)
 docs/_build/
 docs/.doctrees/
 site/
+
+# Documentation source files are tracked (not ignored)
+# docs/ directory contains important project documentation
 
 # Testing
 .coverage
