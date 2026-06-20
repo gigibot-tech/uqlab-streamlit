@@ -49,16 +49,24 @@ if str(SRC_DIR) not in sys.path:
 # ============================================================================
 
 # Data loading
-from uqlab.data.loaders.cifar10n_loader import CIFAR10NDataset
-from torch.utils.data import Dataset
-from torchvision import datasets, transforms
+from uqlab.data.classification_dataset import dataset_clean_labels
+from uqlab.data.dataset_registry import get_dataset_spec, load_classification_dataset
+from uqlab.data.preprocessing import get_dataset_image_transform
+from uqlab.evaluation.classification.image_dataset import (
+    ClassificationImageDataset,
+    load_image_datasets,
+)
+from uqlab.evaluation.classification.pipeline.experiment_setup import (
+    apply_data_context,
+    extract_run_config,
+    print_dataset_loaded,
+    print_experiment_configuration,
+    validate_eval_splits,
+)
+from uqlab.models.architecture import normalize_architecture
+from uqlab.evaluation.classification.pipeline.data_setup import prepare_fast_pilot_data
 
-# Uncertainty metrics
-from uqlab.mc_dropout_uq import calculate_mc_dropout_uncertainty, mc_forward_efficient
-
-# Attribution methods
-from uqlab.evaluation.legacy.triage.dualxda_axioms import DualXDATracer, infer_classifier_layer_name
-
+# Uncertainty metrics (used in run_experiment_core via fast_pilot_eval)
 # UQ Classification package - Constants
 GROUP_CLEAN = 0
 GROUP_ALEATORIC = 1
@@ -89,57 +97,11 @@ from uqlab.evaluation.classification.signal_formula_specs import build_signal_fo
 
 # UQ Classification package - Evaluation
 from uqlab.evaluation.classification.evaluation import (
-    binary_auroc,
-    build_results_markdown,
-    save_per_sample_csv,
     save_training_data_csv,
     split_group_balanced_targets,
     train_signal_classifier,
 )
-
-# UQLab artifacts
-from uqlab.run_artifacts import save_zwischen_result
-
-# UQLab classification - Attribution signals
-from uqlab.evaluation.classification.attribution_signals import (
-    build_fast_pilot_signal_table,
-    compute_attribution_structure_signals,
-)
-
-
-class CIFAR10NImageDataset(Dataset):
-    """Subset wrapper returning image data with labels/metadata for end-to-end training."""
-
-    def __init__(self, base_dataset: CIFAR10NDataset, indices, transform=None):
-        self.base_dataset = base_dataset
-        self.indices = np.asarray(indices, dtype=np.int64)
-        self.transform = transform
-
-        clean_labels = np.asarray(base_dataset.cifar10.targets)
-        if base_dataset.noisy_labels is not None and base_dataset.noise_mask is not None:
-            noisy_labels = np.asarray(base_dataset.noisy_labels)
-            is_noisy = np.asarray(base_dataset.noise_mask, dtype=bool)
-        else:
-            noisy_labels = clean_labels.copy()
-            is_noisy = np.zeros(len(base_dataset), dtype=bool)
-
-        self.targets = torch.as_tensor(noisy_labels[self.indices], dtype=torch.long)
-        self.clean_labels = torch.as_tensor(clean_labels[self.indices], dtype=torch.long)
-        self.is_noisy = torch.as_tensor(is_noisy[self.indices], dtype=torch.bool)
-        self.original_indices = torch.as_tensor(self.indices, dtype=torch.long)
-
-    def __len__(self) -> int:
-        return len(self.indices)
-
-    def __getitem__(self, item: int):
-        dataset_index = int(self.indices[item])
-        image = self.base_dataset.cifar10.data[dataset_index]
-        image = transforms.ToPILImage()(image)
-
-        if self.transform is not None:
-            image = self.transform(image)
-
-        return image, self.targets[item]
+from uqlab.evaluation.evaluator import persist_experiment_summaries
 
 
 def get_data_loading_mode(config: ExperimentConfig) -> str:
@@ -153,42 +115,6 @@ def get_data_loading_mode(config: ExperimentConfig) -> str:
     if model_config.training_mode == "end_to_end":
         return "images"
     raise ValueError(f"Unknown training mode: {model_config.training_mode}")
-
-
-def load_image_datasets(
-    dataset: CIFAR10NDataset,
-    split_spec: SplitSpec,
-) -> tuple[CIFAR10NImageDataset, dict[str, dict[str, torch.Tensor]]]:
-    """Load CIFAR-10N subsets as image datasets for end-to-end training."""
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(
-            (0.4914, 0.4822, 0.4465),
-            (0.2023, 0.1994, 0.2010),
-        ),
-    ])
-
-    train_dataset = CIFAR10NImageDataset(dataset, split_spec.train_indices, transform=transform)
-
-    def build_eval_pack(indices: np.ndarray) -> dict[str, torch.Tensor]:
-        subset = CIFAR10NImageDataset(dataset, indices, transform=transform)
-        images = torch.stack([subset[i][0] for i in range(len(subset))], dim=0) if len(subset) > 0 else torch.empty((0, 3, 32, 32), dtype=torch.float32)
-        return {
-            "inputs": images,
-            "features": images,
-            "noisy_labels": subset.targets,
-            "clean_labels": subset.clean_labels,
-            "is_noisy": subset.is_noisy,
-            "original_indices": subset.original_indices,
-        }
-
-    eval_packs = {
-        "clean": build_eval_pack(split_spec.clean_eval_indices),
-        "aleatoric": build_eval_pack(split_spec.aleatoric_eval_indices),
-        "epistemic": build_eval_pack(split_spec.epistemic_eval_indices),
-    }
-
-    return train_dataset, eval_packs
 
 
 def prepare_eval_data(
@@ -255,197 +181,21 @@ def prepare_eval_data(
     }
 
 
-def compute_eval_signals(
-    *,
-    model: nn.Module,
-    train_dataset,
-    eval_inputs: torch.Tensor,
-    device: torch.device,
-    train_batch_size: int,
-    mc_passes: int,
-    top_k: int,
-    run_cache_dir: Path,
-    results_dir: Path,
-) -> dict[str, object]:
-    """Run deterministic eval, attribution signals, MC dropout, and build the signal table."""
-    eval_x = eval_inputs.to(device)
-    eval_batch_size = train_batch_size
+from uqlab.evaluation.classification.pipeline.fast_pilot_eval import (
+    collect_uncertainty_signals as compute_eval_signals,
+    score_uncertainty_signals as summarize_eval_signals,
+)
+from uqlab.run_artifacts import save_zwischen_result
 
-    print("Deterministic eval forward (DualXDA targets)...")
-    det_logits_chunks: list[torch.Tensor] = []
-    with torch.no_grad():
-        model.eval()
-        for start in range(0, int(eval_x.shape[0]), eval_batch_size):
-            end = min(start + eval_batch_size, int(eval_x.shape[0]))
-            det_logits_chunks.append(model(eval_x[start:end]).cpu())
-    det_logits = torch.cat(det_logits_chunks, dim=0)
-    mean_pred_det = torch.softmax(det_logits, dim=1)
-
-    save_zwischen_result(
-        results_dir,
-        "01_deterministic_forward",
-        {
-            "det_logits": det_logits,
-            "mean_prediction": mean_pred_det,
-        },
-    )
-
-    tracer = DualXDATracer(
-        model=model,
-        train_dataset=train_dataset,
-        layer_name=infer_classifier_layer_name(model),
-        device=str(device),
-        cache_dir=str(run_cache_dir / "dualxda"),
-    )
-    print("DualXDA attribution signals...")
-    attribution_signals = compute_attribution_structure_signals(
-        tracer,
-        model,
-        eval_inputs,
-        mean_pred_det,
-        train_dataset,
-        device=device,
-        batch_size=train_batch_size,
-        top_k=top_k,
-        num_classes=10,
-    )
-    save_zwischen_result(
-        results_dir,
-        "02_attribution_signals",
-        {k: v.cpu() if hasattr(v, "cpu") else v for k, v in attribution_signals.items()},
-    )
-
-    logit_magnitude = torch.abs(det_logits).sum(dim=1)
-    save_zwischen_result(
-        results_dir,
-        "03_logit_signals",
-        {
-            "det_logits": det_logits,
-            "logit_magnitude": logit_magnitude,
-        },
-    )
-
-    # MC Dropout uncertainty quantification (skip if mc_passes=0)
-    if mc_passes > 0:
-        print(f"MC Dropout ({mc_passes} passes, batched eval)...")
-        mc_predictions = mc_forward_efficient(
-            model,
-            eval_x,
-            mc_passes,
-            sample_batch_size=eval_batch_size,
-        ).cpu()
-        uq = calculate_mc_dropout_uncertainty(mc_predictions)
-        save_zwischen_result(
-            results_dir,
-            "04_mc_dropout",
-            {
-                "entropy": uq["entropy"].cpu(),
-                "mutual_info": uq["mutual_info"].cpu(),
-                "mean_variance": uq["mean_variance"].cpu(),
-                "mean_prediction": uq["mean_prediction"].cpu(),
-                "n_passes": mc_passes,
-            },
-        )
-    else:
-        print("⚠️  MC Dropout disabled (mc_passes=0) - using deterministic predictions only")
-        # Create dummy mc_predictions and UQ dict with zeros for compatibility
-        n_samples = eval_x.shape[0]
-        n_classes = det_logits.shape[1]
-        # mc_predictions shape: (n_passes=1, n_samples, n_classes) - use deterministic prediction
-        mc_predictions = mean_pred_det.unsqueeze(0)  # Add pass dimension
-        uq = {
-            "entropy": torch.zeros(n_samples),
-            "mutual_info": torch.zeros(n_samples),
-            "mean_variance": torch.zeros(n_samples),
-            "mean_prediction": mean_pred_det,  # Use deterministic prediction
-        }
-        save_zwischen_result(
-            results_dir,
-            "04_mc_dropout",
-            {
-                "entropy": uq["entropy"],
-                "mutual_info": uq["mutual_info"],
-                "mean_variance": uq["mean_variance"],
-                "mean_prediction": uq["mean_prediction"],
-                "n_passes": 0,
-                "note": "MC Dropout disabled - all uncertainty metrics are zero",
-            },
-        )
-
-    signal_table = build_fast_pilot_signal_table(
-        attribution_signals=attribution_signals,
-        mc_uq=uq,
-        logit_magnitude=logit_magnitude,
-    )
-    save_zwischen_result(
-        results_dir,
-        "05_signal_table",
-        {k: v.cpu() if hasattr(v, "cpu") else v for k, v in signal_table.items()},
-    )
-
-    return {
-        "eval_x": eval_x,
-        "det_logits": det_logits,
-        "mean_pred_det": mean_pred_det,
-        "attribution_signals": attribution_signals,
-        "logit_magnitude": logit_magnitude,
-        "mc_predictions": mc_predictions,
-        "uq": uq,
-        "signal_table": signal_table,
-    }
-
-
-def summarize_eval_signals(
-    *,
-    signal_table: dict[str, torch.Tensor],
-    eval_group_labels: torch.Tensor,
-    eval_clean_labels: torch.Tensor,
-    eval_is_noisy: torch.Tensor,
-    eval_noisy_labels: torch.Tensor,
-    eval_dataset_index: torch.Tensor,
-    results_dir: Path,
-    device: torch.device,
-    seed: int,
-) -> dict[str, list]:
-    """Compute eval summaries and write per-sample signal artifacts."""
-    aleatoric_positive = eval_group_labels == GROUP_ALEATORIC
-    epistemic_positive = eval_group_labels == GROUP_EPISTEMIC
-
-    auroc_rows = []
-    for name, values in signal_table.items():
-        auroc_rows.append(
-            (
-                name,
-                binary_auroc(values, aleatoric_positive),
-                binary_auroc(values, epistemic_positive),
-            )
-        )
-
-    from uqlab.evaluation.classification.evaluation import evaluate_three_way_classification
-
-    clf_rows = evaluate_three_way_classification(
-        signal_table=signal_table,
-        eval_group_labels=eval_group_labels,
-        device=device,
-        seed=seed,
-        train_fraction=0.5,
-    )
-
-    save_per_sample_csv(
-        results_dir / "per_sample_signals.csv",
-        eval_group_labels,
-        eval_clean_labels,
-        eval_is_noisy,
-        signal_table,
-        GROUP_NAMES,
-        eval_noisy_labels=eval_noisy_labels,
-        eval_dataset_index=eval_dataset_index,
-    )
-
-    return {
-        "auroc_rows": auroc_rows,
-        "clf_rows": clf_rows,
-    }
+def _format_auroc_console(value: object, skip_reason: str | None) -> str:
+    if value is None:
+        if skip_reason:
+            return f"— (skipped: {skip_reason.replace('_', ' ')})"
+        return "—"
+    try:
+        return f"{float(value):.4f}"
+    except (TypeError, ValueError):
+        return "—"
 
 
 def train_feature_model(
@@ -540,476 +290,62 @@ def train_image_model(
     return model
 
 
-def main() -> None:
+def run_experiment_core(
+    config: ExperimentConfig,
+    results_dir: Path,
+    *,
+    seed: int,
+    device_str: str,
+    config_path: Path | None = None,
+) -> dict:
+    """Shared fast-pilot pipeline (CLI, facade, backend DirectExecutor).
+
+    Config path: UI workflow → YAML → ``ExperimentConfig`` → ``RunConfigView`` (log/validate)
+    → ``prepare_fast_pilot_data`` → ``FastPilotDataContext`` (dataset + splits).
     """
-    Main experiment workflow for fast uncertainty classification.
-    
-    Configuration Structure:
-    ------------------------
-    The experiment is controlled by a YAML config file with the following sections:
-    
-    1. DATA PARAMETERS (data.*):
-       - noise_type: Which CIFAR-10N noise labels to use
-       - under_supported_classes: Classes with reduced training samples (creates epistemic uncertainty)
-       - under_train_per_class: Training samples for under-supported classes
-       - regular_train_per_class: Training samples for well-supported classes
-       - eval_per_group: Evaluation samples per uncertainty group
-       
-       Effect: Controls the dataset split and how uncertainty groups are created.
-       Lower under_train_per_class → stronger epistemic uncertainty signal.
-    
-    2. MODEL PARAMETERS (model.*):
-       - dinov2_model: Size of frozen feature extractor ("small", "base", "large", "giant")
-       - hidden_dim: Size of trainable MLP classifier on top of features
-       - dropout: Dropout rate for MC Dropout uncertainty estimation
-       
-       Effect: Controls model capacity and uncertainty estimation quality.
-       Larger models → better features but slower. Higher dropout → more uncertainty.
-    
-    3. TRAINING PARAMETERS (training.*):
-       - epochs: Number of training epochs for the classifier
-       - learning_rate: Adam optimizer learning rate
-       - weight_decay: L2 regularization strength
-       - train_batch_size: Batch size for classifier training
-       - feature_batch_size: Batch size for feature extraction
-       
-       Effect: Controls training speed and model convergence.
-       More epochs → better convergence. Larger batches → faster but less stable.
-    
-    4. EVALUATION PARAMETERS (evaluation.*):
-       - mc_passes: Number of Monte Carlo forward passes for uncertainty
-       - top_k: Number of top training samples for attribution analysis
-       
-       Effect: Controls uncertainty and attribution quality vs. speed.
-       More mc_passes → more stable uncertainty. Higher top_k → richer attribution context.
-    
-    5. PATH PARAMETERS (paths.*):
-       - cifar10n_root: Location of CIFAR-10N dataset
-       - feature_cache_dir: Where to cache extracted features
-       - results_base_dir: Where to save experiment results
-       
-       Effect: Controls data locations and caching behavior.
-    
-    CLI Arguments:
-    --------------
-    Only essential arguments are exposed via CLI (others come from config):
-    - --config: Path to YAML config file (default: experiments/configs/fast_uq_classification.yaml)
-    - --seed: Random seed for reproducibility
-    - --device: Device to use (auto/cpu/cuda/mps)
-    - --output_dir: Override output directory (optional)
-    
-    Recommended Values / Presets:
-    -----------------------------
-    The backend now exposes named presets that resolve to concrete flat config values
-    before being written into this grouped YAML structure.
+    run_cfg = extract_run_config(config)
+    print_experiment_configuration(run_cfg)
 
-    Quick preset (5-10 min):
-      - under_train_per_class: 40
-      - regular_train_per_class: 250
-      - eval_per_group: 500
-      - dinov2_model: "small"
-      - epochs: 10
-      - mc_passes: 15
-      - top_k: 8
-
-    Thorough preset (30-60 min):
-      - under_train_per_class: 150
-      - regular_train_per_class: 750
-      - eval_per_group: 1500
-      - dinov2_model: "base"
-      - epochs: 24
-      - mc_passes: 75
-      - top_k: 30
-
-    API usage:
-      - single experiment endpoints accept either:
-        * preset = "quick" | "thorough"
-        * or an explicit config payload
-      - batch experiment endpoints accept either:
-        * preset = "quick" | "thorough"
-        * or an explicit base_config payload
-    """
-    # Parse arguments (minimal CLI interface)
-    parser = argparse.ArgumentParser(
-        description="Fast uncertainty classification pilot",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  # Run with default config
-  python run_fast_uncertainty_classification.py
-  
-  # Run with custom config
-  python run_fast_uncertainty_classification.py --config my_config.yaml
-  
-  # Override seed and device
-  python run_fast_uncertainty_classification.py --seed 123 --device cuda
-  
-  # Custom output directory
-  python run_fast_uncertainty_classification.py --output_dir ./my_results
-        """
-    )
-    parser.add_argument(
-        "--config",
-        type=str,
-        default=str(PROJECT_ROOT / "experiments" / "configs" / "fast_uq_classification.yaml"),
-        help="Path to YAML configuration file"
-    )
-    parser.add_argument(
-        "--seed",
-        type=int,
-        default=None,
-        help="Random seed for reproducibility (overrides config if provided)"
-    )
-    parser.add_argument(
-        "--device",
-        type=str,
-        default=None,
-        choices=["auto", "cpu", "cuda", "mps"],
-        help="Device to use (overrides config if provided)"
-    )
-    parser.add_argument(
-        "--output_dir",
-        type=str,
-        default=None,
-        help="Override output directory (default: results/fast_uncertainty_classification_TIMESTAMP)"
-    )
-    args = parser.parse_args()
-
-    # Load configuration
-    config_path = Path(args.config)
-    if not config_path.exists():
-        raise FileNotFoundError(
-            f"Config file not found: {config_path}\n"
-            f"Please create a config file or use the default at:\n"
-            f"  {PROJECT_ROOT / 'experiments' / 'configs' / 'fast_uq_classification.yaml'}"
-        )
-    
-    config = ExperimentConfig.from_yaml(config_path)
-    if config.data is None or config.model is None or config.training is None or config.evaluation is None or config.paths is None:
-        raise ValueError("ExperimentConfig is incomplete; data/model/training/evaluation/paths must be defined")
-
-    # Extract parameters from config with CLI overrides
-    seed = args.seed if args.seed is not None else config.seed
-    device_str = args.device if args.device is not None else config.device
-    
-    # Setup
     set_seed(seed)
     device = auto_device(device_str)
 
-    # Setup directories
-    if args.output_dir:
-        results_dir = Path(args.output_dir)
-    else:
-        results_base = PROJECT_ROOT / config.paths.results_base_dir
-        results_dir = results_base / f"fast_uncertainty_classification_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    
     feature_cache_dir = PROJECT_ROOT / config.paths.feature_cache_dir
     run_cache_dir = results_dir / "cache"
     results_dir.mkdir(parents=True, exist_ok=True)
 
-    # Extract data parameters
     data_config = config.data
-    noise_type = data_config.noise_type
-    under_supported_classes = data_config.under_supported_classes or []
-    under_supported_classes_str = ",".join(str(x) for x in under_supported_classes)
-    under_train_per_class = data_config.under_train_per_class
-    regular_train_per_class = data_config.regular_train_per_class
-    eval_per_group = data_config.eval_per_group
-    aleatoric_noise_percentage = data_config.aleatoric_noise_percentage
-
-    # Extract model parameters
     model_config = config.model
-    dinov2_model = model_config.dinov2_model
-    hidden_dim = model_config.hidden_dim
-    dropout = model_config.dropout
-
-    # Extract training parameters
     training_config = config.training
-    epochs = training_config.epochs
-    learning_rate = training_config.learning_rate
-    weight_decay = training_config.weight_decay
-    train_batch_size = training_config.train_batch_size
-    feature_batch_size = training_config.feature_batch_size
-
-    # Extract evaluation parameters
     eval_config = config.evaluation
-    mc_passes = eval_config.mc_passes
-    top_k = eval_config.top_k
-    
-    # Validate mc_passes - warn if 0 (MC Dropout disabled)
-    if mc_passes < 0:
-        raise ValueError(
-            f"mc_passes must be >= 0, got {mc_passes}. "
-            f"Set to 0 to disable MC Dropout (faster but no uncertainty), "
-            f"or use 5-10 for efficient uncertainty estimation (recommended: 10-50 for accuracy)."
-        )
-    elif mc_passes == 0:
-        logger.warning(
-            "⚠️  MC Dropout disabled (mc_passes=0): No uncertainty quantification will be performed. "
-            "This is faster but provides no epistemic uncertainty estimates. "
-            "Consider using mc_passes=5-10 for efficient uncertainty estimation."
-        )
 
-    # Aleatoric control happens here:
-    # - `aleatoric_noise_percentage == 0` -> ALWAYS use clean labels (ignore noise_type)
-    # - `aleatoric_noise_percentage > 0` -> custom random flips
-    # - `aleatoric_noise_percentage is None` -> use CIFAR-10N noise from `noise_type`
-    cifar10n_root = Path(config.paths.cifar10n_root)
-    if not cifar10n_root.is_absolute():
-        cifar10n_root = PROJECT_ROOT / cifar10n_root
+    data_ctx = prepare_fast_pilot_data(config, PROJECT_ROOT, seed=seed)
+    apply_data_context(run_cfg, data_ctx)
+    dataset = data_ctx.dataset
+    split_spec = data_ctx.split_spec
+    ds_spec = run_cfg.dataset_spec
+    dataset_name = run_cfg.dataset_name
 
-    # ============================================================================
-    # EXPERIMENT CONFIGURATION SUMMARY
-    # ============================================================================
-    print("\n" + "="*80)
-    print("EXPERIMENT CONFIGURATION")
-    print("="*80)
-    print(f"📊 Dataset Configuration:")
-    print(f"   • Noise type: {noise_type}")
-    print(f"   • Aleatoric noise: {aleatoric_noise_percentage}%")
-    print(f"   • Under-supported classes: {under_supported_classes_str or 'None'}")
-    print(f"   • Under-train per class: {under_train_per_class}")
-    print(f"   • Regular-train per class: {regular_train_per_class}")
-    print(f"   • Eval per group: {eval_per_group}")
-    print(f"\n🧠 Model Configuration:")
-    print(f"   • DINOv2 model: {dinov2_model}")
-    print(f"   • Hidden dim: {hidden_dim}")
-    print(f"   • Dropout: {dropout}")
-    print(f"\n🎯 Training Configuration:")
-    print(f"   • Epochs: {epochs}")
-    print(f"   • Learning rate: {learning_rate}")
-    print(f"   • Weight decay: {weight_decay}")
-    print(f"   • Train batch size: {train_batch_size}")
-    print(f"\n📈 Evaluation Configuration:")
-    print(f"   • MC passes: {mc_passes}")
-    print(f"   • Top-k attribution: {top_k}")
-    print(f"\n💡 Expected Behavior:")
-    if aleatoric_noise_percentage == 0:
-        print(f"   ⚠️  Aleatoric AUROC will be NaN (no noisy samples in eval set)")
-        print(f"   ✅ Epistemic AUROC will be calculated (under-supported vs regular classes)")
-    elif aleatoric_noise_percentage > 0 and not under_supported_classes:
-        print(f"   ✅ Aleatoric AUROC will be calculated (noisy vs clean samples)")
-        print(f"   ⚠️  Epistemic AUROC may be weak (no under-supported classes)")
-    else:
-        print(f"   ✅ Both Aleatoric and Epistemic AUROC will be calculated")
-    print("="*80 + "\n")
+    print_dataset_loaded(data_ctx, dataset)
+    validate_eval_splits(run_cfg, split_spec)
 
-    from uqlab.data.loaders.cifar10n_loader import (
-        apply_clean_training_labels,
-        is_clean_training_noise_type,
-    )
-
-    # FIXED: When aleatoric_noise_percentage is explicitly set to 0, use clean labels
-    # regardless of noise_type setting
-    if aleatoric_noise_percentage == 0:
-        print(
-            "\n🎯 Fig. 3 / epistemic benchmark: clean labels only "
-            "(aleatoric_noise_percentage=0%)"
-        )
-        dataset = CIFAR10NDataset(
-            root=str(cifar10n_root),
-            noise_type="clean_label",
-            train=True,
-            transform=dino_transform(),
-            download=True,
-        )
-        apply_clean_training_labels(dataset)
-        print(f"   ✅ {len(dataset)} training samples, 0% injected label noise")
-    elif aleatoric_noise_percentage > 0:
-        print(
-            f"\n🎯 Fig. 4 / aleatoric benchmark: injecting {aleatoric_noise_percentage}% "
-            "uniform label noise"
-        )
-        dataset = CIFAR10NDataset(
-            root=str(cifar10n_root),
-            noise_type="clean_label",
-            train=True,
-            transform=dino_transform(),
-            download=True,
-        )
-        apply_clean_training_labels(dataset)
-        dataset.inject_custom_noise(noise_percentage=aleatoric_noise_percentage, seed=42)
-        print(
-            f"   ✅ Custom noise: {len(dataset)} samples, {aleatoric_noise_percentage}% flipped"
-        )
-    elif is_clean_training_noise_type(noise_type):
-        print(f"\n🎯 Loading CIFAR-10 with clean training labels (noise_type={noise_type})")
-        dataset = CIFAR10NDataset(
-            root=str(cifar10n_root),
-            noise_type=noise_type,
-            train=True,
-            transform=dino_transform(),
-            download=True,
-        )
-        apply_clean_training_labels(dataset)
-        print(f"   ✅ Clean training labels: {len(dataset)} samples")
-    else:
-        print(f"\n🎯 Loading CIFAR-10N with existing noise (type: {noise_type})")
-        dataset = CIFAR10NDataset(
-            root=str(cifar10n_root),
-            noise_type=noise_type,
-            train=True,
-            transform=dino_transform(),
-            download=True,
-        )
-        if dataset.noise_mask is None or float(dataset.noise_rate) == 0.0:
-            raise RuntimeError(
-                "CIFAR-10N noisy labels are not available or the selected noise split "
-                f"`{noise_type}` resolved to zero noise. For label-noise sweeps use "
-                "`clean_label` with aleatoric_noise_percentage > 0. Otherwise place "
-                f"`CIFAR-10_human.pt` under `{cifar10n_root / 'cifar-10-batches-py'}`."
-            )
-
-    # ============================================================================
-    # ENTERPRISE VALIDATION: Fail Fast with Clear Error Messages
-    # ============================================================================
-    # Validate configuration BEFORE attempting data sampling
-    # This catches invalid configs early and provides actionable error messages
-    
-    # Validate regular_train_per_class
-    if regular_train_per_class is not None and regular_train_per_class < 0:
-        raise ValueError(
-            f"❌ Invalid regular_train_per_class={regular_train_per_class}. "
-            f"Must be None or >= 0."
-        )
-    
-    # Validate under_train_per_class
-    if under_train_per_class < 0:
-        raise ValueError(
-            f"❌ Invalid under_train_per_class={under_train_per_class}. "
-            f"Must be >= 0."
-        )
-    
-    # Validate eval_per_group
-    if eval_per_group <= 0:
-        raise ValueError(
-            f"❌ Invalid eval_per_group={eval_per_group}. "
-            f"Must be > 0."
-        )
-    
-    # Validate under_supported_classes
-    if not under_supported_classes or len(under_supported_classes) == 0:
-        raise ValueError(
-            f"❌ Invalid under_supported_classes={under_supported_classes}. "
-            f"Must specify at least one class (e.g., [3, 5])."
-        )
-    
-    for cls in under_supported_classes:
-        if cls < 0 or cls >= 10:
-            raise ValueError(
-                f"❌ Invalid class {cls} in under_supported_classes. "
-                f"Must be in range [0, 9] for CIFAR-10."
-            )
-    
-    # Log configuration
-    logger.info("=" * 80)
-    logger.info("CONFIGURATION VALIDATION")
-    logger.info("=" * 80)
-    logger.info(f"regular_train_per_class: {regular_train_per_class}")
-    logger.info(f"under_train_per_class: {under_train_per_class}")
-    logger.info(f"eval_per_group: {eval_per_group}")
-    logger.info(f"under_supported_classes: {under_supported_classes}")
-    logger.info("=" * 80)
-    
-    # IMPORTANT EXPERIMENT CONTROL:
-    # This call hands the prepared dataset state to the split builder.
-    #
-    # By this point:
-    # - noisy vs clean labels have already been decided above
-    # - under-supported classes have already been chosen in config
-    #
-    # The split builder then:
-    # - downsamples the under-supported classes for training
-    # - builds clean / aleatoric / epistemic evaluation pools
-    #
-    # Key implementation file:
-    #   src/uqlab/classification/data_loader.py
-    # Key function:
-    #   sample_indices_for_fast_pilot(...)
-    split_spec: SplitSpec = sample_indices_for_fast_pilot(
-        dataset,
-        under_supported_classes=under_supported_classes,
-        under_train_per_class=under_train_per_class,
-        regular_train_per_class=regular_train_per_class,
-        eval_per_group=eval_per_group,
-        seed=args.seed,
-        aleatoric_noise_percentage=aleatoric_noise_percentage,
-    )
-    
-    # ============================================================================
-    # POST-SAMPLING VALIDATION: Verify We Have Usable Data
-    # ============================================================================
-    
-    # Log actual eval sizes
-    logger.info("=" * 80)
-    logger.info("EVALUATION SPLITS CREATED")
-    logger.info("=" * 80)
-    logger.info(f"Clean: {len(split_spec.clean_eval_indices)} samples")
-    logger.info(f"Aleatoric: {len(split_spec.aleatoric_eval_indices)} samples")
-    logger.info(f"Epistemic: {len(split_spec.epistemic_eval_indices)} samples")
-    logger.info(f"Training: {len(split_spec.train_indices)} samples")
-    logger.info("=" * 80)
-    
-    # Enterprise check: Fail fast if ALL eval groups are empty
-    all_empty = (
-        len(split_spec.clean_eval_indices) == 0 and
-        len(split_spec.aleatoric_eval_indices) == 0 and
-        len(split_spec.epistemic_eval_indices) == 0
-    )
-    
-    if all_empty:
-        raise RuntimeError(
-            f"❌ CRITICAL: All evaluation groups are empty!\n"
-            f"Configuration:\n"
-            f"  - regular_train_per_class: {regular_train_per_class}\n"
-            f"  - under_train_per_class: {under_train_per_class}\n"
-            f"  - eval_per_group: {eval_per_group}\n"
-            f"  - under_supported_classes: {under_supported_classes}\n"
-            f"\n"
-            f"This configuration leaves no samples for evaluation.\n"
-            f"Possible fixes:\n"
-            f"  1. Set regular_train_per_class to a valid number (e.g., 300)\n"
-            f"  2. Reduce eval_per_group (currently {eval_per_group})\n"
-            f"  3. Reduce under_train_per_class (currently {under_train_per_class})\n"
-            f"  4. Use correct under_supported_classes (recommended: [3, 5])"
-        )
-    
-    from uqlab.evaluation.classification.benchmark_axes import (
-        expects_aleatoric_eval,
-        expects_epistemic_eval,
-    )
-
-    aleatoric_expected = expects_aleatoric_eval(aleatoric_noise_percentage)
-    epistemic_expected = expects_epistemic_eval(
-        under_supported_classes,
-        under_train_per_class=under_train_per_class,
-        regular_train_per_class=regular_train_per_class,
-    )
-
-    # Warn only when an expected benchmark axis has no eval samples.
-    if len(split_spec.clean_eval_indices) == 0:
-        logger.warning(
-            "⚠️  Clean evaluation group is empty — clean AUROC will be NaN."
-        )
-    if len(split_spec.aleatoric_eval_indices) == 0:
-        if aleatoric_expected:
-            raise RuntimeError(
-                f"❌ Aleatoric benchmark requested ({aleatoric_noise_percentage}% label noise) "
-                "but the aleatoric eval pool is empty. "
-                "Check aleatoric_noise_percentage and noise_type=clean_label in config."
-            )
-        logger.info(
-            "ℹ️  Aleatoric AUROC skipped (0% label noise — this is normal for Fig. 3 runs)."
-        )
-    if len(split_spec.epistemic_eval_indices) == 0:
-        if epistemic_expected:
-            logger.warning(
-                "⚠️  Epistemic evaluation group is empty — epistemic AUROC will be NaN."
-            )
-        else:
-            logger.info(
-                "ℹ️  Epistemic AUROC skipped (balanced training — normal for Fig. 4 runs)."
-            )
+    # Shorthand aliases used throughout train/eval (from run_cfg after data phase)
+    noise_type = run_cfg.noise_type
+    under_supported_classes = run_cfg.under_supported_classes
+    under_supported_classes_str = run_cfg.under_supported_classes_str
+    under_train_per_class = run_cfg.under_train_per_class
+    regular_train_per_class = run_cfg.regular_train_per_class
+    eval_per_group = run_cfg.eval_per_group
+    aleatoric_noise_percentage = run_cfg.aleatoric_noise_percentage
+    epochs = run_cfg.epochs
+    train_batch_size = run_cfg.train_batch_size
+    feature_batch_size = run_cfg.feature_batch_size
+    mc_passes = run_cfg.mc_passes
+    top_k = run_cfg.top_k
+    aleatoric_expected = run_cfg.aleatoric_expected
+    epistemic_expected = run_cfg.epistemic_expected
+    dinov2_model = run_cfg.dinov2_model
+    hidden_dim = run_cfg.hidden_dim
+    dropout = run_cfg.dropout
 
     mode = get_data_loading_mode(config)
     
@@ -1017,7 +353,7 @@ Examples:
     # - DINOv2: Uses pre-computed cached features (embeddings mode)
     # - ResNet: Uses images directly but with frozen backbone (images mode)
     # Both achieve "feature space" training, but through different mechanisms
-    if config.model.architecture == "resnet18_mcdropout" and mode == "embeddings":
+    if normalize_architecture(config.model.architecture) == "resnet18" and mode == "embeddings":
         logger.info(
             "ResNet with feature_space mode: Using images with frozen backbone "
             "(ResNet doesn't support feature caching like DINOv2)"
@@ -1064,7 +400,9 @@ Examples:
         eval_inputs = eval_data["eval_inputs"]
         feature_dim = int(train_pack["features"].shape[1])
     elif mode == "images":
-        train_dataset, eval_packs = load_image_datasets(dataset, split_spec)
+        train_dataset, eval_packs = load_image_datasets(
+            dataset, split_spec, dataset_name=dataset_name
+        )
         clean_eval_pack = eval_packs["clean"]
         aleatoric_eval_pack = eval_packs["aleatoric"]
         epistemic_eval_pack = eval_packs["epistemic"]
@@ -1080,10 +418,30 @@ Examples:
     # Build the model
     model = build_model(
         config=config.model,
-        num_classes=10,
+        num_classes=ds_spec.num_classes,
         feature_dim=feature_dim if mode == "embeddings" else None,
     )
     model = model.to(device)
+
+    prior_epoch_loaded = 0
+    checkpoint_path = getattr(config.model, "checkpoint_path", None) or (
+        config.model.get("checkpoint_path") if isinstance(config.model, dict) else None
+    )
+    if checkpoint_path:
+        ckpt_file = Path(checkpoint_path)
+        if ckpt_file.exists():
+            print(f"🔁 Loading checkpoint: {ckpt_file}")
+            checkpoint = torch.load(ckpt_file, map_location=device, weights_only=False)
+            state = checkpoint.get("model_state_dict")
+            if state:
+                model.load_state_dict(state, strict=False)
+                print(f"   ✅ Loaded model_state_dict ({len(state)} tensors)")
+            elif checkpoint.get("model") is not None:
+                print("   ⚠️  Full model object in checkpoint — using state_dict only when available")
+            prior_epoch_loaded = int(checkpoint.get("epoch") or 0)
+            print(f"   Prior training: {prior_epoch_loaded} epoch(s) → training {epochs} more")
+        else:
+            print(f"⚠️  checkpoint_path set but file missing: {ckpt_file}")
 
     if mode == "images":
         feature_extractor = create_feature_extractor(
@@ -1113,12 +471,7 @@ Examples:
     model = model.to(device)
     model.eval()
 
-    # Save training data statistics to CSV
-    print("\n" + "="*80)
-    print("Saving training data statistics...")
-    print("="*80)
-    
-    # Convert config to dict for serialization
+    # Save training data statistics to CSV (banner printed inside save_training_data_csv)
     from dataclasses import asdict
     config_dict = asdict(config)
     # Convert Path objects to strings for JSON serialization
@@ -1197,7 +550,10 @@ Examples:
         seed=seed,
     )
     auroc_rows = eval_summary["auroc_rows"]
+    one_vs_rest_auroc = eval_summary["one_vs_rest_auroc"]
     clf_rows = eval_summary["clf_rows"]
+    alea_skip = one_vs_rest_auroc[0].get("aleatoric_skip_reason") if one_vs_rest_auroc else None
+    epis_skip = one_vs_rest_auroc[0].get("epistemic_skip_reason") if one_vs_rest_auroc else None
 
     eval_protocol = {
         "architecture_invariant": True,
@@ -1237,13 +593,11 @@ Examples:
         },
         "eval_protocol": eval_protocol,
         "signal_formulas": signal_formulas,
-        "one_vs_rest_auroc": [
-            {
-                "signal": name,
-                "aleatoric_like_auroc": alea_auc,
-                "epistemic_like_auroc": epis_auc,
-            }
-            for name, alea_auc, epis_auc in auroc_rows
+        "dualxda_svm": {"max_iter": 1_000_000},
+        "one_vs_rest_auroc": one_vs_rest_auroc,
+        "auroc_rows": [
+            {"signal": name, "aleatoric_auroc": alea, "epistemic_auroc": epis}
+            for name, alea, epis in auroc_rows
         ],
         "macro_f1": [
             {
@@ -1254,8 +608,36 @@ Examples:
         ],
     }
 
-    with (results_dir / "summary.json").open("w") as f:
-        json.dump(summary, f, indent=2)
+    config_ns = argparse.Namespace(
+        noise_type=noise_type,
+        under_supported_classes=under_supported_classes_str,
+        under_train_per_class=under_train_per_class,
+        regular_train_per_class=regular_train_per_class,
+        eval_per_group=eval_per_group,
+        dinov2_model=dinov2_model,
+        hidden_dim=hidden_dim,
+        dropout=dropout,
+        epochs=epochs,
+        learning_rate=learning_rate,
+        weight_decay=weight_decay,
+        train_batch_size=train_batch_size,
+        feature_batch_size=feature_batch_size,
+        mc_passes=mc_passes,
+        top_k=top_k,
+        seed=seed,
+        device=device_str,
+    )
+
+    persist_experiment_summaries(
+        results_dir,
+        summary=summary,
+        args=config_ns,
+        split_spec=split_spec,
+        train_size=len(train_dataset),
+        eval_sizes=summary["eval_sizes"],
+        auroc_rows=auroc_rows,
+        clf_rows=clf_rows,
+    )
 
     from uqlab.run_artifacts import save_signal_formula_manifest
 
@@ -1271,14 +653,14 @@ Examples:
         module._backward_hooks.clear()
     
     checkpoint = {
-        'model': model,  # Full model object (hooks removed)
-        'model_state_dict': model.state_dict(),  # Also save state_dict for flexibility
-        'epoch': epochs,
-        'loss': 0.0,  # Final loss not tracked in this script
+        'model': model,
+        'model_state_dict': model.state_dict(),
+        'epoch': prior_epoch_loaded + epochs,
+        'loss': 0.0,
         'config': {
             'hidden_dim': hidden_dim,
             'dropout': dropout,
-            'num_classes': 10,
+            'num_classes': ds_spec.num_classes,
             'dinov2_model': dinov2_model,
         }
     }
@@ -1332,37 +714,6 @@ Examples:
     except Exception as exc:
         print(f"⚠️ results.pt save failed (summary.json is available): {exc}")
 
-    # Create a namespace object for backward compatibility with build_results_markdown
-    config_ns = argparse.Namespace(
-        noise_type=noise_type,
-        under_supported_classes=under_supported_classes_str,
-        under_train_per_class=under_train_per_class,
-        regular_train_per_class=regular_train_per_class,
-        eval_per_group=eval_per_group,
-        dinov2_model=dinov2_model,
-        hidden_dim=hidden_dim,
-        dropout=dropout,
-        epochs=epochs,
-        learning_rate=learning_rate,
-        weight_decay=weight_decay,
-        train_batch_size=train_batch_size,
-        feature_batch_size=feature_batch_size,
-        mc_passes=mc_passes,
-        top_k=top_k,
-        seed=seed,
-        device=device_str,
-    )
-    
-    markdown = build_results_markdown(
-        args=config_ns,
-        split_spec=split_spec,
-        train_size=len(train_dataset),
-        eval_sizes=summary["eval_sizes"],
-        auroc_rows=auroc_rows,
-        clf_rows=clf_rows,
-    )
-    (results_dir / "summary.md").write_text(markdown)
-
     try:
         from uqlab.run_artifacts import metrics_row_from_run, print_run_metrics_summary
 
@@ -1382,33 +733,97 @@ Examples:
     print("ATTRIBUTION-BASED SIGNALS (DualXDA)")
     print("="*70)
     attr_rows = [(n, a, e) for n, a, e in auroc_rows if n in attribution_signals]
-    for name, alea_auc, epis_auc in sorted(attr_rows, key=lambda row: max(row[1], row[2]), reverse=True):
-        print(f"  {name:<30} aleatoric={alea_auc:.4f}, epistemic={epis_auc:.4f}")
-    
-    print("\n" + "="*70)
+    for name, alea_auc, epis_auc in sorted(
+        attr_rows,
+        key=lambda row: max(v for v in row[1:] if v is not None) if any(v is not None for v in row[1:]) else 0,
+        reverse=True,
+    ):
+        print(
+            f"  {name:<30} aleatoric={_format_auroc_console(alea_auc, alea_skip)}, "
+            f"epistemic={_format_auroc_console(epis_auc, epis_skip)}"
+        )
+
+    print("\n" + "=" * 70)
     print("LOGIT-BASED SIGNALS (via Representer Theorem)")
-    print("="*70)
+    print("=" * 70)
     logit_rows = [(n, a, e) for n, a, e in auroc_rows if n in logit_signals]
-    for name, alea_auc, epis_auc in sorted(logit_rows, key=lambda row: max(row[1], row[2]), reverse=True):
-        print(f"  {name:<30} aleatoric={alea_auc:.4f}, epistemic={epis_auc:.4f}")
-    
-    print("\n" + "="*70)
+    for name, alea_auc, epis_auc in sorted(
+        logit_rows,
+        key=lambda row: max(v for v in row[1:] if v is not None) if any(v is not None for v in row[1:]) else 0,
+        reverse=True,
+    ):
+        print(
+            f"  {name:<30} aleatoric={_format_auroc_console(alea_auc, alea_skip)}, "
+            f"epistemic={_format_auroc_console(epis_auc, epis_skip)}"
+        )
+
+    print("\n" + "=" * 70)
     print("PREDICTIVE UNCERTAINTY BASELINE")
-    print("="*70)
+    print("=" * 70)
     pred_rows = [(n, a, e) for n, a, e in auroc_rows if n in predictive_signals]
     for name, alea_auc, epis_auc in pred_rows:
-        print(f"  {name:<30} aleatoric={alea_auc:.4f}, epistemic={epis_auc:.4f}")
+        print(
+            f"  {name:<30} aleatoric={_format_auroc_console(alea_auc, alea_skip)}, "
+            f"epistemic={_format_auroc_console(epis_auc, epis_skip)}"
+        )
 
     print("\n3-way macro-F1:")
     for name, score in clf_rows:
         print(f"  {name}: {score:.4f}")
 
-    # Rewrite summary.json last so the API always finds it after a successful run.
-    with (results_dir / "summary.json").open("w") as f:
-        json.dump(summary, f, indent=2)
+    persist_experiment_summaries(
+        results_dir,
+        summary=summary,
+        args=config_ns,
+        split_spec=split_spec,
+        train_size=len(train_dataset),
+        eval_sizes=summary["eval_sizes"],
+        auroc_rows=auroc_rows,
+        clf_rows=clf_rows,
+    )
 
     print(f"\nSaved per-sample signals to: {results_dir / 'per_sample_signals.csv'}")
     print(f"Saved summary to: {results_dir / 'summary.json'} and {results_dir / 'summary.md'}")
+    return summary
+
+
+def main() -> None:
+    """CLI entry: parse args, delegate to ``uqlab.runner.pipeline.run``."""
+    parser = argparse.ArgumentParser(description="Fast uncertainty classification pilot")
+    parser.add_argument("--config", type=str, required=True, help="Path to YAML configuration file")
+    parser.add_argument("--seed", type=int, default=None, help="Random seed override")
+    parser.add_argument(
+        "--device",
+        type=str,
+        default=None,
+        choices=["auto", "cpu", "cuda", "mps"],
+        help="Device override",
+    )
+    parser.add_argument("--output_dir", type=str, default=None, help="Output directory override")
+    args = parser.parse_args()
+
+    config_path = Path(args.config)
+    if not config_path.exists():
+        raise FileNotFoundError(f"Config file not found: {config_path}")
+
+    config = ExperimentConfig.from_yaml(config_path)
+    seed = args.seed if args.seed is not None else config.seed
+    device_str = args.device if args.device is not None else config.device
+
+    if args.output_dir:
+        results_dir = Path(args.output_dir)
+    else:
+        results_base = PROJECT_ROOT / config.paths.results_base_dir
+        results_dir = results_base / f"fast_uncertainty_classification_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+    from uqlab.runner.pipeline import run as pipeline_run
+
+    pipeline_run(
+        config_path,
+        results_dir,
+        seed=seed,
+        device_str=device_str,
+    )
 
 
 if __name__ == "__main__":

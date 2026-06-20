@@ -37,6 +37,15 @@ class TestDatasetConfig:
         )
         assert config.stats["noise_rate"] == 0.4
     
+    def test_valid_mnist_dataset(self):
+        """MNIST is registered in the dataset plugin registry."""
+        config = WorkflowDatasetConfig(
+            dataset_name="mnist",
+            noise_type="clean_label",
+            stats={"total_samples": 60000, "num_classes": 10},
+        )
+        assert config.dataset_name == "mnist"
+
     def test_invalid_noise_type(self):
         """Test invalid noise type."""
         with pytest.raises(ValidationError) as exc_info:

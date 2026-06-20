@@ -21,12 +21,11 @@ Usage:
 """
 
 import argparse
-import subprocess
 import sys
 import tempfile
 import yaml
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Callable, Dict, List, Tuple
 import pandas as pd
 import json
 from datetime import datetime
@@ -57,48 +56,35 @@ from uqlab.validation_config import (
 def run_experiment(
     config: Dict,
     output_dir: Path,
-    experiment_name: str
+    experiment_name: str,
 ) -> Tuple[bool, str]:
-    """Run a single experiment with the given configuration."""
-    
-    # Create temporary config file
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+    """Run a single experiment via the canonical runner pipeline."""
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         yaml.dump(config, f)
-        config_path = f.name
-    
+        config_path = Path(f.name)
+
     try:
-        # Run the experiment
-        cmd = [
-            sys.executable,
-            str(PROJECT_ROOT / 'scripts' / 'run_fast_uncertainty_classification.py'),
-            '--config', config_path,
-            '--output_dir', str(output_dir)
-        ]
-        
+        from uqlab.runner.pipeline import run as pipeline_run
+
         print(f"\n{'='*80}")
         print(f"Running: {experiment_name}")
         print(f"{'='*80}")
-        print(f"Command: {' '.join(cmd)}")
-        
-        result = subprocess.run(
-            cmd,
-            cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True
-        )
-        
-        if result.returncode != 0:
-            error_msg = f"Experiment failed with return code {result.returncode}\n"
-            error_msg += f"STDOUT:\n{result.stdout}\n"
-            error_msg += f"STDERR:\n{result.stderr}"
-            return False, error_msg
-        
-        print(f"✅ Experiment completed successfully")
-        return True, result.stdout
-        
+        print(f"Config: {config_path}")
+        print(f"Output: {output_dir}")
+
+        pipeline_run(config_path, output_dir)
+        print("Experiment completed successfully")
+        return True, ""
+    except Exception as exc:
+        import traceback
+
+        error_msg = f"Experiment failed: {exc}\n{traceback.format_exc()}"
+        return False, error_msg
     finally:
-        # Clean up temporary config file
-        Path(config_path).unlink(missing_ok=True)
+        config_path.unlink(missing_ok=True)
 
 
 # Reverse map for folder names → human labels (includes legacy MC-dropout sweeps).
@@ -380,6 +366,84 @@ def run_label_noise_sweep(
             )
     
     return pd.DataFrame(results)
+
+
+def run_validation_sweep_inprocess(
+    sweep: str,
+    mode: str = "quick",
+    *,
+    output_dir: Path | None = None,
+    rebuild_only: bool = False,
+    on_line: Callable[[str], None] | None = None,
+) -> tuple[bool, str]:
+    """
+    Run preset validation sweeps in-process (Streamlit / notebooks).
+
+    Uses ``uqlab.runner.pipeline.run`` via :func:`run_experiment`.
+    """
+    import contextlib
+    import io
+
+    validation_dir = output_dir or (PROJECT_ROOT / "results" / "validation")
+    validation_dir = Path(validation_dir)
+    validation_dir.mkdir(parents=True, exist_ok=True)
+    captured: list[str] = []
+
+    class _LineWriter(io.TextIOBase):
+        def write(self, s: str) -> int:
+            for line in s.splitlines():
+                if not line.strip():
+                    continue
+                captured.append(line)
+                if on_line is not None:
+                    on_line(line)
+            return len(s)
+
+    def _emit(msg: str) -> None:
+        captured.append(msg)
+        if on_line is not None:
+            on_line(msg)
+
+    try:
+        with contextlib.redirect_stdout(_LineWriter()):
+            print("=" * 80)
+            print("VALIDATION EXPERIMENT RUNNER (in-process)")
+            print("=" * 80)
+            print(f"Mode: {mode}")
+            print(f"Sweep: {sweep}")
+            print(f"Output directory: {validation_dir}")
+
+            if sweep in ("dataset_size", "both"):
+                dataset_size_dir = validation_dir / "dataset_size_sweep"
+                dataset_size_dir.mkdir(parents=True, exist_ok=True)
+                metrics_file = dataset_size_dir / "metrics.csv"
+                if rebuild_only:
+                    rebuild_metrics_from_folders(
+                        dataset_size_dir,
+                        sweep_kind="dataset_size",
+                        metrics_csv=metrics_file,
+                    )
+                else:
+                    run_dataset_size_sweep(mode, dataset_size_dir, metrics_csv=metrics_file)
+
+            if sweep in ("label_noise", "both"):
+                label_noise_dir = validation_dir / "label_noise_sweep"
+                label_noise_dir.mkdir(parents=True, exist_ok=True)
+                metrics_file = label_noise_dir / "metrics.csv"
+                if rebuild_only:
+                    rebuild_metrics_from_folders(
+                        label_noise_dir,
+                        sweep_kind="label_noise",
+                        metrics_csv=metrics_file,
+                    )
+                else:
+                    run_label_noise_sweep(mode, label_noise_dir, metrics_csv=metrics_file)
+
+            print("VALIDATION EXPERIMENTS COMPLETE")
+        return True, "\n".join(captured)
+    except Exception as exc:
+        _emit(f"Validation sweep failed: {exc}")
+        return False, "\n".join(captured)
 
 
 def main():
