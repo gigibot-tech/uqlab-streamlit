@@ -1,101 +1,44 @@
+version: '3.8'
+
 services:
-  db:
-    image: postgres:12
-    restart: "no"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 10s
-      retries: 5
-      start_period: 30s
-      timeout: 10s
+  minio:
+    image: minio/minio:latest
+    container_name: uqlab-minio
+    ports:
+      - "9000:9000"  # API port
+      - "9001:9001"  # Console port
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
     volumes:
-      - app-db-data:/var/lib/postgresql/data/pgdata
-    env_file:
-      - .env
-    environment:
-      - PGDATA=/var/lib/postgresql/data/pgdata
-    ports:
-      - "5432:5432"
-
-  adminer:
-    image: adminer
-    restart: "no"
-    depends_on:
-      - db
-    environment:
-      - ADMINER_DESIGN=pepa-linha-dark
-    ports:
-      - "8080:8080"
-
-  backend:
-    restart: "no"
-    depends_on:
-      db:
-        condition: service_healthy
-        restart: true
-    env_file:
-      - .env
-    environment:
-      - POSTGRES_SERVER=db
-      - DTAG_ROOT=/dtag
+      - minio_data:/data
+    command: server /data --console-address ":9001"
     healthcheck:
-      test:
-        [
-          "CMD",
-          "curl",
-          "-f",
-          "http://localhost:8000/api/v1/utils/health-check/",
-        ]
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 10s
       timeout: 5s
       retries: 5
-    build:
-      context: ./backend
-      args:
-        - DOCKER_BUILDKIT=0
-    ports:
-      - "8000:8000"
-    volumes:
-      - ${HOME}/Desktop/GigiApps/dtag:/dtag:ro
-    command:
-      - fastapi
-      - run
-      - --reload
-      - "app/main.py"
-    develop:
-      watch:
-        - path: ./backend
-          action: sync
-          target: /app
-          ignore:
-            - ./backend/.venv
-            - .venv
-        - path: ./backend/pyproject.toml
-          action: rebuild
+      start_period: 10s
+    restart: unless-stopped
 
-  frontend:
+  # Create default bucket on startup
+  minio-init:
+    image: minio/mc:latest
+    container_name: uqlab-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set myminio http://minio:9000 minioadmin minioadmin;
+      mc mb myminio/uqlab-artifacts --ignore-existing;
+      mc anonymous set download myminio/uqlab-artifacts;
+      echo 'MinIO bucket uqlab-artifacts created and configured';
+      "
     restart: "no"
-    build:
-      context: ./frontend
-      args:
-        - VITE_API_URL=http://localhost:8000
-        - NODE_ENV=development
-      target: base
-    ports:
-      - "5173:5173"
-    command: >
-      npm run dev
-      --
-      --host 0.0.0.0
-    environment:
-      - VITE_API_URL=http://localhost:8000
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    develop:
-      watch:
-        - path: ./frontend/package.json
-          action: rebuild
 
 volumes:
-  app-db-data:
+  minio_data:
+    driver: local
+
+# Made with Bob

@@ -3,27 +3,110 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "uqlab"
+name = "uqlab-streamlit"
 version = "0.1.0"
-description = "Uncertainty Quantification Lab - Unified UQ validation and benchmark tooling"
+description = "Uncertainty Quantification Lab - Streamlit Dashboard & Experiment Management"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "pandas>=2.0",
     "numpy>=1.24",
+    "streamlit>=1.28",
+    "plotly>=5.18",
+    "requests>=2.31",
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
-streamlit = ["streamlit>=1.28", "plotly>=5.18"]
-paper = ["tensorflow>=2.12", "keras>=3.0"]
+dev = [
+    "ruff>=0.8.0",
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "mypy>=1.4.0",
+]
+
+# UV Workspace Configuration (inspired by SPARK workflow)
+[tool.uv.workspace]
+members = [
+    "src/uqlab",
+    "backend",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "ruff>=0.8.0",
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+]
+
+# Ruff Configuration (replaces Black, isort, Flake8, pyupgrade)
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+extend-exclude = [
+    "__pycache__",
+    ".venv",
+    "venv",
+    ".git",
+    "*.egg-info",
+    "build",
+    "dist",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort (import sorting)
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade (modernize Python syntax)
+    "ARG", # flake8-unused-arguments
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "B008",  # do not perform function calls in argument defaults
+    "W191",  # indentation contains tabs
+]
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["uqlab", "app"]
+
+[tool.ruff.lint.pyupgrade]
+keep-runtime-typing = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+# Pytest Configuration
+[tool.pytest.ini_options]
+testpaths = ["tests", "src/uqlab/tests"]
+pythonpath = ["src", ".", "backend"]
+norecursedirs = ["tests/legacy", "src/walaris/classification/archive"]
+addopts = "--cov=uqlab --cov=app --cov-report=html --cov-report=term-missing"
+
+# MyPy Configuration
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+strict_equality = true
+exclude = ["venv", ".venv", "alembic", "migrations"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-dir]
 "" = "src"
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["src", "."]
-norecursedirs = ["tests/legacy", "src/walaris/classification/archive"]

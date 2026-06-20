@@ -21,6 +21,10 @@ dependencies = [
     "torchvision>=0.15.0",
     "numpy>=1.24.0",
     "pyyaml>=6.0",
+    "aiofiles>=24.1.0",
+    # S3/MinIO storage backend (now required for default setup)
+    "aioboto3>=13.1.1",
+    "aiobotocore>=2.13.1",
     # UQ Benchmarks dependencies (Phase 2-6)
     "tensorflow>=2.10.0,<2.16.0",  # For Gaussian Logits
     "keras>=2.10.0,<3.0.0",  # Keras 2.x for compatibility
@@ -41,6 +45,11 @@ dev-dependencies = [
     "coverage<8.0.0,>=7.4.3",
     "pytest>=8.4.1",
 ]
+
+[project.optional-dependencies]
+# S3 dependencies are now in main dependencies for default MinIO setup
+# Keeping this section for backwards compatibility
+storage-s3 = []
 
 [build-system]
 requires = ["hatchling"]

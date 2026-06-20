@@ -20,6 +20,13 @@ import pandas as pd
 import os
 from typing import Optional
 
+st.warning(
+    "⚠️ **Deprecated app** — use the progressive wizard instead: "
+    "`make run-frontend` or `streamlit run streamlit_app_progressive.py`. "
+    "See START_HERE.md.",
+    icon="⚠️",
+)
+
 # Import UI components
 from ui_components import (
     build_base_experiment_config,

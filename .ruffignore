@@ -1,0 +1,18 @@
+# Ruff ignore patterns
+__pycache__/
+*.pyc
+.venv/
+venv/
+.git/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+*.db
+*.db-journal
+alembic/versions/
+migrations/
+node_modules/
