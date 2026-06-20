@@ -30,7 +30,8 @@ Parent toggles cascade: turning off **entire section** disables all children.
 
 | Toggle | What it gates |
 |--------|----------------|
-| `Step 5 · launch buttons` | Custom + Fig 3 / Fig 4 / Both cards in Step 5 |
+| `Step 5 · launch buttons` | Primary + Run all cards in Step 5 |
+| `Step 5 / Results · plot probe redo suggestions` | Duplicate-gated plot probe panels |
 | `Sidebar · quick launch` | Same cards in the sidebar |
 | `Launch result banner` | Success/error banner after launch |
 

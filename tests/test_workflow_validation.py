@@ -242,7 +242,7 @@ class TestWorkflowConfig:
             "evaluation_config": {
                 "eval_per_group": 100,
                 "mc_passes": 20,
-                "selected_signals": ["inverse_mass", "dominance"]
+                "selected_signals": ["inverse_mass", "inverse_dominance"]
             }
         }
         

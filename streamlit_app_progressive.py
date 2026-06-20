@@ -24,11 +24,10 @@ import streamlit as st
 
 from uqlab.data.dataset_registry import get_dataset_spec
 from uqlab_orchestrator import (
-    generate_sweep_configs,
-    launch_paired_paper_profiles,
-    launch_paper_profile,
-    launch_workflow_experiments,
+    launch_primary_from_step3,
+    launch_run_both,
 )
+from uqlab_orchestrator.launch_preflight import assess_launch_readiness
 from uqlab_orchestrator.config import (
     CIFAR10N_NOISE_LABELS,
     DATASET_CATALOG,
@@ -130,29 +129,27 @@ st.markdown(
 
 def _make_launch_callbacks(workflow: Dict[str, Any]) -> SweepLaunchCallbacks:
     return SweepLaunchCallbacks(
-        on_launch_custom=lambda auto: launch_workflow_experiments(
+        on_launch_primary=lambda auto: launch_primary_from_step3(
             workflow,
             auto_start=auto,
             highlight_callback=_set_highlight_experiment,
         ),
-        on_launch_fig3=lambda auto: launch_paper_profile(
-            workflow,
-            "under_train",
-            auto_start=auto,
-            highlight_callback=_set_highlight_experiment,
-        ),
-        on_launch_fig4=lambda auto: launch_paper_profile(
-            workflow,
-            "noise",
-            auto_start=auto,
-            highlight_callback=_set_highlight_experiment,
-        ),
-        on_launch_both=lambda auto: launch_paired_paper_profiles(
+        on_launch_both=lambda auto, mirror_mode: launch_run_both(
             workflow,
             auto_start=auto,
+            mirror_mode=mirror_mode,  # type: ignore[arg-type]
             highlight_callback=_set_highlight_experiment,
         ),
     )
+
+
+def _apply_launch_workflow(workflow: Dict[str, Any], auto: bool) -> None:
+    st.session_state.launch_result = launch_primary_from_step3(
+        workflow,
+        auto_start=auto,
+        highlight_callback=_set_highlight_experiment,
+    )
+    st.session_state["scroll_to_results"] = True
 
 
 def main() -> None:
@@ -167,17 +164,26 @@ def main() -> None:
     workflow = st.session_state.workflow
     launch_callbacks = _make_launch_callbacks(workflow)
 
+    try:
+        app_experiments = fetch_experiments(API_BASE_URL, get_headers)
+    except Exception:
+        app_experiments = []
+    readiness = assess_launch_readiness(workflow, app_experiments, _PROJECT_ROOT)
+    st.session_state.launch_readiness = readiness
+
     with st.sidebar:
         render_sidebar_paper_launch(
             workflow,
-            on_launch_custom=launch_callbacks.on_launch_custom,
+            readiness=readiness,
+            on_launch_primary=launch_callbacks.on_launch_primary,
             on_launch_both=launch_callbacks.on_launch_both,
-            on_launch_epis=launch_callbacks.on_launch_fig3,
-            on_launch_alea=launch_callbacks.on_launch_fig4,
+            on_apply_launch=_apply_launch_workflow,
         )
         if st.session_state.get("experiment_selection_in_sidebar", True):
             try:
-                sidebar_experiments = fetch_experiments(API_BASE_URL, get_headers)
+                sidebar_experiments = app_experiments or fetch_experiments(
+                    API_BASE_URL, get_headers
+                )
                 render_sidebar_experiment_selector(
                     sidebar_experiments,
                     workflow,
@@ -300,19 +306,23 @@ def main() -> None:
         st.stop()
 
     if ui_on("step5_launch"):
+        if st.session_state.pop("scroll_to_step5", False):
+            st.info("Workflow updated from plot probe — review Step 5 and launch when ready.")
         st.markdown('<div class="step-active">', unsafe_allow_html=True)
         render_step5_review(
             workflow,
-            api_base_url=API_BASE_URL,
-            get_headers=get_headers,
-            project_root=_PROJECT_ROOT,
-            generate_sweep_configs=generate_sweep_configs,
+            readiness=readiness,
             launch_callbacks=launch_callbacks,
+            on_apply_launch=_apply_launch_workflow,
         )
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown('<div id="results-section"></div>', unsafe_allow_html=True)
-    render_progressive_results_section(API_BASE_URL, get_headers)
+    render_progressive_results_section(
+        API_BASE_URL,
+        get_headers,
+        on_apply_launch=_apply_launch_workflow,
+    )
 
     render_experiment_stats_footer(API_BASE_URL, get_headers)
 

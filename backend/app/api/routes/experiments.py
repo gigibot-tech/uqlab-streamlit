@@ -123,16 +123,31 @@ async def _create_experiment_impl(
         config_yaml = yaml.dump(training_config.to_yaml_dict(), default_flow_style=False)
     elif experiment.config is not None:
         try:
-            from uqlab_orchestrator.run_spec import RunSpecError, validate_run_yaml
+            import importlib
 
-            validate_run_yaml(experiment.config)
+            import uqlab_orchestrator.run_spec as run_spec
+
+            # run_spec lives outside backend/; reload so edits apply without full server restart.
+            importlib.reload(run_spec)
+            run_spec.validate_run_yaml(experiment.config)
             config_yaml = yaml.dump(experiment.config, default_flow_style=False)
         except ImportError:
             training_config = TrainingConfig.from_legacy_flat_dict(experiment.config)
             config_yaml = yaml.dump(training_config.to_yaml_dict(), default_flow_style=False)
-        except RunSpecError as exc:
+        except run_spec.RunSpecError as exc:
+            logger.warning(
+                "Experiment create rejected (invalid run config): name=%r user_id=%s — %s",
+                experiment.name,
+                user.id,
+                exc,
+            )
             raise HTTPException(status_code=400, detail=str(exc)) from exc
     else:
+        logger.warning(
+            "Experiment create rejected (missing body): name=%r user_id=%s — no preset or config",
+            experiment.name,
+            user.id,
+        )
         raise HTTPException(
             status_code=400,
             detail="Provide either `preset` or `config` when creating an experiment.",
@@ -410,7 +425,7 @@ async def get_experiment_no_auth(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid experiment ID format")
     
-    experiment = session.get(UncertaintyExperiment, experiment_uuid)
+    experiment: UncertaintyExperiment | None = session.get(UncertaintyExperiment, experiment_uuid)
     if not experiment:
         raise HTTPException(status_code=404, detail="Experiment not found")
     return experiment

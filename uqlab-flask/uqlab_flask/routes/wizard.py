@@ -68,7 +68,7 @@ def _apply_step(n: int, wf: dict, form) -> None:
             "training_scope": form.get("training_scope", "full"),
             "hidden_dim": int(form.get("hidden_dim", 256)),
             "dropout": float(form.get("dropout", 0.0)),
-            "epochs": int(form.get("epochs", 2)),
+            "epochs": int(form.get("epochs", 12)),
             "learning_rate": float(form.get("learning_rate", 0.001)),
             "batch_size": int(form.get("batch_size", 256)),
         }

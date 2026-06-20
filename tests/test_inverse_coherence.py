@@ -9,7 +9,7 @@ _root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_root / "src"))
 sys.path.insert(0, str(_root))
 
-from uqlab.classification.attribution_signals import (  # noqa: E402
+from uqlab.evaluation.signals.attribution import (  # noqa: E402
     build_fast_pilot_signal_table,
     inverse_coherence_from_coherence,
     map_attribution_structure_to_uncertainty,
@@ -67,10 +67,14 @@ def test_map_and_build_fast_pilot_share_inverse_coherence():
     mapped = map_attribution_structure_to_uncertainty(raw)
     table = build_fast_pilot_signal_table(
         attribution_signals=raw,
-        predictive_entropy=torch.ones(n),
-        mutual_info=torch.ones(n) * 0.1,
-        mean_prediction=torch.softmax(torch.randn(n, 10), dim=1),
-        logit_magnitude=torch.ones(n) * 2.0,
+        det_logits=torch.randn(n, 10),
+        mean_pred_det=torch.softmax(torch.randn(n, 10), dim=1),
+        mc_uq={
+            "mean_prediction": torch.softmax(torch.randn(n, 10), dim=1),
+            "entropy": torch.ones(n),
+            "mutual_info": torch.ones(n) * 0.1,
+        },
+        enabled={"inverse_coherence"},
     )
     assert torch.allclose(mapped["inverse_coherence"], table["inverse_coherence"])
 

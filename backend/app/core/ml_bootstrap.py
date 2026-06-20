@@ -91,6 +91,7 @@ def verify_ml_stack() -> None:
             )
 
     import uqlab.evaluation.evaluator as evaluator
+    import uqlab.evaluation.signals.registry as signal_registry
 
     eval_src = inspect.getsource(evaluator.build_results_markdown)
     if "_format_auroc_markdown" not in eval_src:
@@ -99,12 +100,26 @@ def verify_ml_stack() -> None:
             "missing None-safe AUROC markdown formatting. Restart via ./start_backend.sh."
         )
 
+    metric_ids = set(signal_registry.METRICS.keys())
+    if "inverse_dominance" not in metric_ids:
+        raise RuntimeError(
+            f"Stale uqlab.evaluation.signals.registry at {signal_registry.__file__!r} — "
+            f"missing inverse_dominance metric (have {sorted(metric_ids)!r}). "
+            "Restart via ./start_backend.sh after editing src/."
+        )
+    if "dominance" in metric_ids and "inverse_dominance" not in metric_ids:
+        raise RuntimeError(
+            f"Stale signal registry at {signal_registry.__file__!r} — "
+            "still exports raw dominance instead of inverse_dominance. Restart backend."
+        )
+
     logger.info(
-        "ML stack OK: run_spec=%s registry=%s data_loader=%s evaluator=%s",
+        "ML stack OK: run_spec=%s registry=%s data_loader=%s evaluator=%s signals=%s",
         run_spec.__file__,
         registry.__file__,
         data_loader.__file__,
         evaluator.__file__,
+        signal_registry.__file__,
     )
 
 
@@ -124,6 +139,10 @@ def reload_training_modules(*, scripts_dir: Path | None = None) -> None:
         sys.path.insert(0, scripts_entry)
 
     for name in (
+        "uqlab.evaluation.signals.registry",
+        "uqlab.evaluation.signals.primitives",
+        "uqlab.evaluation.signals.sources",
+        "uqlab.shared.config.signals",
         "uqlab.data.loaders.cifar10_loader",
         "uqlab.data.dataset_registry",
         "uqlab.evaluation.evaluator",

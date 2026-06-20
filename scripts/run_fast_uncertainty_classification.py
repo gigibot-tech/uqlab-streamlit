@@ -337,10 +337,14 @@ def run_experiment_core(
     eval_per_group = run_cfg.eval_per_group
     aleatoric_noise_percentage = run_cfg.aleatoric_noise_percentage
     epochs = run_cfg.epochs
+    learning_rate = run_cfg.learning_rate
+    weight_decay = run_cfg.weight_decay
     train_batch_size = run_cfg.train_batch_size
     feature_batch_size = run_cfg.feature_batch_size
     mc_passes = run_cfg.mc_passes
     top_k = run_cfg.top_k
+    attribution_method = run_cfg.attribution_method
+    enabled_signals = set(run_cfg.enabled_signals)
     aleatoric_expected = run_cfg.aleatoric_expected
     epistemic_expected = run_cfg.epistemic_expected
     dinov2_model = run_cfg.dinov2_model
@@ -519,14 +523,15 @@ def run_experiment_core(
         top_k=top_k,
         run_cache_dir=run_cache_dir,
         results_dir=results_dir,
+        enabled_signals=enabled_signals,
+        dropout=dropout,
+        attribution_method=attribution_method,
     )
-    det_logits = eval_outputs["det_logits"]
-    mean_pred_det = eval_outputs["mean_pred_det"]
-    uq = eval_outputs["uq"]
+    det_logits = eval_outputs.get("det_logits")
+    mean_pred_det = eval_outputs.get("mean_pred_det")
+    uq = eval_outputs.get("uq") or {}
     signal_table = eval_outputs["signal_table"]
-    if not isinstance(uq, dict):
-        raise TypeError("compute_eval_signals() returned invalid `uq` payload")
-    if not isinstance(signal_table, dict):
+    if signal_table is None or not isinstance(signal_table, dict):
         raise TypeError("compute_eval_signals() returned invalid `signal_table` payload")
     print(f"✅ Zwischenergebnisse: {results_dir / 'zwischen'}/")
 
@@ -671,10 +676,14 @@ def run_experiment_core(
         print(f"⚠️ Checkpoint save failed (training metrics still saved): {exc}")
 
     # Save complete results for watsonx.ai export
+    mean_for_results = uq.get("mean_prediction") if uq else mean_pred_det
+    if mean_for_results is None:
+        raise TypeError("compute_eval_signals() returned no mean predictions for results export")
+
     results_data = {
         # Model outputs
-        'predictions': uq["mean_prediction"].argmax(dim=1),
-        'confidences': uq["mean_prediction"].max(dim=1).values,
+        'predictions': mean_for_results.argmax(dim=1),
+        'confidences': mean_for_results.max(dim=1).values,
         'mean_prediction_deterministic': mean_pred_det,
         
         # Training data
@@ -725,7 +734,7 @@ def run_experiment_core(
         pass
 
     # Print summary - separate attribution-based from logit-based
-    attribution_signals = ["inverse_coherence", "dominance"]
+    attribution_signals = ["inverse_coherence", "inverse_dominance"]
     logit_signals = ["inverse_mass", "inverse_logit_magnitude"]
     predictive_signals = ["msp_uncertainty", "predictive_entropy", "mutual_info"]
     

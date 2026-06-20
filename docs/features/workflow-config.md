@@ -23,19 +23,31 @@ The progressive UI never builds flat training dicts on the hot path. It edits a 
 
 Scope is derived: ResNet/CNN → `head_only`; DINOv2 → `feature_space` unless end-to-end.
 
-## Step 3 — Uncertainty / sweep axis
+## Step 3 — Uncertainty / sweep perspective
+
+Step 3 picks **one perspective** (`uncertainty_config.sweep_target`):
+
+| `sweep_target` | Meaning | Step 3 shows |
+|----------------|---------|--------------|
+| `single` | Fixed training point | Epistemic + aleatoric |
+| `label_noise` | Sweep Fig. 4 axis | Epistemic fixed mirror + noise grid |
+| `under_train` | Sweep Fig. 3 axis | Aleatoric fixed mirror + under-train grid |
+| `sweep_both` | Both axes swept (fine-grained) | Both grids in Step 3 — **one** launch button in Step 5 |
 
 | Wizard | YAML |
 |--------|------|
+| `uncertainty_config.sweep_target` | UI launch perspective (maps to sweep fields) |
 | `uncertainty_config.epistemic_enabled` | sets `data.under_train_per_class` sweep vs single point |
 | `uncertainty_config.under_train_per_class` | `data.under_train_per_class` |
 | `uncertainty_config.regular_train_per_class` | `data.regular_train_per_class` |
 | `uncertainty_config.under_supported` | `data.under_supported_classes` |
 | `uncertainty_config.aleatoric_enabled` | label-noise sweep vs clean |
 | `uncertainty_config.custom_noise_rate` | `data.aleatoric_noise_percentage` |
-| `uncertainty_config.sweep_mode` | selects points in `generate_sweep_runs` |
+| `uncertainty_config.sweep_mode` | quick/full grid for paper sweeps |
 
 Sweep expansion: [`generate_sweep_runs`](../../src/uqlab_orchestrator/run_spec.py) — not in the wizard dict directly.
+
+Preview helpers: `launch_mirror_preview`, `launch_button_labels` in [`validation_config.py`](../../src/uqlab_orchestrator/config/validation_config.py).
 
 ## Step 4 — Evaluation
 
@@ -51,30 +63,62 @@ Signal families (strategy): predictive / logit / attribution — see [`shared/co
 
 | Action | Code |
 |--------|------|
-| Build configs | `generate_sweep_configs(workflow)` |
-| POST to API | `launch_workflow_experiments(workflow, auto_start=…)` |
+| Preflight | `assess_launch_readiness(workflow, experiments, project_root)` |
+| Build configs | `expand_launch_candidates(workflow)` (arm-aligned, same as launch) |
+| POST to API | `launch_primary_from_step3` / `launch_run_both` |
 | Backend train | `DirectExecutor` → `pipeline.run` |
 
-### Launch modes (progressive UI)
+### Shared launch panel (Step 5 + sidebar)
 
-Step 5 and sidebar **Quick launch** expose the same four actions. Paper reproduction is **two separate 1D sweeps**, not one 2D grid.
+Step 5 and sidebar **Quick launch** share one component: [`launch_panel.py`](../../src/uqlab/ui_components/progressive/launch_panel.py).
 
-| Mode | What runs | Swept axis | Fixed axis (from Step 3 or paper default) |
-|------|-----------|------------|-------------------------------------------|
-| **Custom sweep** | N runs from Step 3 `sweep_enabled` + `sweep_kind` | Label noise *or* under-train (one axis) | Other uncertainty type off or fixed |
-| **Fig 3** | Under-train campaign | `under_train_per_class` grid | Label noise / epistemic settings mirrored from workflow |
-| **Fig 4** | Label-noise campaign | `label_noise_percent` grid | Under-train mirrored from workflow |
-| **Both figures** | Fig 3 campaign then Fig 4 (`2N` runs, two sweep groups) | Each campaign sweeps one axis | See preview expander in launch cards |
+`streamlit_app_progressive.py` computes `assess_launch_readiness` **once per rerun** and passes the same `LaunchReadiness` to both surfaces. Layout differs only:
+
+| Surface | Layout | Extra |
+|---------|--------|-------|
+| Sidebar | `compact` | Vertical buttons, shorter summary |
+| Step 5 | `main` | Full width; optional `View full workflow state` expander |
+
+Preflight priority (one message + one CTA):
+
+1. **Config error** — block launch; link to Step 3
+2. **Duplicate OK** — already plottable; open Results
+3. **Resume** — one aggregate sweep resume button (+N epochs)
+4. **Plot probe** — one **Apply & launch** CTA
+5. Else — proceed to launch row
+
+Launch buttons are **disabled** when `config_error` or `duplicate_ok`. **Run both** always opens a confirm dialog (arm detail in dialog, not a separate expander).
+
+Code: [`launch_preflight.py`](../../src/uqlab_orchestrator/launch_preflight.py), UI [`launch_panel.py`](../../src/uqlab/ui_components/progressive/launch_panel.py), slim launch row in [`sweep_launch_cards.py`](../../src/uqlab/ui_components/progressive/sweep_launch_cards.py).
+
+### Launch modes (perspective-first)
+
+| Step 3 | Primary button | Run both |
+|--------|----------------|----------|
+| `single` | **Single run** | Mirror dialog: paired sweeps or single + complementary sweep |
+| `label_noise` | **Start sweep (Fig. 4)** | **Run all (Fig. 3 + Fig. 4)** — preview then `launch_paired_paper_profiles` |
+| `under_train` | **Start sweep (Fig. 3)** | **Run all (Fig. 3 + Fig. 4)** |
+| `sweep_both` | **Launch both sweeps** (one button + confirm dialog) | — |
 
 Code paths:
 
-- Custom: `launch_workflow_experiments(workflow)`
-- Fig 3: `launch_paper_profile(workflow, "under_train")`
-- Fig 4: `launch_paper_profile(workflow, "noise")`
-- Both: `launch_paired_paper_profiles(workflow)`
+- Single: `launch_single_run(workflow)` (`sweep_enabled=false`)
+- One-axis sweep: `launch_paper_profile(workflow, "noise" \| "under_train")`
+- Run both (sweep_one): `launch_paired_paper_profiles(workflow)`
+- Run both (single, mirror): `launch_run_both(workflow, mirror_mode=…)`
 
-Preview helper: `paper_sweep_preview(workflow, profile)` in [`validation_config.py`](../../src/uqlab_orchestrator/config/validation_config.py).  
-UI: [`sweep_launch_cards.py`](../../src/uqlab/ui_components/progressive/sweep_launch_cards.py).
+Paper reproduction = **one 1D sweep per registered perspective** under one campaign timestamp, not a 2D grid.
+
+### Extensibility
+
+Perspectives are defined in [`uncertainty/registry.py`](../../src/uqlab_orchestrator/uncertainty/registry.py).  
+Mirroring is automatic: for primary P, **Run all** launches sweeps for all other **N−1** types via a for-loop over the registry.
+
+**Adding a 3rd perspective:** append one `UncertaintyPerspective` to `UNCERTAINTY_PERSPECTIVES`, add sweep grids in `validation_config.py` if needed, and extend `arm_builder.build_arm_workflow` — Step 3 options, launch resolver, and Results arm tabs pick it up via `iter_perspectives()`.
+
+Launch actions are resolved in [`launch_resolver.resolve_launch_actions`](../../src/uqlab_orchestrator/uncertainty/launch_resolver.py); UI renders buttons from that list (never hardcoded Fig 3/4 branches in `sweep_launch_cards.py`).
+
+Arm workflows: [`arm_builder.py`](../../src/uqlab_orchestrator/uncertainty/arm_builder.py) (replaces inline profile `if` chains in the sidebar wrapper).
 
 ## Sweep grouping (results)
 
@@ -84,7 +128,35 @@ After launch, experiments are grouped by:
 2. Name pattern `prefix_timestamp_param_value`
 3. Single-parameter config diff
 
+When a campaign has both `fast_alea_*` and `fast_epis_*` runs, Results §2 offers **Noise sweep** | **Under-train sweep** tabs.
+
 See [`sweep-grouping.md`](sweep-grouping.md) and [`sweep_groups.py`](../../src/uqlab_orchestrator/sweep_groups.py).
+
+## Plot probe (duplicate-gated redo)
+
+When **UI debug → plot probe redo suggestions** is on:
+
+| Location | Gate | Ladder | On failure |
+|----------|------|--------|------------|
+| **Step 5 / sidebar preflight** | `assess_launch_readiness` → single best suggestion | artifacts → completion (≥2 runs) → `build_sweep_line_plot` | One-line warning + **Apply & launch** (no per-group loop) |
+| **Results §2** | Plot render failed for selected campaign | Same ladder on campaign runs | Reconstruct workflow from run YAML + full diff table |
+
+Code: [`plot_probe/`](../../src/uqlab_orchestrator/plot_probe/), UI [`plot_probe_panel.py`](../../src/uqlab/ui_components/progressive/plot_probe_panel.py), preflight [`launch_preflight.py`](../../src/uqlab_orchestrator/launch_preflight.py).
+
+Optional **Preflight detail (debug)** expander (both surfaces) shows diff table when `ui_debug.plot_probe_suggestions` is on.
+
+Suggestions bias **upward** on `epochs`, `mc_passes`, `eval_per_group`, or `sweep_mode → full` (1–2 knobs per failure kind). No silent relaunch — user must **Apply** or **Apply & launch**.
+
+### Training presets (`TRAINING_CONFIG`)
+
+Step 3 sweep mode applies quick/full training presets to `training_config.epochs` and `evaluation_config.mc_passes`:
+
+| Mode | Default epochs | MC passes |
+|------|----------------|-----------|
+| `quick` | 12 | 10 |
+| `full` | 10 | 30 |
+
+Defined in [`validation_config.py`](../../src/uqlab_orchestrator/config/validation_config.py); seeded into [`workflow_defaults.py`](../../src/uqlab_orchestrator/config/workflow_defaults.py).
 
 ## Related
 
