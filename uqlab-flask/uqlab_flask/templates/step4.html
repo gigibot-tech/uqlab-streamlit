@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Step 4 — Eval</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<h1>Step 4: Evaluation</h1>
+<form method="post">
+  <label>Samples per eval group</label>
+  <input name="eval_per_group" type="number" value="{{ workflow.evaluation_config.eval_per_group | default(100) }}">
+  <label>MC passes (predictive signals)</label>
+  <input name="mc_passes" type="number" value="{{ workflow.evaluation_config.mc_passes | default(10) }}">
+  <button type="submit">Continue</button>
+</form>
+</body>
+</html>
