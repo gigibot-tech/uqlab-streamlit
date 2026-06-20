@@ -1,0 +1,41 @@
+# UI debug (progressive app)
+
+Hide or show blocks in [`streamlit_app_progressive.py`](../../streamlit_app_progressive.py) without deleting code.
+
+**Where:** sidebar footer → **UI debug — components**
+
+**Agent workflow:** [`.cursor/skills/ui-debug/SKILL.md`](../../.cursor/skills/ui-debug/SKILL.md)
+
+## Quick actions
+
+| Button | Effect |
+|--------|--------|
+| **All on** | Every registered toggle on (auto-refresh still off until you enable it) |
+| **Results off** | Hides entire Results area + footer metrics |
+| **Results defaults** | Results on; §1 progress/auto-refresh and per-run details off |
+
+## Results §1–§4 toggles
+
+| Section | Primary toggle |
+|---------|----------------|
+| Entire block | `Results · entire section` |
+| §1 Live status | `Results · §1 live status` |
+| §2 3-line sweep plots | `Results · §2 sweep analysis` |
+| §3 Campaign expanders | `Results · §3 campaign expanders` |
+| §4 Training data | `Results · training data inspection` |
+
+Parent toggles cascade: turning off **entire section** disables all children.
+
+## Launch toggles
+
+| Toggle | What it gates |
+|--------|----------------|
+| `Step 5 · launch buttons` | Custom + Fig 3 / Fig 4 / Both cards in Step 5 |
+| `Sidebar · quick launch` | Same cards in the sidebar |
+| `Launch result banner` | Success/error banner after launch |
+
+## If Results “disappears”
+
+1. Open **UI debug** → enable **Results · entire section** (or **Results defaults**).
+2. Scroll below Step 5 — Results is not in the sidebar.
+3. §2 plots need ≥2 **completed** runs with `results.pt` on disk.
