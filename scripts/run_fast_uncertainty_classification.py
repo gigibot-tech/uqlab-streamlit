@@ -475,33 +475,38 @@ def run_experiment_core(
     model = model.to(device)
     model.eval()
 
-    # Save training data statistics to CSV (banner printed inside save_training_data_csv)
+    # ============================================================================
+    # POST-TRAINING PHASE: Save Training Statistics & Prepare Evaluation
+    # ============================================================================
+    # This corresponds to Progressive UI Step 4: After model training completes,
+    # we save training data statistics and prepare for uncertainty evaluation.
+    
+    # Serialize config for CSV export (convert Path/Pydantic objects to JSON-safe types)
     from dataclasses import asdict
     config_dict = asdict(config)
-    # Convert Path objects to strings for JSON serialization
     if config_dict.get('paths'):
-        for key, value in config_dict['paths'].items():
-            if isinstance(value, Path):
-                config_dict['paths'][key] = str(value)
-    # Convert Pydantic model to dict
+        config_dict['paths'] = {k: str(v) if isinstance(v, Path) else v
+                                for k, v in config_dict['paths'].items()}
     if config_dict.get('model'):
         config_dict['model'] = dict(config.model)
     
+    # Save training data distribution to CSV (includes class balance, noise rates)
     save_training_data_csv(
         output_path=results_dir / "training_data.csv",
         train_dataset=train_dataset,
         config=config_dict,
     )
 
-    eval_group_labels = eval_data["eval_group_labels"]
-    eval_clean_labels = eval_data["eval_clean_labels"]
-    eval_is_noisy = eval_data["eval_is_noisy"]
-    eval_noisy_labels = eval_data["eval_noisy_labels"]
-    eval_dataset_index = eval_data["eval_dataset_index"]
+    # Extract evaluation metadata (ground truth labels, noise indicators, dataset indices)
+    eval_group_labels = eval_data["eval_group_labels"]      # Which UQ group: clean/aleatoric/epistemic
+    eval_clean_labels = eval_data["eval_clean_labels"]      # True CIFAR-10 labels
+    eval_is_noisy = eval_data["eval_is_noisy"]              # Boolean: has label noise?
+    eval_noisy_labels = eval_data["eval_noisy_labels"]      # Noisy labels (if applicable)
+    eval_dataset_index = eval_data["eval_dataset_index"]    # Original CIFAR-10N indices
 
+    # Save evaluation setup as intermediate result (for debugging/reproducibility)
     save_zwischen_result(
-        results_dir,
-        "00_eval_setup",
+        results_dir, "00_eval_setup",
         {
             "eval_group_labels": eval_group_labels.cpu(),
             "eval_clean_labels": eval_clean_labels.cpu(),
@@ -513,6 +518,13 @@ def run_experiment_core(
         },
     )
 
+    # ============================================================================
+    # UNCERTAINTY SIGNAL COMPUTATION PHASE
+    # ============================================================================
+    # This corresponds to Progressive UI Step 5: Compute uncertainty signals
+    # (epistemic, aleatoric, attribution-based) using the trained model.
+    
+    # Compute all enabled uncertainty signals (MC dropout, attribution, etc.)
     eval_outputs = compute_eval_signals(
         model=model,
         train_dataset=train_dataset,
@@ -527,6 +539,8 @@ def run_experiment_core(
         dropout=dropout,
         attribution_method=attribution_method,
     )
+    
+    # Extract computed signals and validate output structure
     det_logits = eval_outputs.get("det_logits")
     mean_pred_det = eval_outputs.get("mean_pred_det")
     uq = eval_outputs.get("uq") or {}
@@ -535,14 +549,17 @@ def run_experiment_core(
         raise TypeError("compute_eval_signals() returned invalid `signal_table` payload")
     print(f"✅ Zwischenergebnisse: {results_dir / 'zwischen'}/")
 
-    # REMOVED SIGNALS (poor performers; still computed inside attribution_signals):
-    # - attribution_concentration: Random performance (0.54 alea, 0.31 epis)
-    # - label_disagreement: Random performance (0.50, 0.50)
-    # - compound_uncertainty: Random performance (0.50, 0.50)
-    # - noisy_support_ratio: Misclassified, redundant with inverse_mass
-    # - inverse_max_logit: Redundant with inverse_mass
-    # - cross_class_support: Poor performer
+    # NOTE: Some signals removed due to poor AUROC performance (see AUROC_METRICS_EXPLAINED.md)
+    # - attribution_concentration, label_disagreement, compound_uncertainty: ~0.50 AUROC (random)
+    # - noisy_support_ratio, inverse_max_logit: redundant with better-performing signals
 
+    # ============================================================================
+    # SIGNAL EVALUATION & AUROC COMPUTATION PHASE
+    # ============================================================================
+    # This corresponds to Progressive UI Step 6: Evaluate how well each signal
+    # distinguishes clean vs. aleatoric vs. epistemic samples using AUROC.
+    
+    # Compute AUROC scores for all signals (one-vs-rest classification)
     eval_summary = summarize_eval_signals(
         signal_table=signal_table,
         eval_group_labels=eval_group_labels,
@@ -554,25 +571,29 @@ def run_experiment_core(
         device=device,
         seed=seed,
     )
+    
+    # Extract AUROC results and check for skipped evaluations
     auroc_rows = eval_summary["auroc_rows"]
     one_vs_rest_auroc = eval_summary["one_vs_rest_auroc"]
     clf_rows = eval_summary["clf_rows"]
     alea_skip = one_vs_rest_auroc[0].get("aleatoric_skip_reason") if one_vs_rest_auroc else None
     epis_skip = one_vs_rest_auroc[0].get("epistemic_skip_reason") if one_vs_rest_auroc else None
 
+    # Document evaluation protocol (ensures reproducibility across architectures)
     eval_protocol = {
         "architecture_invariant": True,
         "rationale": (
-            "Eval indices are sampled from CIFAR-10N pools before training; "
-            "all architectures at the same sweep point use the same seed, "
-            "eval_per_group, and under_supported_classes (same design as "
-            "uq_disentanglement: fixed test set, varying train UQ method)."
+            "Eval indices sampled from CIFAR-10N pools before training; "
+            "all architectures at same sweep point use same seed/eval_per_group/under_supported_classes "
+            "(fixed test set, varying train UQ method - same as uq_disentanglement design)."
         ),
         "eval_per_group": eval_per_group,
         "groups": list(GROUP_NAMES.values()),
         "under_supported_classes": list(split_spec.under_supported_classes),
         "seed": seed,
     }
+    
+    # Build signal formula manifest (documents how each signal is computed)
     signal_formulas = build_signal_formula_manifest(
         top_k=top_k,
         mc_passes=mc_passes,
