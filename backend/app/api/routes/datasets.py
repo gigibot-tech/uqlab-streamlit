@@ -1,231 +1,152 @@
 """Dataset statistics and exploration endpoints."""
 
-from fastapi import APIRouter, HTTPException, Query
-from pathlib import Path
-import sys
-import os
-from typing import Any
+from __future__ import annotations
+
 import logging
+import os
+from pathlib import Path
+from typing import Any
+
+from fastapi import APIRouter, HTTPException, Query
+
+from app.core.ml_bootstrap import PROJECT_ROOT, ensure_ml_paths
 
 logger = logging.getLogger(__name__)
 
-# Configuration: Use environment variables for enterprise deployment
-DTAG_ROOT_ENV = os.getenv("DTAG_ROOT")
-DATA_DIR_ENV = os.getenv("CIFAR10N_DATA_DIR")
-
-# Fail-fast: Determine paths at startup
-if DTAG_ROOT_ENV:
-    # Production: Use explicit environment variable
-    DTAG_ROOT = Path(DTAG_ROOT_ENV)
-    if not DTAG_ROOT.exists():
-        raise RuntimeError(f"DTAG_ROOT path does not exist: {DTAG_ROOT}")
-else:
-    # Development: Try to find dtag directory
-    CURRENT_FILE = Path(__file__).resolve()
-    POSSIBLE_PATHS = [
-        Path.home() / "Desktop" / "GigiApps" / "dtag",
-        Path("/dtag"),
-        CURRENT_FILE.parents[5] / "dtag" if len(CURRENT_FILE.parents) > 5 else None,
-    ]
-    
-    DTAG_ROOT = None
-    for path in POSSIBLE_PATHS:
-        if path and path.exists():
-            DTAG_ROOT = path
-            logger.info(f"Found DTAG_ROOT at: {path}")
-            break
-    
-    if not DTAG_ROOT:
-        raise RuntimeError(
-            "DTAG_ROOT not found. Set DTAG_ROOT environment variable or ensure "
-            "dtag directory exists in one of: " + ", ".join(str(p) for p in POSSIBLE_PATHS if p)
-        )
-
-from app.core.ml_bootstrap import ensure_ml_paths
-
 ensure_ml_paths()
 
-# Optional legacy dtag on path
-if DTAG_ROOT.exists():
-    _dtag_entry = str(DTAG_ROOT)
-    if _dtag_entry not in sys.path:
-        sys.path.insert(0, _dtag_entry)
-
-# Set data directory
-if DATA_DIR_ENV:
-    DATA_DIR = Path(DATA_DIR_ENV)
-else:
-    DATA_DIR = Path(__file__).resolve().parents[3] / "data" / "cifar10n"
-
-if not DATA_DIR.exists():
-    logger.warning(f"Data directory does not exist: {DATA_DIR}")
-
-os.environ["CIFAR10N_DATA_DIR"] = str(DATA_DIR)
+# Optional override for any dataset root (e.g. shared CIFAR cache on disk).
+DATA_ROOT_OVERRIDE = os.getenv("DATA_ROOT")
 
 router = APIRouter()
 
 
-def _normalize_noise_type(noise_type: str) -> str:
-    """Map UI aliases (``none``) to CIFAR-10N keys (``clean_label``)."""
-    try:
-        from uqlab.data_loaders.cifar10n_loader import normalize_noise_type
+def _resolve_dataset_root(dataset_name: str) -> Path:
+    """Resolve on-disk root via the shared registry (not CIFAR-10N-only)."""
+    from uqlab.data.dataset_registry import resolve_data_root
 
-        return normalize_noise_type(noise_type)
-    except ImportError:
-        aliases = {"none": "clean_label", "clean": "clean_label", "no_noise": "clean_label"}
-        return aliases.get(noise_type, noise_type)
+    if DATA_ROOT_OVERRIDE:
+        return Path(DATA_ROOT_OVERRIDE)
+    return resolve_data_root(dataset_name, project_root=PROJECT_ROOT)
 
 
-# Lazy import helper - only import when needed
-def _get_cifar10n_dataset():
-    """Lazy import of CIFAR10NDataset to avoid startup failures."""
-    try:
-        from uqlab.data_loaders.cifar10n_loader import CIFAR10NDataset
-        import numpy as np
-        return CIFAR10NDataset, np
-    except ImportError as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"CIFAR10N dependencies not available. Error: {str(e)}"
-        )
+def _should_download(dataset_name: str, root: Path) -> bool:
+    """Download torchvision data when the expected cache folder is missing."""
+    if dataset_name == "mnist":
+        return not (root / "MNIST").exists()
+    if dataset_name in ("cifar10", "cifar10n"):
+        return not (root / "cifar-10-batches-py").exists()
+    return False
+
+
+@router.get("")
+async def list_datasets() -> dict[str, Any]:
+    """List datasets registered in the plugin registry."""
+    from uqlab.data.dataset_registry import DATASET_SPECS
+
+    return {
+        "datasets": [
+            {
+                "name": spec.name,
+                "label": spec.label,
+                "num_classes": spec.num_classes,
+                "default_root": spec.default_root,
+                "supports_human_noise": spec.supports_human_noise,
+                "supports_synthetic_noise": spec.supports_synthetic_noise,
+                "noise_options": list(spec.noise_options),
+            }
+            for spec in DATASET_SPECS.values()
+        ]
+    }
+
 
 @router.get("/{dataset_name}/stats")
 async def get_dataset_stats_by_name(
     dataset_name: str,
-    noise_type: str = Query("clean_label", description="Noise type to analyze (CIFAR-10N only)"),
+    noise_type: str = Query(
+        "clean_label",
+        description="Noise split (human noise for cifar10n; ignored for cifar10/mnist)",
+    ),
 ) -> dict[str, Any]:
     """
-    Get dataset statistics including noise distribution.
+    Dataset statistics via the shared registry/factory.
 
-    - ``cifar10``: original CIFAR-10 with clean labels (noise_type ignored).
-    - ``cifar10n``: CIFAR-10N human-noisy labels; ``noise_type`` selects the split.
+    Supports: ``cifar10``, ``cifar10n``, ``mnist``.
     """
+    from uqlab.data.dataset_registry import compute_dataset_stats, get_dataset_spec, list_dataset_names
+
     key = dataset_name.lower()
-    if key not in ("cifar10", "cifar10n"):
+    if key not in list_dataset_names():
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported dataset: {dataset_name}. Available: cifar10, cifar10n.",
+            detail=f"Unsupported dataset: {dataset_name}. Available: {', '.join(list_dataset_names())}.",
         )
 
-    CIFAR10NDataset, np = _get_cifar10n_dataset()
-    resolved_noise = "clean_label" if key == "cifar10" else _normalize_noise_type(noise_type)
+    spec = get_dataset_spec(key)
+    if noise_type not in spec.noise_options and key != "cifar10n":
+        noise_type = "clean_label"
+
+    root = _resolve_dataset_root(key)
+    root.parent.mkdir(parents=True, exist_ok=True)
 
     try:
-        dataset = CIFAR10NDataset(
-            root=str(DATA_DIR), noise_type=resolved_noise, download=False, train=True
+        payload = compute_dataset_stats(
+            key,
+            noise_type,
+            root=root,
+            download=_should_download(key, root),
         )
-        payload = _dataset_stats_payload(
-            dataset, np, requested_noise_type=resolved_noise, dataset_name=key
-        )
+        payload["source"] = "api"
+        payload["data_root"] = str(root)
         return payload
     except Exception as e:
-        logger.error(f"Error loading dataset stats: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Dataset error: {str(e)}")
-
-
-def _dataset_stats_payload(
-    dataset, np, *, requested_noise_type: str, dataset_name: str = "cifar10n"
-) -> dict[str, Any]:
-    """Shared stats dict for CIFAR-10 / CIFAR-10N dataset instances."""
-    total_samples = len(dataset)
-
-    if dataset.noise_mask is not None:
-        noisy_samples = int(np.sum(dataset.noise_mask))
-        noise_rate = float(dataset.noise_rate)
-    else:
-        noisy_samples = 0
-        noise_rate = 0.0
-
-    clean_labels = np.array(dataset.cifar10.targets)
-    class_counts = {int(i): int(np.sum(clean_labels == i)) for i in range(10)}
-
-    noise_per_class = {}
-    for i in range(10):
-        class_mask = clean_labels == i
-        if dataset.noise_mask is not None:
-            class_noisy = int(np.sum(dataset.noise_mask[class_mask]))
-        else:
-            class_noisy = 0
-
-        total_in_class = int(np.sum(class_mask))
-        noise_per_class[int(i)] = {
-            "total": total_in_class,
-            "noisy": class_noisy,
-            "rate": float(class_noisy / total_in_class) if total_in_class > 0 else 0.0,
-        }
-
-    class_names = dataset.cifar10.classes
-
-    return {
-        "dataset_name": dataset_name,
-        "total_samples": total_samples,
-        "num_classes": 10,
-        "noisy_samples": noisy_samples,
-        "clean_samples": total_samples - noisy_samples,
-        "noise_rate": noise_rate,
-        "noise_type": requested_noise_type,
-        "resolved_noise_type": dataset.noise_type,
-        "class_distribution": class_counts,
-        "noise_per_class": noise_per_class,
-        "class_names": class_names,
-    }
+        logger.error("Error loading dataset stats for %s: %s", key, e, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Dataset error: {e}") from e
 
 
 @router.get("/cifar10n/stats")
 async def get_dataset_stats(
-    noise_type: str = Query("worse_label", description="Noise type to analyze")
+    noise_type: str = Query("worse_label", description="Noise type to analyze"),
 ) -> dict[str, Any]:
-    """Get CIFAR-10N dataset statistics including noise distribution (legacy endpoint)."""
-    CIFAR10NDataset, np = _get_cifar10n_dataset()
-    resolved_noise = _normalize_noise_type(noise_type)
-
-    try:
-        dataset = CIFAR10NDataset(
-            root=str(DATA_DIR), noise_type=resolved_noise, download=False, train=True
-        )
-        payload = _dataset_stats_payload(
-            dataset, np, requested_noise_type=noise_type, dataset_name="cifar10n"
-        )
-        payload.pop("num_classes", None)
-        return payload
-    except Exception as e:
-        logger.error(f"Error loading dataset stats: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Dataset error: {str(e)}")
+    """Legacy CIFAR-10N stats endpoint."""
+    payload = await get_dataset_stats_by_name("cifar10n", noise_type=noise_type)
+    payload.pop("num_classes", None)
+    return payload
 
 
 @router.get("/cifar10n/confusion-matrix")
 async def get_confusion_matrix(
-    noise_type: str = Query("worse_label", description="Noise type to analyze")
+    noise_type: str = Query("worse_label", description="Noise type to analyze"),
 ) -> dict[str, Any]:
-    """Get confusion matrix showing clean vs noisy label relationships."""
-    CIFAR10NDataset, np = _get_cifar10n_dataset()
-    
+    """Confusion matrix for CIFAR-10N human noise splits."""
+    import numpy as np
+
+    from uqlab.data.classification_dataset import dataset_clean_labels
+    from uqlab.data.dataset_registry import load_classification_dataset
+
+    root = _resolve_dataset_root("cifar10n")
     try:
-        dataset = CIFAR10NDataset(root=str(DATA_DIR), noise_type=noise_type, download=False, train=True)
-
-        # Get clean labels from wrapped CIFAR10 dataset
-        clean_labels = np.array(dataset.cifar10.targets)
-        
-        # Get noisy labels if available
-        if dataset.noisy_labels is not None:
-            noisy_labels = dataset.noisy_labels
-        else:
-            noisy_labels = clean_labels
-
-        # Build confusion matrix
-        confusion = np.zeros((10, 10), dtype=int)
+        dataset = load_classification_dataset(
+            "cifar10n",
+            root=root,
+            noise_type=noise_type,
+            train=True,
+            download=_should_download("cifar10n", root),
+        )
+        clean_labels = dataset_clean_labels(dataset)
+        noisy_labels = (
+            np.asarray(dataset.noisy_labels)
+            if dataset.noisy_labels is not None
+            else clean_labels
+        )
+        n_classes = dataset.num_classes
+        confusion = np.zeros((n_classes, n_classes), dtype=int)
         for clean, noisy in zip(clean_labels, noisy_labels):
-            confusion[clean, noisy] += 1
-
-        # Get class names from CIFAR10
-        class_names = dataset.cifar10.classes
-
+            confusion[int(clean), int(noisy)] += 1
         return {
             "matrix": confusion.tolist(),
-            "class_names": class_names,
+            "class_names": list(dataset.class_names),
         }
     except Exception as e:
-        logger.error(f"Error loading confusion matrix: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Dataset error: {str(e)}")
-
-# Made with Bob
+        logger.error("Error loading confusion matrix: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Dataset error: {e}") from e

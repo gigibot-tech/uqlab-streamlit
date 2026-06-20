@@ -1,6 +1,12 @@
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
-import logging
+
+# Bootstrap ``src/`` before any route imports ``uqlab`` / ``uqlab_orchestrator``.
+from app.core.ml_bootstrap import SRC_DIR, ensure_ml_paths, verify_ml_stack
+
+ensure_ml_paths()
+verify_ml_stack()
 
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
@@ -10,6 +16,7 @@ from starlette.middleware.cors import CORSMiddleware
 from app.api.main import api_router
 from app.core.config import settings
 from app.core.db import engine, init_db
+from app.storage.factory import get_storage_backend
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +40,9 @@ async def lifespan(app: FastAPI):
         raise FileNotFoundError(error_msg)
     
     logger.info(f"✅ ML script found at: {ml_script_path.absolute()}")
+    logger.info("✅ ML stack: uqlab from %s", SRC_DIR)
+    storage_backend = get_storage_backend()
+    logger.info("✅ Active storage backend ready: %s", storage_backend.name)
     
     # Initialize database (create tables for SQLite)
     with Session(engine) as session:

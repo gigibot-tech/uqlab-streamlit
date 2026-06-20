@@ -51,14 +51,25 @@ class TrainingOrchestrator:
                 if not experiment:
                     raise ValueError(f"Experiment {experiment_id} not found")
 
-                # Parse config and generate YAML
+                # Parse config — write validated YAML straight to disk (no flat re-parse).
                 raw_config = (
                     experiment.config_yaml
                     if isinstance(experiment.config_yaml, dict)
                     else yaml.safe_load(experiment.config_yaml)
                 )
-                config = TrainingConfig.from_legacy_flat_dict(raw_config)
-                config_path, output_dir = self._prepare_paths(experiment_id, config)
+                try:
+                    from uqlab_orchestrator.run_spec import RunSpecError, validate_run_yaml
+
+                    validate_run_yaml(raw_config)
+                except ImportError:
+                    config = TrainingConfig.from_legacy_flat_dict(raw_config)
+                    config_path, output_dir = self._prepare_paths(experiment_id, config)
+                except RunSpecError as exc:
+                    raise ValueError(str(exc)) from exc
+                else:
+                    config_path, output_dir = self._prepare_paths_from_yaml(
+                        experiment_id, raw_config
+                    )
 
                 # Update status to running
                 repo.update_status(experiment_id, JobStatus.RUNNING, 0.0)
@@ -105,6 +116,21 @@ class TrainingOrchestrator:
             self._running_jobs.pop(experiment_id, None)
             if self._current_training == experiment_id:
                 self._current_training = None
+
+    def _prepare_paths_from_yaml(self, experiment_id: uuid.UUID, cfg: dict) -> tuple[Path, Path]:
+        """Write grouped YAML dict directly for run_fast_uncertainty_classification."""
+        from app.core.runtime_paths import experiment_dir
+
+        exp_dir = experiment_dir(experiment_id)
+        exp_dir.mkdir(parents=True, exist_ok=True)
+
+        config_path = exp_dir / "config.yaml"
+        with open(config_path, "w") as f:
+            yaml.dump(cfg, f, default_flow_style=False)
+
+        output_dir = exp_dir / "results"
+        output_dir.mkdir(exist_ok=True)
+        return config_path, output_dir
 
     def _prepare_paths(self, experiment_id: uuid.UUID, config: TrainingConfig) -> tuple[Path, Path]:
         """Prepare config file and output directory."""

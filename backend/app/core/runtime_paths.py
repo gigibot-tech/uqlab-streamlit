@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Union
 from uuid import UUID
 
+from app.storage.factory import get_storage_backend
+
 # backend/app/core/runtime_paths.py -> uqlab-streamlit/
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -18,8 +20,8 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 def data_root() -> Path:
     raw = os.environ.get("UQLAB_DATA_DIR", "").strip()
     root = Path(raw).expanduser() if raw else _REPO_ROOT / "data"
-    root.mkdir(parents=True, exist_ok=True)
-    return root.resolve()
+    prepared = get_storage_backend().prepare_directory(root)
+    return prepared.resolve()
 
 
 def sqlite_db_path() -> Path:
@@ -28,8 +30,7 @@ def sqlite_db_path() -> Path:
 
 def experiments_root() -> Path:
     root = data_root() / "experiments"
-    root.mkdir(parents=True, exist_ok=True)
-    return root
+    return get_storage_backend().prepare_directory(root)
 
 
 def experiment_dir(experiment_id: Union[str, UUID]) -> Path:
@@ -68,4 +69,4 @@ def resolve_experiment_results_dir(
 
 
 def batch_root(batch_id: Union[str, UUID]) -> Path:
-    return experiments_root() / f"batch_{batch_id}"
+    return get_storage_backend().prepare_directory(experiments_root() / f"batch_{batch_id}")

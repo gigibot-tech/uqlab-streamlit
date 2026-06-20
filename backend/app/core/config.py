@@ -69,6 +69,14 @@ class Settings(BaseSettings):
     # Storage backend configuration
     ENABLE_POSTGRES: bool = True  # Enable PostgreSQL storage backend
     ENABLE_WXGOV: bool = False  # Enable watsonx.governance storage backend
+    STORAGE_BACKEND: Literal["filesystem", "s3"] = "s3"  # Default to S3 (local MinIO)
+    STORAGE_S3_ENDPOINT_URL: str | None = "http://localhost:9000"  # Local MinIO endpoint
+    STORAGE_S3_BUCKET: str | None = "uqlab-artifacts"  # Default bucket name
+    STORAGE_S3_ACCESS_KEY_ID: str | None = "minioadmin"  # Default MinIO credentials
+    STORAGE_S3_SECRET_ACCESS_KEY: str | None = "minioadmin"  # Default MinIO credentials
+    STORAGE_S3_REGION: str | None = "us-east-1"  # MinIO default region
+    STORAGE_S3_SECURE: bool = False  # Local MinIO uses HTTP, not HTTPS
+    STORAGE_S3_PREFIX: str = "uqlab"
     
     # watsonx.governance configuration (optional)
     WXGOV_API_KEY: str | None = None

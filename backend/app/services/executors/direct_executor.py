@@ -7,7 +7,7 @@ import threading
 from pathlib import Path
 from typing import Callable, Optional
 
-from app.core.ml_bootstrap import ensure_ml_paths
+from app.core.ml_bootstrap import ensure_ml_paths, reload_training_modules
 from app.domain.models import TrainingResult
 from app.domain.value_objects import ProgressUpdate, TrainingStage
 from app.services.executors.base import TrainingExecutor
@@ -16,18 +16,6 @@ logger = logging.getLogger(__name__)
 
 # Only one in-process training run at a time (shared sys.argv / reloaded module).
 _TRAINING_LOCK = threading.Lock()
-
-# Global progress callback that ML scripts can use
-_GLOBAL_PROGRESS_CALLBACK: Optional[Callable[[ProgressUpdate], None]] = None
-
-def set_progress_callback(callback: Optional[Callable[[ProgressUpdate], None]]) -> None:
-    """Set the global progress callback for ML scripts to use."""
-    global _GLOBAL_PROGRESS_CALLBACK
-    _GLOBAL_PROGRESS_CALLBACK = callback
-
-def get_progress_callback() -> Optional[Callable[[ProgressUpdate], None]]:
-    """Get the current global progress callback."""
-    return _GLOBAL_PROGRESS_CALLBACK
 
 
 class DirectExecutor(TrainingExecutor):
@@ -65,12 +53,25 @@ class DirectExecutor(TrainingExecutor):
     def _verify_imports(self):
         """Verify that all required modules can be imported."""
         try:
-            # Test critical imports (using new paths after refactoring)
-            from uqlab.evaluation.classification.models import EmbeddingDataset
+            import importlib
+
+            from uqlab.data.preprocessing import get_dataset_image_transform
             from uqlab.evaluation.classification.config import ExperimentConfig
-            from uqlab.data.loaders.cifar10n_loader import CIFAR10NDataset
+            from uqlab.evaluation.classification.models import EmbeddingDataset
+
+            assert get_dataset_image_transform("cifar10") is not None
             assert EmbeddingDataset is not None and ExperimentConfig is not None
-            logger.info("✅ Pre-flight check passed: All required modules can be imported")
+
+            scripts_dir = self.script_path.parent
+            if str(scripts_dir) not in sys.path:
+                sys.path.insert(0, str(scripts_dir))
+            reload_training_modules(scripts_dir=scripts_dir)
+            import run_fast_uncertainty_classification
+
+            importlib.reload(run_fast_uncertainty_classification)
+            assert hasattr(run_fast_uncertainty_classification, "ClassificationImageDataset")
+
+            logger.info("✅ Pre-flight check passed: training script and dataset transforms import cleanly")
         except ImportError as e:
             logger.error(f"❌ Pre-flight check failed: {e}", exc_info=True)
             raise RuntimeError(f"Missing required dependencies: {e}") from e
@@ -137,72 +138,36 @@ class DirectExecutor(TrainingExecutor):
     def _run_training_sync_locked(
         self, config_path: Path, output_dir: Path, progress_callback: Callable[[ProgressUpdate], None]
     ) -> TrainingResult:
-        """Run training under the global lock (no concurrent sys.argv)."""
-        # Set up sys.argv to simulate command line args
-        original_argv = sys.argv.copy()
-        original_stdout = sys.stdout
-        original_stderr = sys.stderr
-        
-        try:
-            # Import the main function (do this inside try block to catch import errors)
-            import importlib
-            
-            # Add scripts directory to path if not already there
-            scripts_dir = Path(__file__).parent.parent.parent.parent.parent / "scripts"
-            if str(scripts_dir) not in sys.path:
-                sys.path.insert(0, str(scripts_dir))
-            
-            import run_fast_uncertainty_classification
-            # Force reload to pick up any changes to the script
-            importlib.reload(run_fast_uncertainty_classification)
-            from run_fast_uncertainty_classification import main
-            
-            # Set the global progress callback so ML script can use it
-            set_progress_callback(progress_callback)
-            
-            sys.argv = [
-                str(self.script_path),
-                "--config", str(config_path),
-                "--output_dir", str(output_dir)
-            ]
-            
-            logger.info(f"Calling main() with args: {sys.argv}")
-            progress_callback(ProgressUpdate(
-                progress=0.1,
-                stage=TrainingStage.LOADING_DATA,
-                message="Initializing training...",
-                epoch=None,
-                total_epochs=None
-            ))
-            
-            # Call the main function
-            logger.info("Starting ML training script execution...")
-            main()
-            logger.info("ML training script completed successfully")
-            
-            # Final progress update
-            progress_callback(ProgressUpdate(
-                progress=0.95,
-                stage=TrainingStage.SAVING_RESULTS,
-                message="Reading results...",
-                epoch=None,
-                total_epochs=None
-            ))
-            
-            # Read results
-            return self._read_results(output_dir)
-            
-        except ImportError as e:
-            error_msg = f"Failed to import training script: {str(e)}"
-            logger.error(error_msg, exc_info=True)
-            raise RuntimeError(error_msg) from e
-        finally:
-            # Always restore original state
-            sys.argv = original_argv
-            sys.stdout = original_stdout
-            sys.stderr = original_stderr
-            # Clear the global progress callback
-            set_progress_callback(None)
+        """Run training under the global lock via the canonical runner pipeline."""
+        progress_callback(ProgressUpdate(
+            progress=0.1,
+            stage=TrainingStage.LOADING_DATA,
+            message="Loading config and starting pipeline...",
+            epoch=None,
+            total_epochs=None,
+        ))
+
+        from uqlab.runner.pipeline import run as pipeline_run
+
+        logger.info(
+            "Calling uqlab.runner.pipeline.run(config=%s, output=%s)",
+            config_path,
+            output_dir,
+        )
+        pipeline_run(
+            config_path,
+            output_dir,
+            progress_callback=progress_callback,
+        )
+
+        progress_callback(ProgressUpdate(
+            progress=0.95,
+            stage=TrainingStage.SAVING_RESULTS,
+            message="Reading results...",
+            epoch=None,
+            total_epochs=None,
+        ))
+        return self._read_results(output_dir)
 
     def _read_results(self, output_dir: Path) -> TrainingResult:
         """Read results from summary.json, or rebuild from results.pt if needed."""
@@ -232,9 +197,23 @@ class DirectExecutor(TrainingExecutor):
             "one_vs_rest_auroc": one_vs_rest_auroc  # Pass through complete 7×2 structure
         }
         
-        # Compute aggregated max values for backward compatibility
-        aleatoric_auroc = max((s.get("aleatoric_like_auroc", 0.0) for s in one_vs_rest_auroc), default=0.0)
-        epistemic_auroc = max((s.get("epistemic_like_auroc", 0.0) for s in one_vs_rest_auroc), default=0.0)
+        # Compute aggregated max values for backward compatibility (skip null/NaN)
+        def _max_auroc(key: str) -> float | None:
+            vals = []
+            for s in one_vs_rest_auroc:
+                v = s.get(key)
+                if v is None:
+                    continue
+                try:
+                    fv = float(v)
+                    if fv == fv:
+                        vals.append(fv)
+                except (TypeError, ValueError):
+                    continue
+            return max(vals) if vals else None
+
+        aleatoric_auroc = _max_auroc("aleatoric_like_auroc")
+        epistemic_auroc = _max_auroc("epistemic_like_auroc")
         
         return TrainingResult(
             aleatoric_auroc=aleatoric_auroc,

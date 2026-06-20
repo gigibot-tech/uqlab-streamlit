@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 class DataConfig(BaseModel):
     """Dataset and uncertainty-manipulation parameters."""
 
+    dataset_name: str = Field(default="cifar10", description="Registry key: cifar10, cifar10n, mnist")
     noise_type: str = Field(default="worse_label", description="CIFAR-10N noise type")
     aleatoric_noise_percentage: Optional[float] = Field(
         default=0.0,
@@ -72,6 +73,7 @@ class EvaluationConfig(BaseModel):
 class PathsConfig(BaseModel):
     """Filesystem path configuration."""
 
+    data_root: str = Field(default="./data/cifar10n")
     cifar10n_root: str = Field(default="./data/cifar10n")
     feature_cache_dir: str = Field(default="./cache/fast_uncertainty_classification/features")
     results_base_dir: str = Field(default="./results")
@@ -106,6 +108,7 @@ class ExperimentConfig(BaseModel):
             "seed": self.seed,
             "device": self.device,
             # Data fields
+            "dataset_name": self.data.dataset_name,
             "noise_type": self.data.noise_type,
             "aleatoric_noise_percentage": self.data.aleatoric_noise_percentage,
             "under_supported_classes": self.data.under_supported_classes,
@@ -130,6 +133,7 @@ class ExperimentConfig(BaseModel):
             "attribution_method": self.evaluation.attribution_method,
             "top_k": self.evaluation.top_k,
             # Paths
+            "data_root": self.paths.data_root,
             "cifar10n_root": self.paths.cifar10n_root,
             "feature_cache_dir": self.paths.feature_cache_dir,
             "results_base_dir": self.paths.results_base_dir,
@@ -142,6 +146,7 @@ class ExperimentConfig(BaseModel):
             seed=flat.get("seed", 42),
             device=flat.get("device", "auto"),
             data=DataConfig(
+                dataset_name=flat.get("dataset_name", "cifar10"),
                 noise_type=flat.get("noise_type", "worse_label"),
                 aleatoric_noise_percentage=flat.get("aleatoric_noise_percentage", 0.0),
                 under_supported_classes=flat.get("under_supported_classes", "3,5"),
@@ -171,7 +176,8 @@ class ExperimentConfig(BaseModel):
                 top_k=flat.get("top_k", 10),
             ),
             paths=PathsConfig(
-                cifar10n_root=flat.get("cifar10n_root", "./data/cifar10n"),
+                data_root=flat.get("data_root", flat.get("cifar10n_root", "./data/cifar10n")),
+                cifar10n_root=flat.get("cifar10n_root", flat.get("data_root", "./data/cifar10n")),
                 feature_cache_dir=flat.get("feature_cache_dir", "./cache/fast_uncertainty_classification/features"),
                 results_base_dir=flat.get("results_base_dir", "./results"),
             ),
@@ -210,6 +216,7 @@ class TrainingConfig(BaseModel):
     device: str = Field(default="auto")
 
     # Data parameters
+    dataset_name: str = Field(default="cifar10", description="Registry dataset key")
     noise_type: str = Field(default="worse_label", description="CIFAR-10N noise type")
     aleatoric_noise_percentage: Optional[float] = Field(
         default=0.0,
@@ -246,6 +253,7 @@ class TrainingConfig(BaseModel):
     top_k: int = Field(default=10, ge=1, le=1000)
 
     # Path parameters
+    data_root: str = Field(default="./data/cifar10n")
     cifar10n_root: str = Field(default="./data/cifar10n")
     feature_cache_dir: str = Field(default="./cache/fast_uncertainty_classification/features")
     results_base_dir: str = Field(default="./results")
@@ -253,6 +261,7 @@ class TrainingConfig(BaseModel):
     @property
     def data(self) -> DataConfig:
         return DataConfig(
+            dataset_name=self.dataset_name,
             noise_type=self.noise_type,
             aleatoric_noise_percentage=self.aleatoric_noise_percentage,
             under_supported_classes=self.under_supported_classes,
@@ -292,8 +301,10 @@ class TrainingConfig(BaseModel):
 
     @property
     def paths(self) -> PathsConfig:
+        root = self.data_root or self.cifar10n_root
         return PathsConfig(
-            cifar10n_root=self.cifar10n_root,
+            data_root=root,
+            cifar10n_root=self.cifar10n_root or root,
             feature_cache_dir=self.feature_cache_dir,
             results_base_dir=self.results_base_dir,
         )
@@ -302,16 +313,31 @@ class TrainingConfig(BaseModel):
     def from_legacy_flat_dict(cls, payload: Dict[str, Any]) -> "TrainingConfig":
         """Build flat config from flat or grouped payloads."""
         if any(key in payload for key in ("data", "model", "training", "evaluation", "paths")):
-            data = payload.get("data", {})
-            model = payload.get("model", {})
-            training = payload.get("training", {})
-            evaluation = payload.get("evaluation", {})
-            paths = payload.get("paths", {})
+            data = payload.get("data") or {}
+            model = payload.get("model") or {}
+            training = payload.get("training") or {}
+            evaluation = payload.get("evaluation") or {}
+            paths = payload.get("paths") or {}
+
+            alea_pct = data.get("aleatoric_noise_percentage", 0.0)
+            noise_type = data.get("noise_type", "worse_label")
+            if alea_pct == 0:
+                noise_type = "clean_label"
+
+            dropout = model.get("dropout")
+            if dropout is None:
+                dropout = 0.2
+
+            mc_passes = evaluation.get("mc_passes")
+            if mc_passes is None:
+                mc_passes = 20
+
             return cls(
                 seed=payload.get("seed", 42),
                 device=payload.get("device", "auto"),
-                noise_type=data.get("noise_type", "worse_label"),
-                aleatoric_noise_percentage=data.get("aleatoric_noise_percentage", 0.0),
+                dataset_name=data.get("dataset_name", "cifar10"),
+                noise_type=noise_type,
+                aleatoric_noise_percentage=alea_pct,
                 under_supported_classes=data.get("under_supported_classes", "3,5"),
                 under_train_per_class=data.get("under_train_per_class", 50),
                 regular_train_per_class=data.get("regular_train_per_class", 300),
@@ -320,24 +346,28 @@ class TrainingConfig(BaseModel):
                 training_mode=model.get("training_mode", "feature_space"),
                 dinov2_model=model.get("dinov2_model", "small"),
                 hidden_dim=model.get("hidden_dim", 256),
-                dropout=model.get("dropout", 0.2),
+                dropout=dropout,
                 use_untrained_resnet=model.get("use_untrained_resnet", False),
                 epochs=training.get("epochs", 12),
                 learning_rate=training.get("learning_rate", 0.001),
                 weight_decay=training.get("weight_decay", 0.0001),
                 train_batch_size=training.get("train_batch_size", 256),
                 feature_batch_size=training.get("feature_batch_size", 64),
-                mc_passes=evaluation.get("mc_passes", 20),
+                mc_passes=mc_passes,
                 attribution_method=evaluation.get("attribution_method", "dualxda"),
                 top_k=evaluation.get("top_k", 10),
-                cifar10n_root=paths.get("cifar10n_root", "./data/cifar10n"),
+                data_root=paths.get("data_root", paths.get("cifar10n_root", "./data/cifar10n")),
+                cifar10n_root=paths.get("cifar10n_root", paths.get("data_root", "./data/cifar10n")),
                 feature_cache_dir=paths.get(
                     "feature_cache_dir", "./cache/fast_uncertainty_classification/features"
                 ),
                 results_base_dir=paths.get("results_base_dir", "./results"),
             )
 
-        return cls(**payload)
+        flat = dict(payload)
+        if flat.get("aleatoric_noise_percentage") == 0:
+            flat["noise_type"] = "clean_label"
+        return cls(**flat)
 
     def to_flat_dict(self) -> Dict[str, Any]:
         """Flatten config for legacy sweep/UI code paths."""
@@ -436,8 +466,12 @@ class TrainingConfig(BaseModel):
 class TrainingResult(BaseModel):
     """Training results value object."""
 
-    aleatoric_auroc: float = Field(description="AUROC for aleatoric uncertainty detection")
-    epistemic_auroc: float = Field(description="AUROC for epistemic uncertainty detection")
+    aleatoric_auroc: float | None = Field(
+        default=None, description="AUROC for aleatoric uncertainty detection"
+    )
+    epistemic_auroc: float | None = Field(
+        default=None, description="AUROC for epistemic uncertainty detection"
+    )
     train_size: int = Field(description="Number of training samples")
     eval_sizes: Dict[str, int] = Field(description="Evaluation set sizes per group")
     best_signals: Dict[str, List[Dict[str, Any]]] = Field(

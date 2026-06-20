@@ -62,16 +62,14 @@ def get_or_create_test_user(session: Session) -> User:
     return user
 
 
-class ExperimentConfig(TrainingConfig):
-    """Experiment configuration matching the simplified flat API."""
-
-
 class ExperimentCreate(BaseModel):
     """Request to create a new experiment."""
 
     name: str = Field(min_length=1, max_length=255)
     preset: TrainingPresetName | None = None
-    config: ExperimentConfig | None = None
+    # Nested (Streamlit) or flat dict — parsed via TrainingConfig.from_legacy_flat_dict.
+    # Do NOT type this as flat TrainingConfig: Pydantic would drop nested `data`/`model`.
+    config: dict[str, Any] | None = None
 
 
 class ExperimentResponse(BaseModel):
@@ -122,19 +120,23 @@ async def _create_experiment_impl(
     """Implementation of experiment creation."""
     if experiment.preset is not None:
         training_config = TrainingConfig.preset_config(experiment.preset)
+        config_yaml = yaml.dump(training_config.to_yaml_dict(), default_flow_style=False)
     elif experiment.config is not None:
-        raw = experiment.config.model_dump()
-        if any(k in raw for k in ("data", "model", "training", "evaluation", "paths")):
-            training_config = TrainingConfig.from_legacy_flat_dict(raw)
-        else:
-            training_config = TrainingConfig(**raw)
+        try:
+            from uqlab_orchestrator.run_spec import RunSpecError, validate_run_yaml
+
+            validate_run_yaml(experiment.config)
+            config_yaml = yaml.dump(experiment.config, default_flow_style=False)
+        except ImportError:
+            training_config = TrainingConfig.from_legacy_flat_dict(experiment.config)
+            config_yaml = yaml.dump(training_config.to_yaml_dict(), default_flow_style=False)
+        except RunSpecError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
     else:
         raise HTTPException(
             status_code=400,
             detail="Provide either `preset` or `config` when creating an experiment.",
         )
-
-    config_yaml = yaml.dump(training_config.to_yaml_dict(), default_flow_style=False)
 
     # Create experiment record
     db_experiment = UncertaintyExperiment(
