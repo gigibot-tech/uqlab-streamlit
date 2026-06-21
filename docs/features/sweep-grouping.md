@@ -77,7 +77,24 @@ def render_experiment_results_panel(
     )
 ```
 
-## Recommended Long-Term Solutions
+## Campaign PDF export (Results §2)
+
+Per sweep campaign in the sweep analysis hub:
+
+1. **Config timeline** — shared baseline once, then per-run steps with Δparams vs the previous run (ordered by swept X).
+2. **Sweep line plot** — same signal/pool model as the interactive chart.
+
+**Streamlit:** *Build campaign PDF* → *Download campaign PDF* (respects arm, X axis, facet slice).
+
+**CLI:**
+
+```bash
+PYTHONPATH=src python3 scripts/generate_campaign_config_timeline.py --run-ids id1,id2,id3 -o timeline.pdf
+PYTHONPATH=src python3 scripts/generate_campaign_report.py --run-ids id1,id2,id3 -o report.pdf
+```
+
+Modules: `campaign_config_timeline.py`, `campaign_report.py`.
+
 
 ### Option 1: Add Sweep Metadata to UncertaintyExperiment (Recommended)
 

@@ -12,20 +12,44 @@ logger = logging.getLogger(__name__)
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 SRC_DIR = PROJECT_ROOT / "src"
 SCRIPTS_DIR = PROJECT_ROOT / "scripts"
+RUNNERS_DIR = SCRIPTS_DIR / "runners"
+ML_SCRIPT_NAME = "run_fast_uncertainty_classification.py"
+
+
+def resolve_ml_training_script(*, project_root: Path | None = None) -> Path:
+    """
+    Locate the fast-pilot training script (``scripts/runners/`` after reorg).
+
+    Falls back to the legacy flat ``scripts/`` path when present.
+    """
+    root = project_root or PROJECT_ROOT
+    candidates = (
+        root / "scripts" / "runners" / ML_SCRIPT_NAME,
+        root / "scripts" / ML_SCRIPT_NAME,
+    )
+    for path in candidates:
+        if path.is_file():
+            return path.resolve()
+    return candidates[0].resolve()
+
+
+def training_script_import_dir(script_path: Path | None = None) -> Path:
+    """Directory to put on ``sys.path`` so ``import run_fast_uncertainty_classification`` works."""
+    path = script_path or resolve_ml_training_script()
+    return path.parent
 
 
 def ensure_ml_paths(*, scripts_dir: Path | None = None) -> Path:
     """
-    Put repo ``src/``, project root, and ``scripts/`` on ``sys.path``.
+    Put repo ``src/``, project root, and training script dir on ``sys.path``.
 
     Works when ``uqlab`` is not pip-installed (e.g. dev uses repo root ``.venv``).
     When ``uqlab`` is installed (``uv sync`` in ``backend/``), this is a no-op for imports.
     """
-    paths = [SRC_DIR, PROJECT_ROOT]
-    if scripts_dir is not None:
-        paths.insert(0, scripts_dir)
-    elif SCRIPTS_DIR.exists():
-        paths.insert(0, SCRIPTS_DIR)
+    script_dir = scripts_dir or training_script_import_dir()
+    paths = [SRC_DIR, PROJECT_ROOT, script_dir]
+    if SCRIPTS_DIR.exists() and SCRIPTS_DIR not in (script_dir,):
+        paths.append(SCRIPTS_DIR)
 
     added: list[str] = []
     for path in paths:
@@ -82,13 +106,16 @@ def verify_ml_stack() -> None:
             "missing protocol-based noise_mask. Use ./start_backend.sh."
         )
 
-    script_path = SCRIPTS_DIR / "run_fast_uncertainty_classification.py"
-    if script_path.exists():
-        script_src = script_path.read_text(encoding="utf-8")
-        if "DualXDATracer(" in script_src and "max_iter=" in script_src.split("DualXDATracer(")[1].split(")")[0]:
-            raise RuntimeError(
-                f"Training script still passes max_iter to DualXDATracer: {script_path}"
-            )
+    script_path = resolve_ml_training_script()
+    if not script_path.is_file():
+        raise RuntimeError(
+            f"Training script not found (checked scripts/runners/ and scripts/): {script_path}"
+        )
+    script_src = script_path.read_text(encoding="utf-8")
+    if "DualXDATracer(" in script_src and "max_iter=" in script_src.split("DualXDATracer(")[1].split(")")[0]:
+        raise RuntimeError(
+            f"Training script still passes max_iter to DualXDATracer: {script_path}"
+        )
 
     import uqlab.evaluation.evaluator as evaluator
     import uqlab.evaluation.signals.registry as signal_registry
@@ -114,8 +141,9 @@ def verify_ml_stack() -> None:
         )
 
     logger.info(
-        "ML stack OK: run_spec=%s registry=%s data_loader=%s evaluator=%s signals=%s",
+        "ML stack OK: run_spec=%s training_script=%s registry=%s data_loader=%s evaluator=%s signals=%s",
         run_spec.__file__,
+        script_path,
         registry.__file__,
         data_loader.__file__,
         evaluator.__file__,
@@ -133,7 +161,7 @@ def reload_training_modules(*, scripts_dir: Path | None = None) -> None:
     import importlib
 
     ensure_ml_paths(scripts_dir=scripts_dir)
-    scripts = scripts_dir or SCRIPTS_DIR
+    scripts = scripts_dir or training_script_import_dir()
     scripts_entry = str(scripts.resolve())
     if scripts.exists() and scripts_entry not in sys.path:
         sys.path.insert(0, scripts_entry)

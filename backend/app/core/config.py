@@ -49,9 +49,7 @@ class Settings(BaseSettings):
 
     PROJECT_NAME: str
     
-    # ML Script Configuration (project root level)
-    # Path: uqlab-streamlit/scripts/run_fast_uncertainty_classification.py
-    # Can be overridden via environment variable for custom locations
+    # ML script lives under scripts/runners/ (see resolve_ml_training_script)
     DTAG_ROOT: str = str(Path(__file__).resolve().parents[3] / "scripts")
     
     # Persistent data root (experiments + default SQLite). Override via UQLAB_DATA_DIR.

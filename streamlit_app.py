@@ -31,8 +31,6 @@ st.warning(
 from ui_components import (
     build_base_experiment_config,
     render_batch_results,
-    render_batch_sweep_config,
-    render_batch_base_config,
     render_dataset_selection,
     render_configuration_progress,
     render_epistemic_config,
@@ -44,8 +42,6 @@ from ui_components import (
     render_evaluation_strategy,
     render_roc_explanation,
     render_experiment_results,
-    render_2d_sweep_config,
-    render_2d_results_analysis,
     render_model_selector,
     render_model_inference_panel,
     render_data_overlap_analysis,
@@ -54,6 +50,14 @@ from ui_components import (
     validate_sweep_configuration,
     render_unified_builder,
     render_hypothesis_validation_tab,
+)
+from uqlab.ui_components.workflow.batch_sweep_config import (
+    render_batch_base_config,
+    render_batch_sweep_config,
+)
+from uqlab.ui_components.visualization.sweeps.batch_2d_sweep import (
+    render_2d_results_analysis,
+    render_2d_sweep_config,
 )
 
 # Import UQ Benchmarks UI components (Phase 5)

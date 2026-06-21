@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session, select, desc
 
 from app.api.deps import CurrentUser, SessionDep
-from app.core.config import settings
+from app.core.ml_bootstrap import resolve_ml_training_script
 from app.core.security import get_password_hash
 from app.domain.models import TrainingConfig, TrainingPresetName
 from app.repositories.experiment_repository import ExperimentRepository
@@ -26,8 +26,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Path to the ML script (now inside the project at scripts/)
-ML_SCRIPT = Path(settings.DTAG_ROOT) / "run_fast_uncertainty_classification.py"
+# Path to the ML script (scripts/runners/ after scripts reorg)
+ML_SCRIPT = resolve_ml_training_script()
 
 # Global executor instance (stateless, can be reused)
 _executor: DirectExecutor | None = None

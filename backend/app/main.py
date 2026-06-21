@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 # Bootstrap ``src/`` before any route imports ``uqlab`` / ``uqlab_orchestrator``.
-from app.core.ml_bootstrap import SRC_DIR, ensure_ml_paths, verify_ml_stack
+from app.core.ml_bootstrap import SRC_DIR, ensure_ml_paths, resolve_ml_training_script, verify_ml_stack
 
 ensure_ml_paths()
 verify_ml_stack()
@@ -28,7 +28,7 @@ def custom_generate_unique_id(route: APIRoute) -> str:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup validation: Check ML script exists
-    ml_script_path = Path(settings.DTAG_ROOT) / "run_fast_uncertainty_classification.py"
+    ml_script_path = resolve_ml_training_script()
     if not ml_script_path.exists():
         error_msg = (
             f"❌ STARTUP FAILED: ML script not found at {ml_script_path}\n"

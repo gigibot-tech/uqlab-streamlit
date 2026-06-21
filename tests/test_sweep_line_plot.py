@@ -164,6 +164,7 @@ training:
     assert len(left_traces) >= 1
     assert left_traces[0]["dash"] == "solid"
     assert d["traces"][-1]["name"] == "Accuracy"
+    assert d["traces"][-1]["x"] == d["traces"][0]["x"]
 
 
 def test_build_sweep_line_plot_100pct_noise_no_epistemic_mirror(tmp_path):
