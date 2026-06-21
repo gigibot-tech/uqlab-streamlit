@@ -56,15 +56,33 @@ def test_sweep_kind_from_group_under_param():
     assert sweep_kind_from_group(group) == SWEEP_KIND_DATASET_SIZE
 
 
-def test_list_plottable_signals_requires_both_pools():
-    df = pd.DataFrame(
+def test_list_plottable_signals_primary_pool_only():
+    alea_df = pd.DataFrame(
         columns=[
-            "inverse_coherence_mean_epistemic",
             "inverse_coherence_mean_aleatoric",
             "mutual_info_mean_epistemic",
         ]
     )
-    assert list_plottable_signals(df) == ["inverse_coherence"]
+    assert list_plottable_signals(alea_df, SWEEP_KIND_LABEL_NOISE) == []
+
+    alea_df = pd.DataFrame([{"inverse_coherence_mean_aleatoric": 0.5}])
+    assert list_plottable_signals(alea_df, SWEEP_KIND_LABEL_NOISE) == ["inverse_coherence"]
+
+    epis_df = pd.DataFrame([{"mutual_info_mean_epistemic": 0.3}])
+    assert list_plottable_signals(epis_df, SWEEP_KIND_DATASET_SIZE) == ["mutual_info"]
+    assert list_plottable_signals(epis_df, SWEEP_KIND_LABEL_NOISE) == []
+
+
+def test_list_plottable_signals_old_both_pools_not_required_for_noise():
+    df = pd.DataFrame(
+        [
+            {
+                "inverse_coherence_mean_aleatoric": 0.4,
+                "inverse_coherence_mean_epistemic": 0.2,
+            }
+        ]
+    )
+    assert list_plottable_signals(df, SWEEP_KIND_LABEL_NOISE) == ["inverse_coherence"]
 
 
 def test_detect_facet_columns_learning_rate():
@@ -138,9 +156,63 @@ training:
     assert d["signal"] == "inverse_coherence"
     assert d["x_col"] == "noise_percent"
     assert d["points"] == 3
-    assert len(d["traces"]) == 3
-    assert d["traces"][0]["yaxis"] == "left"
+    assert d["primary_pool"] == "aleatoric"
+    assert d.get("plot_config")
+    assert d["plot_config"]["signal"]["id"] == "inverse_coherence"
+    assert d["plot_config"]["x_axis"]["column"] == "noise_percent"
+    left_traces = [t for t in d["traces"] if t.get("yaxis") == "left"]
+    assert len(left_traces) >= 1
+    assert left_traces[0]["dash"] == "solid"
     assert d["traces"][-1]["name"] == "Accuracy"
+
+
+def test_build_sweep_line_plot_100pct_noise_no_epistemic_mirror(tmp_path):
+    experiments = tmp_path / "experiments"
+    for noise in (50, 100):
+        run_id = f"run-{noise}"
+        run_dir = experiments / run_id
+        results = run_dir / "results"
+        results.mkdir(parents=True)
+        (run_dir / "config.yaml").write_text(
+            f"""
+data:
+  aleatoric_noise_percentage: {noise}
+  under_train_per_class: 300
+model:
+  architecture: resnet18
+""".strip(),
+            encoding="utf-8",
+        )
+        import json
+        import torch
+
+        n = 20
+        labels = torch.zeros(n)
+        (results / "summary.json").write_text("{}", encoding="utf-8")
+        group_labels = torch.ones(n) if noise >= 100 else torch.cat(
+            [torch.zeros(10), torch.ones(10), torch.full((10,), 2)]
+        )
+        torch.save(
+            {
+                "signal_table": {"inverse_coherence": torch.linspace(0.1, 0.5, len(group_labels))},
+                "eval_group_labels": group_labels,
+                "predictions": labels[: len(group_labels)],
+                "eval_clean_labels": labels[: len(group_labels)],
+            },
+            results / "results.pt",
+        )
+
+    payload = build_sweep_line_plot(
+        ["run-50", "run-100"],
+        experiments,
+        signal="inverse_coherence",
+    )
+    d = payload.to_dict()
+    left_traces = [t for t in d["traces"] if t.get("yaxis") == "left"]
+    assert len(left_traces) == 1
+    assert left_traces[0]["dash"] == "solid"
+    assert d["has_mirror_line"] is False
+    assert d["mirror_note"] is not None
 
 
 def test_build_sweep_line_plot_facet_slice(tmp_path):

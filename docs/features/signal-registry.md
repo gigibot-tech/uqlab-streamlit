@@ -78,4 +78,4 @@ Set `evaluation.attribution_method: integrated_gradients` in run YAML. Metrics r
 
 - Step 4 `selected_signals` → `evaluation.signals` via `signals_from_flat_list`.
 - `prune_signals_for_runtime` uses `metric_runtime_ok` per metric.
-- `run_experiment_core` passes `enabled_signals`, `dropout`, and `attribution_method` into `collect_uncertainty_signals`.
+- `run_experiment_core` builds ``EvalSignalConfig.from_run_config(run_cfg, ...)`` and passes it to ``collect_uncertainty_signals``.

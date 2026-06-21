@@ -278,6 +278,36 @@ This is a **distinguished engineer-level insight** because it identifies:
 3. **Technical debt**: Config-based detection is a workaround, not a solution
 4. **Scalability issue**: O(n²) grouping doesn't scale to 1000s of experiments
 
+## Sweep line plots: eval pool semantics (config-implicit)
+
+Each run evaluates samples in three **eval packs** (from `data_loader.py`):
+
+| Pack | Who is in it |
+|------|----------------|
+| `clean` | Clean labels, regular support |
+| `aleatoric_like` | Noisy labels, regular support, not in train |
+| `epistemic_like` | Clean labels, under-supported class, not in train |
+
+`results.pt` exports `{signal}_mean_epistemic` / `{signal}_mean_aleatoric` only when that pack has samples.
+
+**Config rules** (same as split construction, via `expects_epistemic_eval` / `expects_aleatoric_eval`):
+
+- **Epistemic pool** exists when under-supported classes are set **and** `under_train_per_class < regular_train_per_class`.
+- **Aleatoric pool** exists when `aleatoric_noise_percentage > 0`.
+
+**At 100% label noise** there are no clean samples → epistemic eval pool is **empty** → no `_mean_epistemic` column.
+
+### How sweep plots pick lines
+
+| Sweep axis | Primary line (solid) | Optional mirror (dashed) |
+|------------|----------------------|---------------------------|
+| Label noise (Fig 4) | `{signal}_mean_aleatoric` | `{signal}_mean_epistemic` when present |
+| Under-train (Fig 3) | `{signal}_mean_epistemic` | `{signal}_mean_aleatoric` when present |
+
+No manual toggle: the plot layer reads config expectations + artifact columns. Mirror lines are omitted automatically when the pool is empty (e.g. 100% noise).
+
+Implementation: `sweep_plot_pools.py`, `build_sweep_line_plot` in `sweep_line_plot.py`. Results §2 includes a debug expander with per-run group counts vs config.
+
 ## Conclusion
 
 The immediate fix allows the UI to work, but the **proper solution** requires:

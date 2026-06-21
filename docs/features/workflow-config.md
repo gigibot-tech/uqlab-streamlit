@@ -79,17 +79,20 @@ Step 5 and sidebar **Quick launch** share one component: [`launch_panel.py`](../
 | Sidebar | `compact` | Vertical buttons, shorter summary |
 | Step 5 | `main` | Full width; optional `View full workflow state` expander |
 
-Preflight priority (one message + one CTA):
+**Panel order:**
 
-1. **Config error** — block launch; link to Step 3
-2. **Duplicate OK** — already plottable; open Results
-3. **Resume** — one aggregate sweep resume button (+N epochs)
-4. **Plot probe** — one **Apply & launch** CTA
-5. Else — proceed to launch row
+1. One-line readiness summary
+2. **Blocking** preflight only (`config_error` → Edit Step 3; `duplicate_ok` → Open Results) — hides launch row
+3. **Launch row** — synced autostart + **Start sweep** / **Run both** (always opens confirm dialog)
+4. **Suggested fix (optional)** expander below — resume sweep or plot-probe patch (not above launch buttons)
 
-Launch buttons are **disabled** when `config_error` or `duplicate_ok`. **Run both** always opens a confirm dialog (arm detail in dialog, not a separate expander).
+**Autostart:** single session key `launch_autostart` via [`launch_session.py`](../../src/uqlab/ui_components/progressive/launch_session.py) — sidebar, Step 5, and confirm dialog stay in sync.
 
-Code: [`launch_preflight.py`](../../src/uqlab_orchestrator/launch_preflight.py), UI [`launch_panel.py`](../../src/uqlab/ui_components/progressive/launch_panel.py), slim launch row in [`sweep_launch_cards.py`](../../src/uqlab/ui_components/progressive/sweep_launch_cards.py).
+**Confirm dialog:** every launch action (primary + Run both) shows arm preview, autostart toggle, and **Confirm launch** / **Cancel** before POST.
+
+Launch buttons are **disabled** when `config_error` or `duplicate_ok`.
+
+Code: [`launch_preflight.py`](../../src/uqlab_orchestrator/launch_preflight.py), UI [`launch_panel.py`](../../src/uqlab/ui_components/progressive/launch_panel.py), [`sweep_launch_cards.py`](../../src/uqlab/ui_components/progressive/sweep_launch_cards.py).
 
 ### Launch modes (perspective-first)
 
@@ -138,8 +141,8 @@ When **UI debug → plot probe redo suggestions** is on:
 
 | Location | Gate | Ladder | On failure |
 |----------|------|--------|------------|
-| **Step 5 / sidebar preflight** | `assess_launch_readiness` → single best suggestion | artifacts → completion (≥2 runs) → `build_sweep_line_plot` | One-line warning + **Apply & launch** (no per-group loop) |
-| **Results §2** | Plot render failed for selected campaign | Same ladder on campaign runs | Reconstruct workflow from run YAML + full diff table |
+| **Step 5 / sidebar** (optional expander) | `assess_launch_readiness` → resume or plot-probe suggestion | artifacts → completion (≥2 runs) → `build_sweep_line_plot` | **Suggested fix (optional)** below launch row: apply-only or **Apply suggested fix & launch** (respects `launch_autostart`) |
+| **Results §2** | Plot render failed for selected campaign | Same ladder on campaign runs | Read-only status + **Review launch in Step 5** (no diff table, no launch buttons) |
 
 Code: [`plot_probe/`](../../src/uqlab_orchestrator/plot_probe/), UI [`plot_probe_panel.py`](../../src/uqlab/ui_components/progressive/plot_probe_panel.py), preflight [`launch_preflight.py`](../../src/uqlab_orchestrator/launch_preflight.py).
 

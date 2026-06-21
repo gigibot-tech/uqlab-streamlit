@@ -182,6 +182,7 @@ def prepare_eval_data(
 
 
 from uqlab.evaluation.classification.pipeline.fast_pilot_eval import (
+    EvalSignalConfig,
     collect_uncertainty_signals as compute_eval_signals,
     score_uncertainty_signals as summarize_eval_signals,
 )
@@ -525,19 +526,17 @@ def run_experiment_core(
     # (epistemic, aleatoric, attribution-based) using the trained model.
     
     # Compute all enabled uncertainty signals (MC dropout, attribution, etc.)
+    eval_signal_config = EvalSignalConfig.from_run_config(
+        run_cfg,
+        results_dir=results_dir,
+        run_cache_dir=run_cache_dir,
+    )
     eval_outputs = compute_eval_signals(
         model=model,
         train_dataset=train_dataset,
         eval_inputs=eval_inputs,
         device=device,
-        train_batch_size=train_batch_size,
-        mc_passes=mc_passes,
-        top_k=top_k,
-        run_cache_dir=run_cache_dir,
-        results_dir=results_dir,
-        enabled_signals=enabled_signals,
-        dropout=dropout,
-        attribution_method=attribution_method,
+        config=eval_signal_config,
     )
     
     # Extract computed signals and validate output structure
