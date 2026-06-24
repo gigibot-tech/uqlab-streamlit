@@ -32,14 +32,14 @@ from datetime import datetime
 import shutil
 
 # Project root (package lives in src/uqlab)
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _SRC = PROJECT_ROOT / "src"
 for _p in (_SRC, PROJECT_ROOT):
     _s = str(_p)
     if _s not in sys.path:
         sys.path.insert(0, _s)
 
-from uqlab.validation_config import (
+from uqlab_orchestrator.config.validation_config import (
     ARCHITECTURES,
     FIXED_REGULAR_TRAIN_PER_CLASS,
     FIXED_UNDER_TRAIN_ALEATORIC_ARM,

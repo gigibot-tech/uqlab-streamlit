@@ -8,6 +8,7 @@ export PYTHONPATH="${ROOT}/src${PYTHONPATH:+:$PYTHONPATH}"
 export PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
 exec python3 -m pytest \
   tests/test_campaign_report.py \
+  tests/test_campaign_sections.py \
   tests/test_campaign_config_timeline.py \
   tests/test_sweep_line_plot.py \
   "$@"

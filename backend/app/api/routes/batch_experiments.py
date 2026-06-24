@@ -23,8 +23,6 @@ from app.services.batch_experiment_service import (
 )
 from app.services.executors.direct_executor import DirectExecutor
 from app.tables import BatchExperiment, JobStatus, User
-from app.api.routes.experiments import ML_SCRIPT
-
 
 router = APIRouter()
 
@@ -36,7 +34,7 @@ def get_batch_service() -> BatchExperimentService:
     global _batch_service
     if _batch_service is None:
         _batch_service = BatchExperimentService(
-            DirectExecutor(ML_SCRIPT),
+            DirectExecutor(),
             tracker=MlflowStyleBatchExperimentTracker(),
         )
     return _batch_service

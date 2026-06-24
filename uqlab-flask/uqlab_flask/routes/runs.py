@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, jsonify, request, send_file
 
 from uqlab_orchestrator.run_spec import build_run_yaml, validate_run_yaml
 from uqlab_flask.executor import (
@@ -128,3 +128,12 @@ def run_status(run_id: str):
     if summary_path.exists():
         body["summary"] = json.loads(summary_path.read_text(encoding="utf-8"))
     return jsonify(body)
+
+
+@bp.get("/runs/<run_id>/log")
+def run_log(run_id: str):
+    """Full stdout/stderr log for one run (``results/experiment.log``)."""
+    log_path = current_app.config["EXPERIMENTS_DIR"] / run_id / "results" / "experiment.log"
+    if not log_path.is_file():
+        return jsonify({"error": "log not found", "path": str(log_path)}), 404
+    return send_file(log_path, mimetype="text/plain; charset=utf-8", download_name=f"{run_id}.log")

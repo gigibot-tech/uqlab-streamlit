@@ -21,21 +21,15 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 import torch
 from uqlab.data.loaders.cifar10n_loader import CIFAR10NDataset
-from uqlab.evaluation.classification import (
-    # Data
-    sample_indices_for_fast_pilot,
+from uqlab.data.experiment_loader import (
     EmbeddingOrganizer,
-    EmbeddingDataset,
-    # Model
+    sample_indices_for_experiment,
     train_feature_model,
-    # Evaluation
-    binary_auroc,
-    # Utils
-    set_seed,
-    auto_device,
-    dino_transform,
 )
-from uqlab.mc_dropout_uq import calculate_mc_dropout_uncertainty
+from uqlab.models.classification_models import EmbeddingDataset
+from uqlab.evaluation.metrics import binary_auroc
+from uqlab.shared.utils.classification import auto_device, dino_transform, set_seed
+from uqlab.evaluation.signals.mc_dropout import calculate_mc_dropout_uncertainty
 
 
 def run_minimal_experiment():
@@ -58,7 +52,7 @@ def run_minimal_experiment():
     )
     
     # ========== 3. SAMPLE SPLITS (5 lines) ==========
-    split = sample_indices_for_fast_pilot(
+    split = sample_indices_for_experiment(
         dataset,
         under_supported_classes=[3, 5],  # Cat, Dog under-supported
         under_train_per_class=50,        # Few samples for under-supported

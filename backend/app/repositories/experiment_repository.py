@@ -77,6 +77,7 @@ class ExperimentRepository:
         experiment.status = JobStatus.COMPLETED
         experiment.completed_at = datetime.utcnow()
         experiment.progress = 1.0
+        experiment.error_message = None
 
         self.session.add(experiment)
         self.session.commit()

@@ -62,7 +62,12 @@ def main(argv: list[str] | None = None) -> int:
         "--extra-signals",
         type=int,
         default=0,
-        help="Append up to N additional signal plots after the primary.",
+        help="When --no-all-signals, append up to N additional signal plots.",
+    )
+    parser.add_argument(
+        "--no-all-signals",
+        action="store_true",
+        help="Only export primary signal plot (plus --extra-signals).",
     )
     parser.add_argument(
         "--facet",
@@ -70,10 +75,14 @@ def main(argv: list[str] | None = None) -> int:
         default=[],
         metavar="KEY=VALUE",
     )
-    parser.add_argument("--title", default=None)
-    args = parser.parse_args(argv)
+    parser.add_argument(
+        "--layout",
+        choices=("by_section", "by_metric"),
+        default="by_section",
+        help="by_section: plots grouped per sweep; by_metric: one page per signal with all sweeps.",
+    )
 
-    from uqlab.evaluation.classification.pipeline.campaign_report import build_campaign_report_pdf
+    from uqlab.evaluation.pipeline.campaign_report import build_campaign_report_pdf
 
     run_ids = [r.strip() for r in args.run_ids.split(",") if r.strip()]
     experiments = [{"id": rid, "status": "completed", "name": rid[:8]} for rid in run_ids]
@@ -81,7 +90,7 @@ def main(argv: list[str] | None = None) -> int:
     facet_filters = _parse_facets(args.facet) or None
 
     try:
-        pdf_bytes, timeline = build_campaign_report_pdf(
+        pdf_bytes, summary = build_campaign_report_pdf(
             experiments,
             args.experiments_dir.resolve(),
             args.output.resolve(),
@@ -91,13 +100,15 @@ def main(argv: list[str] | None = None) -> int:
             signal=args.signal,
             title=args.title,
             extra_signals=max(0, args.extra_signals),
+            include_all_signals=not args.no_all_signals,
+            layout=args.layout,
         )
     except Exception as exc:
         print(f"Failed: {exc}", file=sys.stderr)
         return 1
 
-    print(f"Campaign: {timeline.title}")
-    print(f"Steps: {timeline.n_runs}")
+    print(f"Campaign: {summary.title}")
+    print(f"Sections: {len(summary.sections)} · Runs: {summary.n_runs}")
     print(f"Wrote {args.output.resolve()} ({len(pdf_bytes)} bytes)")
     return 0
 

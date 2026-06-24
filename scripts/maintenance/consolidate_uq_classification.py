@@ -106,7 +106,7 @@ The `uq_classification` symlink has been removed. All code now uses the canonica
 from uq_classification.models import EmbeddingDataset
 
 # NEW (canonical path)
-from uqlab.evaluation.classification.models import EmbeddingDataset
+from uqlab.models.classification_models import EmbeddingDataset
 ```
 
 ## Why

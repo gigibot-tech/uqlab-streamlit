@@ -239,7 +239,7 @@ def sweep_status_json(group_id: str):
 @bp.route("/sweep/<group_id>/plot")
 def sweep_plot_json(group_id: str):
     """3-line sweep plot data (signal means + accuracy); not AUROC."""
-    from uqlab.evaluation.classification.pipeline.sweep_line_plot import build_sweep_line_plot
+    from uqlab.evaluation.pipeline.sweep_line_plot import build_sweep_line_plot
     from uqlab_flask.executor import get_sweep_group
 
     experiments_dir = current_app.config["EXPERIMENTS_DIR"]

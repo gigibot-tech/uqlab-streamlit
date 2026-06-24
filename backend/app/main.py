@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 # Bootstrap ``src/`` before any route imports ``uqlab`` / ``uqlab_orchestrator``.
-from app.core.ml_bootstrap import SRC_DIR, ensure_ml_paths, resolve_ml_training_script, verify_ml_stack
+from app.core.ml_bootstrap import SRC_DIR, ensure_ml_paths, verify_ml_stack
 
 ensure_ml_paths()
 verify_ml_stack()
@@ -27,20 +27,9 @@ def custom_generate_unique_id(route: APIRoute) -> str:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup validation: Check ML script exists
-    ml_script_path = resolve_ml_training_script()
-    if not ml_script_path.exists():
-        error_msg = (
-            f"❌ STARTUP FAILED: ML script not found at {ml_script_path}\n"
-            f"   Expected location: {ml_script_path.absolute()}\n"
-            f"   DTAG_ROOT setting: {settings.DTAG_ROOT}\n"
-            f"   Please ensure the ML script is in the correct location."
-        )
-        logger.error(error_msg)
-        raise FileNotFoundError(error_msg)
-    
-    logger.info(f"✅ ML script found at: {ml_script_path.absolute()}")
-    logger.info("✅ ML stack: uqlab from %s", SRC_DIR)
+    ensure_ml_paths()
+    verify_ml_stack()
+    logger.info("ML stack: uqlab from %s", SRC_DIR)
     storage_backend = get_storage_backend()
     logger.info("✅ Active storage backend ready: %s", storage_backend.name)
     

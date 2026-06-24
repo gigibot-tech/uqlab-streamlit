@@ -9,15 +9,17 @@ from typing import Any
 
 import yaml
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select, desc
 
 from app.api.deps import CurrentUser, SessionDep
-from app.core.ml_bootstrap import resolve_ml_training_script
+from app.core.runtime_paths import experiment_results_dir
 from app.core.security import get_password_hash
 from app.domain.models import TrainingConfig, TrainingPresetName
 from app.repositories.experiment_repository import ExperimentRepository
 from app.services.executors.direct_executor import DirectExecutor
+from app.services.run_recovery_service import RunRecoveryService
 from app.services.training_orchestrator import TrainingOrchestrator
 from app.tables import JobStatus, UncertaintyExperiment, User
 
@@ -25,9 +27,6 @@ from app.tables import JobStatus, UncertaintyExperiment, User
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-# Path to the ML script (scripts/runners/ after scripts reorg)
-ML_SCRIPT = resolve_ml_training_script()
 
 # Global executor instance (stateless, can be reused)
 _executor: DirectExecutor | None = None
@@ -37,7 +36,7 @@ def get_orchestrator(session: SessionDep) -> TrainingOrchestrator:
     """Get or create training orchestrator with fresh session."""
     global _executor
     if _executor is None:
-        _executor = DirectExecutor(ML_SCRIPT)
+        _executor = DirectExecutor()
     
     # Always create fresh repository with current session
     repository = ExperimentRepository(session)
@@ -179,6 +178,110 @@ async def list_experiments_no_auth(
     return experiments
 
 
+class RecoverabilityResponse(BaseModel):
+    """Per-experiment recoverability assessment."""
+
+    id: str
+    name: str
+    status: str
+    error_message: str | None
+    tier: str
+    missing: list[str] = Field(default_factory=list)
+    zwischen_stages: list[str] = Field(default_factory=list)
+    error_hint: str | None = None
+
+
+class RecoverBatchRequest(BaseModel):
+    """Batch recovery filter."""
+
+    status: str = "failed"
+    tier: str = "zwischen_finalize"
+    seed: int = 42
+    device: str = "cpu"
+
+
+@router.get("/no-auth/recoverability", response_model=list[RecoverabilityResponse])
+async def list_recoverability_no_auth(
+    session: SessionDep,
+    status: str | None = None,
+    skip: int = 0,
+    limit: int = 500,
+) -> Any:
+    """Scan experiments and classify disk recoverability."""
+    service = RunRecoveryService(session)
+    job_status = JobStatus(status) if status else None
+    entries = service.list_recoverability(status=job_status, skip=skip, limit=limit)
+    return [entry.to_dict() for entry in entries]
+
+
+@router.post("/no-auth/recover-batch")
+async def recover_batch_no_auth(
+    body: RecoverBatchRequest,
+    session: SessionDep,
+) -> dict[str, Any]:
+    """Recover all experiments matching status + tier."""
+    service = RunRecoveryService(session)
+    try:
+        job_status = JobStatus(body.status)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid status: {body.status}") from exc
+    result = service.recover_batch(
+        status=job_status,
+        tier=body.tier,  # type: ignore[arg-type]
+        seed=body.seed,
+        device=body.device,
+    )
+    return result.to_dict()
+
+
+@router.get("/no-auth/{experiment_id}/recoverability", response_model=RecoverabilityResponse)
+async def get_recoverability_no_auth(
+    experiment_id: str,
+    session: SessionDep,
+) -> Any:
+    """Assess recoverability for a single experiment."""
+    try:
+        experiment_uuid = uuid.UUID(experiment_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid experiment ID format") from exc
+
+    experiment = session.get(UncertaintyExperiment, experiment_uuid)
+    if not experiment:
+        raise HTTPException(status_code=404, detail="Experiment not found")
+
+    service = RunRecoveryService(session)
+    return service.assess_experiment(experiment).to_dict()
+
+
+@router.post("/no-auth/{experiment_id}/recover")
+async def recover_experiment_no_auth(
+    experiment_id: str,
+    session: SessionDep,
+    tier: str | None = None,
+    seed: int = 42,
+    device: str = "cpu",
+) -> dict[str, Any]:
+    """Finalize a failed run from disk artifacts and update the database."""
+    try:
+        experiment_uuid = uuid.UUID(experiment_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid experiment ID format") from exc
+
+    service = RunRecoveryService(session)
+    try:
+        return service.recover_experiment(
+            experiment_uuid,
+            tier=tier,  # type: ignore[arg-type]
+            seed=seed,
+            device=device,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.error("Recovery failed for %s", experiment_id, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Recovery failed: {exc}") from exc
+
+
 @router.post("/no-auth/{experiment_id}/start")
 async def start_experiment_no_auth(experiment_id: str, session: SessionDep) -> dict:
     """Start real ML training for no-auth experiment with enterprise-grade error handling."""
@@ -204,16 +307,7 @@ async def start_experiment_no_auth(experiment_id: str, session: SessionDep) -> d
         )
     
     logger.debug(f"Found experiment in database: {db_experiment.name}")
-    
-    # Validate ML script exists before proceeding
-    if not ML_SCRIPT.exists():
-        error_msg = f"ML script not found at {ML_SCRIPT}"
-        logger.error(error_msg)
-        raise HTTPException(
-            status_code=500,
-            detail=f"Configuration error: {error_msg}. Please check ML_SCRIPT path configuration."
-        )
-    
+
     try:
         # Get or create test user
         logger.debug("Getting or creating test user")
@@ -304,7 +398,7 @@ async def start_experiment_no_auth(experiment_id: str, session: SessionDep) -> d
             exc_info=True,
             extra={
                 "experiment_id": experiment_id,
-                "ml_script": str(ML_SCRIPT),
+                "runner": "uqlab.runner.pipeline.run",
                 "traceback": traceback.format_exc()
             }
         )
@@ -319,7 +413,7 @@ async def start_experiment_no_auth(experiment_id: str, session: SessionDep) -> d
             exc_info=True,
             extra={
                 "experiment_id": experiment_id,
-                "ml_script": str(ML_SCRIPT),
+                "runner": "uqlab.runner.pipeline.run",
                 "traceback": traceback.format_exc()
             }
         )
@@ -350,7 +444,7 @@ async def start_experiment_no_auth(experiment_id: str, session: SessionDep) -> d
                 "experiment_id": experiment_id,
                 "experiment_name": db_experiment.name,
                 "user_id": user.id if user else None,
-                "ml_script": str(ML_SCRIPT),
+                "runner": "uqlab.runner.pipeline.run",
                 "error_type": type(e).__name__,
                 "traceback": traceback.format_exc()
             }
@@ -359,6 +453,28 @@ async def start_experiment_no_auth(experiment_id: str, session: SessionDep) -> d
             status_code=500,
             detail=f"Failed to start training: {type(e).__name__}: {str(e)}. Check server logs for details."
         )
+
+@router.get("/no-auth/{experiment_id}/log")
+async def get_experiment_log_no_auth(experiment_id: str) -> FileResponse:
+    """Download the full stdout/stderr log for one experiment run."""
+    try:
+        experiment_uuid = uuid.UUID(experiment_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid experiment ID format") from e
+
+    log_path = experiment_results_dir(experiment_uuid) / "experiment.log"
+    if not log_path.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail=f"No experiment log at {log_path}. Training may not have started yet.",
+        )
+
+    return FileResponse(
+        log_path,
+        media_type="text/plain; charset=utf-8",
+        filename=f"{experiment_id}.log",
+    )
+
 
 @router.delete("/no-auth/{experiment_id}")
 async def delete_experiment_no_auth(experiment_id: str, session: SessionDep) -> dict:
@@ -460,9 +576,6 @@ async def start_experiment(
         raise HTTPException(status_code=403, detail="Not authorized")
     if experiment.status == JobStatus.RUNNING:
         raise HTTPException(status_code=400, detail="Experiment already running")
-
-    if not ML_SCRIPT.exists():
-        raise HTTPException(status_code=500, detail=f"ML script not found at {ML_SCRIPT}")
 
     try:
         # Get orchestrator and start training asynchronously

@@ -83,7 +83,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    from uqlab.evaluation.classification.pipeline.campaign_config_timeline import (
+    from uqlab.evaluation.pipeline.campaign_config_timeline import (
         build_campaign_timeline,
         build_campaign_timeline_figure,
         save_timeline_figure,
@@ -102,6 +102,7 @@ def main(argv: list[str] | None = None) -> int:
             sweep_kind=sweep_kind,
             facet_filters=facet_filters,
             title=args.title,
+            apply_facet_filters=bool(facet_filters),
         )
     except Exception as exc:
         print(f"Failed: {exc}", file=sys.stderr)
@@ -110,7 +111,7 @@ def main(argv: list[str] | None = None) -> int:
     fig = build_campaign_timeline_figure(timeline)
     saved = save_timeline_figure(fig, args.output.resolve(), dpi=args.dpi)
     print(f"Campaign: {timeline.title}")
-    print(f"Steps: {timeline.n_runs}")
+    print(f"Sweeps: {timeline.n_runs}")
     print(f"Wrote {saved}")
 
     import matplotlib.pyplot as plt

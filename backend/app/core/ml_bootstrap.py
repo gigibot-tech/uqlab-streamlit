@@ -8,48 +8,28 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+# Bump when startup checks change (logged at boot for support/debugging).
+ML_BOOTSTRAP_VERSION = 3
+
 # uqlab-streamlit/ (parent of backend/)
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 SRC_DIR = PROJECT_ROOT / "src"
-SCRIPTS_DIR = PROJECT_ROOT / "scripts"
-RUNNERS_DIR = SCRIPTS_DIR / "runners"
-ML_SCRIPT_NAME = "run_fast_uncertainty_classification.py"
+
+_REQUIRED_DUALXDA_METRICS = frozenset({
+    "inverse_coherence_dualxda",
+    "inverse_dominance_dualxda",
+    "inverse_mass_dualxda",
+})
 
 
-def resolve_ml_training_script(*, project_root: Path | None = None) -> Path:
+def ensure_ml_paths() -> Path:
     """
-    Locate the fast-pilot training script (``scripts/runners/`` after reorg).
-
-    Falls back to the legacy flat ``scripts/`` path when present.
-    """
-    root = project_root or PROJECT_ROOT
-    candidates = (
-        root / "scripts" / "runners" / ML_SCRIPT_NAME,
-        root / "scripts" / ML_SCRIPT_NAME,
-    )
-    for path in candidates:
-        if path.is_file():
-            return path.resolve()
-    return candidates[0].resolve()
-
-
-def training_script_import_dir(script_path: Path | None = None) -> Path:
-    """Directory to put on ``sys.path`` so ``import run_fast_uncertainty_classification`` works."""
-    path = script_path or resolve_ml_training_script()
-    return path.parent
-
-
-def ensure_ml_paths(*, scripts_dir: Path | None = None) -> Path:
-    """
-    Put repo ``src/``, project root, and training script dir on ``sys.path``.
+    Put repo ``src/`` and project root on ``sys.path`` when needed.
 
     Works when ``uqlab`` is not pip-installed (e.g. dev uses repo root ``.venv``).
     When ``uqlab`` is installed (``uv sync`` in ``backend/``), this is a no-op for imports.
     """
-    script_dir = scripts_dir or training_script_import_dir()
-    paths = [SRC_DIR, PROJECT_ROOT, script_dir]
-    if SCRIPTS_DIR.exists() and SCRIPTS_DIR not in (script_dir,):
-        paths.append(SCRIPTS_DIR)
+    paths = [SRC_DIR, PROJECT_ROOT]
 
     added: list[str] = []
     for path in paths:
@@ -65,125 +45,103 @@ def ensure_ml_paths(*, scripts_dir: Path | None = None) -> Path:
 
 def verify_ml_stack() -> None:
     """
-    Fail fast at startup if repo ``src/`` is missing expected ML modules.
+    Fail fast at startup if repo ``src/`` cannot import the ML training stack.
 
-    Prevents silent use of stale/cached imports when ``uvicorn --reload`` only
-    watches ``backend/`` and ``src/`` edits are not picked up until restart.
+    Intentionally avoids brittle ``inspect.getsource`` checks — those produced false
+    "stale code" failures when the registry moved to suffixed DualXDA metric ids.
     """
+    ensure_ml_paths()
+
     try:
         from uqlab_orchestrator.run_spec import validate_run_yaml  # noqa: F401
         from uqlab.data.dataset_registry import compute_dataset_stats  # noqa: F401
+        from uqlab.data.experiment_loader import sample_indices_for_experiment  # noqa: F401
+        from uqlab.runner.experiment_core import run_experiment_core
+        from uqlab.evaluation.result_writers import build_results_markdown
+        from uqlab.evaluation.signals.registry import (
+            METRICS,
+            resolve_signal_table_key,
+        )
     except ImportError as exc:
         raise RuntimeError(
             f"ML stack import failed ({exc}). "
-            f"Start the backend with ./start_backend.sh or python run_dev.py "
-            f"so {SRC_DIR} is on PYTHONPATH."
+            f"Start the backend with ./start_backend.sh from backend/ "
+            f"so {SRC_DIR} is on PYTHONPATH (bootstrap v{ML_BOOTSTRAP_VERSION})."
         ) from exc
 
     import uqlab_orchestrator.run_spec as run_spec
+    import uqlab.evaluation.signals.registry as signal_registry
 
     if not hasattr(run_spec, "validate_run_yaml"):
         raise RuntimeError(
-            f"Stale uqlab_orchestrator.run_spec at {run_spec.__file__!r} — "
-            "missing validate_run_yaml. Restart via ./start_backend.sh."
+            f"uqlab_orchestrator.run_spec at {run_spec.__file__!r} is missing validate_run_yaml."
         )
 
-    import inspect
-    import uqlab.data.dataset_registry as registry
-    import uqlab.evaluation.classification.data_loader as data_loader
+    if not callable(run_experiment_core):
+        raise RuntimeError("uqlab.runner.experiment_core.run_experiment_core is not callable")
 
-    reg_src = inspect.getsource(registry.compute_dataset_stats)
-    if "getattr(dataset, \"class_names\"" not in reg_src and "getattr(dataset, 'class_names'" not in reg_src:
+    if not callable(resolve_signal_table_key):
         raise RuntimeError(
-            f"Stale uqlab.data.dataset_registry at {registry.__file__!r}. "
-            "Restart the backend (./start_backend.sh) after editing src/."
+            "uqlab.evaluation.signals.registry is too old — missing resolve_signal_table_key. "
+            f"Pull latest src/ (bootstrap v{ML_BOOTSTRAP_VERSION})."
         )
 
-    dl_src = inspect.getsource(data_loader.sample_indices_for_fast_pilot)
-    if "dataset_clean_labels" not in dl_src:
+    metric_ids = set(METRICS.keys())
+    missing_dualxda = sorted(_REQUIRED_DUALXDA_METRICS - metric_ids)
+    if missing_dualxda:
         raise RuntimeError(
-            f"Stale data_loader at {data_loader.__file__!r} — "
-            "missing protocol-based noise_mask. Use ./start_backend.sh."
+            f"Signal registry at {signal_registry.__file__!r} is missing DualXDA metrics "
+            f"{missing_dualxda!r}. Found: {sorted(metric_ids)!r}. "
+            f"Expected suffixed ids (bootstrap v{ML_BOOTSTRAP_VERSION})."
         )
 
-    script_path = resolve_ml_training_script()
+    # Legacy unsuffixed ids should alias to dualxda, not appear as primary METRICS keys.
+    if "dominance" in metric_ids:
+        raise RuntimeError(
+            f"Signal registry at {signal_registry.__file__!r} still exports raw 'dominance'."
+        )
+
+    script_path = PROJECT_ROOT / "scripts" / "runners" / "run_fast_uncertainty_classification.py"
     if not script_path.is_file():
-        raise RuntimeError(
-            f"Training script not found (checked scripts/runners/ and scripts/): {script_path}"
-        )
-    script_src = script_path.read_text(encoding="utf-8")
-    if "DualXDATracer(" in script_src and "max_iter=" in script_src.split("DualXDATracer(")[1].split(")")[0]:
-        raise RuntimeError(
-            f"Training script still passes max_iter to DualXDATracer: {script_path}"
-        )
-
-    import uqlab.evaluation.evaluator as evaluator
-    import uqlab.evaluation.signals.registry as signal_registry
-
-    eval_src = inspect.getsource(evaluator.build_results_markdown)
-    if "_format_auroc_markdown" not in eval_src:
-        raise RuntimeError(
-            f"Stale uqlab.evaluation.evaluator at {evaluator.__file__!r} — "
-            "missing None-safe AUROC markdown formatting. Restart via ./start_backend.sh."
-        )
-
-    metric_ids = set(signal_registry.METRICS.keys())
-    if "inverse_dominance" not in metric_ids:
-        raise RuntimeError(
-            f"Stale uqlab.evaluation.signals.registry at {signal_registry.__file__!r} — "
-            f"missing inverse_dominance metric (have {sorted(metric_ids)!r}). "
-            "Restart via ./start_backend.sh after editing src/."
-        )
-    if "dominance" in metric_ids and "inverse_dominance" not in metric_ids:
-        raise RuntimeError(
-            f"Stale signal registry at {signal_registry.__file__!r} — "
-            "still exports raw dominance instead of inverse_dominance. Restart backend."
-        )
+        raise RuntimeError(f"CLI wrapper not found (optional for API): {script_path}")
 
     logger.info(
-        "ML stack OK: run_spec=%s training_script=%s registry=%s data_loader=%s evaluator=%s signals=%s",
-        run_spec.__file__,
-        script_path,
-        registry.__file__,
-        data_loader.__file__,
-        evaluator.__file__,
+        "ML stack OK (bootstrap v%s): registry=%s metrics=%d evaluator=%s cli=%s",
+        ML_BOOTSTRAP_VERSION,
         signal_registry.__file__,
+        len(metric_ids),
+        build_results_markdown.__module__,
+        script_path,
     )
 
 
-def reload_training_modules(*, scripts_dir: Path | None = None) -> None:
+def reload_training_modules() -> None:
     """
     Reload training-related modules before each in-process run.
 
     ``uvicorn --reload`` often watches only ``backend/``; without this, stale
-    ``uqlab`` code stays in ``sys.modules`` even when ``scripts/`` is reloaded.
+    ``uqlab`` code stays in ``sys.modules`` until restart.
     """
     import importlib
 
-    ensure_ml_paths(scripts_dir=scripts_dir)
-    scripts = scripts_dir or training_script_import_dir()
-    scripts_entry = str(scripts.resolve())
-    if scripts.exists() and scripts_entry not in sys.path:
-        sys.path.insert(0, scripts_entry)
+    ensure_ml_paths()
 
     for name in (
+        "uqlab.runner.experiment_core",
+        "uqlab.runner.pipeline",
         "uqlab.evaluation.signals.registry",
         "uqlab.evaluation.signals.primitives",
         "uqlab.evaluation.signals.sources",
         "uqlab.shared.config.signals",
         "uqlab.data.loaders.cifar10_loader",
         "uqlab.data.dataset_registry",
-        "uqlab.evaluation.evaluator",
-        "uqlab.evaluation.classification.evaluation",
-        "uqlab.evaluation.classification.data_loader",
-        "uqlab.evaluation.classification.pipeline.data_setup",
-        "uqlab.evaluation.classification.pipeline.experiment_setup",
+        "uqlab.evaluation.metrics",
+        "uqlab.evaluation.result_writers",
+        "uqlab.data.experiment_loader",
+        "uqlab.evaluation.pipeline.data_setup",
+        "uqlab.evaluation.pipeline.experiment_setup",
+        "uqlab.evaluation.pipeline.experiment_eval",
     ):
         mod = sys.modules.get(name)
         if mod is not None:
             importlib.reload(mod)
-
-    script_name = "run_fast_uncertainty_classification"
-    mod = sys.modules.get(script_name)
-    if mod is not None:
-        importlib.reload(mod)

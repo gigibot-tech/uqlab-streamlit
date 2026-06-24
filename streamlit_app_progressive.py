@@ -24,8 +24,8 @@ import streamlit as st
 
 from uqlab.data.dataset_registry import get_dataset_spec
 from uqlab_orchestrator import (
-    launch_primary_from_step3,
-    launch_run_both,
+    launch_benchmark_both,
+    launch_benchmark_primary,
 )
 from uqlab_orchestrator.launch_preflight import assess_launch_readiness
 from uqlab_orchestrator.config import (
@@ -33,10 +33,8 @@ from uqlab_orchestrator.config import (
     DATASET_CATALOG,
     fallback_dataset_stats,
 )
-from uqlab.ui_components.progressive import (
-    render_launch_result,
-    render_progressive_results_section,
-)
+from uqlab.ui_components.progressive.launch_results import render_launch_result
+from uqlab.ui_components.progressive.results_section import render_progressive_results_section
 from uqlab.ui_components.progressive.sweep_launch_cards import SweepLaunchCallbacks
 from uqlab.ui_components.progressive.api_client import fetch_experiments
 from uqlab.ui_components.results.experiment_results_panel import render_experiment_stats_footer
@@ -129,12 +127,12 @@ st.markdown(
 
 def _make_launch_callbacks(workflow: Dict[str, Any]) -> SweepLaunchCallbacks:
     return SweepLaunchCallbacks(
-        on_launch_primary=lambda auto: launch_primary_from_step3(
+        on_launch_primary=lambda auto: launch_benchmark_primary(
             workflow,
             auto_start=auto,
             highlight_callback=_set_highlight_experiment,
         ),
-        on_launch_both=lambda auto, mirror_mode: launch_run_both(
+        on_launch_both=lambda auto, mirror_mode: launch_benchmark_both(
             workflow,
             auto_start=auto,
             mirror_mode=mirror_mode,  # type: ignore[arg-type]
@@ -144,7 +142,7 @@ def _make_launch_callbacks(workflow: Dict[str, Any]) -> SweepLaunchCallbacks:
 
 
 def _apply_launch_workflow(workflow: Dict[str, Any], auto: bool) -> None:
-    st.session_state.launch_result = launch_primary_from_step3(
+    st.session_state.launch_result = launch_benchmark_primary(
         workflow,
         auto_start=auto,
         highlight_callback=_set_highlight_experiment,
@@ -159,6 +157,25 @@ def main() -> None:
             "Configure Steps 1–4, **launch in Step 5** (or sidebar quick launch), "
             "then scroll to **Results** below. See **START_HERE.md**."
         )
+
+    app_mode = "Experiment builder"
+    if ui_on("signal_validation"):
+        with st.sidebar:
+            app_mode = st.radio(
+                "App mode",
+                ["Experiment builder", "Signal validation"],
+                key="app_mode",
+                horizontal=False,
+            )
+
+    if app_mode == "Signal validation" and ui_on("signal_validation"):
+        from uqlab.ui_components.visualization.validation.signal_validation_tab import (
+            render_signal_validation_tab,
+        )
+
+        render_signal_validation_tab()
+        render_experiment_stats_footer(API_BASE_URL, get_headers)
+        return
 
     ensure_workflow_initialized()
     workflow = st.session_state.workflow
@@ -262,6 +279,19 @@ def main() -> None:
         )
         st.markdown("</div>", unsafe_allow_html=True)
         st.stop()
+
+    if ui_on("step2_5_checkpoint_arsenal"):
+        from uqlab.ui_components.workflow.step2_5_checkpoint_arsenal import (
+            render_step2_5_checkpoint_arsenal,
+        )
+
+        st.markdown('<div class="step-active">', unsafe_allow_html=True)
+        render_step2_5_checkpoint_arsenal(
+            app_experiments,
+            workflow,
+            key_prefix="step25",
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
 
     if not ui_on("step3_uncertainty"):
         pass

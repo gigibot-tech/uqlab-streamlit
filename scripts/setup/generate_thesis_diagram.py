@@ -82,8 +82,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Config not found: {config_path}", file=sys.stderr)
         return 1
 
-    from uqlab.evaluation.classification.config import ExperimentConfig
-    from uqlab.evaluation.classification.pipeline.thesis_diagram import (
+    from uqlab.shared.config.classification import ExperimentConfig
+    from uqlab.evaluation.pipeline.thesis_diagram import (
         build_thesis_figure,
         load_thesis_diagram_inputs,
         save_thesis_figure,

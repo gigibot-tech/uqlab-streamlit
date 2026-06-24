@@ -41,6 +41,17 @@ def experiment_results_dir(experiment_id: Union[str, UUID]) -> Path:
     return experiment_dir(experiment_id) / "results"
 
 
+def _results_dir_has_artifacts(path: Path) -> bool:
+    if not path.is_dir():
+        return False
+    if (path / "summary.json").is_file() or (path / "results.pt").is_file():
+        return True
+    if (path / "per_sample_signals.csv").is_file() or (path / "experiment.log").is_file():
+        return True
+    zwischen = path / "zwischen"
+    return zwischen.is_dir() and any(zwischen.glob("*.pt"))
+
+
 def resolve_experiment_results_dir(
     experiment_id: Union[str, UUID],
     *,
@@ -59,11 +70,7 @@ def resolve_experiment_results_dir(
         if key in seen:
             continue
         seen.add(key)
-        if path.is_dir() and (
-            (path / "summary.json").is_file()
-            or (path / "results.pt").is_file()
-            or (path / "per_sample_signals.csv").is_file()
-        ):
+        if path.is_dir() and _results_dir_has_artifacts(path):
             return path
     return experiment_results_dir(eid)
 

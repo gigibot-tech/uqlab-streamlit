@@ -49,7 +49,7 @@ class Settings(BaseSettings):
 
     PROJECT_NAME: str
     
-    # ML script lives under scripts/runners/ (see resolve_ml_training_script)
+    # ML engine: ``uqlab.runner.experiment_core`` (CLI wrapper under scripts/runners/)
     DTAG_ROOT: str = str(Path(__file__).resolve().parents[3] / "scripts")
     
     # Persistent data root (experiments + default SQLite). Override via UQLAB_DATA_DIR.
