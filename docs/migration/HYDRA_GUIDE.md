@@ -1,6 +1,9 @@
 # Hydra Integration Guide (Optional)
 
-This guide explains how to use Hydra for advanced configuration management. **Hydra is completely optional** - all existing code works without it.
+> **Note (2026):** `hydra_wrapper.py` was archived to `dead_code/evaluation/`.
+> Use `uqlab.shared.config.schemas` for dataclass configs. Hydra remains optional.
+
+This guide explains how to use Hydra for advanced configuration management.
 
 ## What is Hydra?
 

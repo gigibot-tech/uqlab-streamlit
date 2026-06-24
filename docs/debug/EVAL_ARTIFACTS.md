@@ -1,5 +1,7 @@
 # Debug one experiment run
 
+Artifact timing: [`docs/UQLAB_FLOW.md`](../UQLAB_FLOW.md#artifacts-results).
+
 ## Streamlit (simplified)
 
 | Tab | Purpose |

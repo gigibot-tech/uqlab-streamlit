@@ -11,6 +11,8 @@ Installation, configuration, and environment setup guides:
 
 ### 🏗️ [Architecture](./architecture/)
 System design, patterns, and technical decisions:
+- **[UQLab flow](./UQLAB_FLOW.md)** — canonical: experiments, fit/predict, signal_table, disentanglement
+- [uq-flow.md](./architecture/uq-flow.md) — redirect only
 - [MinIO Storage Implementation](./architecture/minio-storage.md) - Object storage architecture
 
 ### ✨ [Features](./features/)

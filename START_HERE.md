@@ -1,6 +1,6 @@
 # Start here
 
-Read this page first. You do not need the older `docs/architecture/*` files unless you are debugging history.
+Read **[`docs/UQLAB_FLOW.md`](docs/UQLAB_FLOW.md)** for experiments, `fit` / `predict_disentangling`, `signal_table`, and the paper benchmark. This page is run commands + folder map only.
 
 ## Run the app
 
@@ -22,17 +22,21 @@ Local Flask wizard (no API): [`uqlab-flask/app.py`](uqlab-flask/app.py) on :5001
 |-----|--------|----------------|
 | **Config** | [`src/uqlab_orchestrator/`](src/uqlab_orchestrator/) | `workflow` dict → nested YAML via [`run_spec.py`](src/uqlab_orchestrator/run_spec.py) |
 | **ML core** | [`src/uqlab/`](src/uqlab/) | Data, model factory, train, eval |
-| **Job** | [`src/uqlab/runner/pipeline.py`](src/uqlab/runner/pipeline.py) | **Single execution entry** — load → validate → execute |
-| **UI** | [`src/uqlab/ui_components/`](src/uqlab/ui_components/) | Streamlit widgets only; edits `workflow`, calls orchestrator |
+| **Job** | [`src/uqlab/runner/pipeline.py`](src/uqlab/runner/pipeline.py) | **uqlab-level** `pipeline.run` — backend / CLI / bridge call this |
+| **UI** | [`src/uqlab/ui_components/`](src/uqlab/ui_components/) | Streamlit only — edits `workflow`, launches via API (`experiment_launcher`); does **not** run training in-process |
+
+**Honest experiment chain:** Config → RunSpec → Launch → Runner → Results. Launch (API / `experiment_launcher`) and `TrainingOrchestrator` are optional wrappers around the same `pipeline.run` entry. The old **facade** layer lives in [`dead_code/facade/`](dead_code/facade/) — do not use it.
 
 ```text
 wizard steps 1–5  →  workflow dict
        ↓
-run_spec.build_run_yaml()
+run_spec.build_run_yaml()     (RunSpec)
+       ↓
+experiment_launcher / API       (Launch — optional)
        ↓
 config.yaml on disk
        ↓
-pipeline.run(config_path, output_dir)   ← always this
+pipeline.run(config_path, output_dir)   ← always this (Runner)
        ↓
 results/summary.json + results.pt
 ```
@@ -86,6 +90,5 @@ scripts/run_fast_uncertainty_classification.py
 
 ## Do not read (unless debugging)
 
-- `docs/architecture/*` — historical rework notes
-- `src/uqlab/ui_components/UI_COMPONENTS_*.md` — migration logs
 - `archive/` — old experiments
+- Superseded root docs (`SYSTEM_FLOW.md`, `EXPERIMENT_FLOW.md`, `REGISTRIES.md`) redirect to `docs/UQLAB_FLOW.md`

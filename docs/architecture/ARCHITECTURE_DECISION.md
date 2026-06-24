@@ -67,7 +67,7 @@ Need to execute long-running ML training tasks from FastAPI backend.
 
 **Migration strategy:**
 1. Keep the Strategy pattern (TrainingExecutor interface)
-2. Implement CeleryExecutor alongside SubprocessExecutor
+2. Implement CeleryExecutor (or DockerExecutor) alongside DirectExecutor via the `TrainingExecutor` ABC
 3. Switch via configuration flag
 4. Minimal code changes (just swap executor)
 

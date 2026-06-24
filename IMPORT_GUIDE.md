@@ -1,12 +1,15 @@
 # Import Guide for UQLab-Streamlit
 
-**Purpose:** Help developers understand import patterns, shims, and where actual implementations live.
+**Purpose:** Help developers understand import patterns and where implementations live.
+
+> **2026 update:** `uqlab.evaluation.classification` shims were removed. See
+> [docs/architecture/classification-package-redirect.md](docs/architecture/classification-package-redirect.md).
 
 ---
 
 ## Quick Reference
 
-### ✅ Recommended Imports (Direct from Source)
+### Recommended imports (direct from source)
 
 ```python
 # Configuration
@@ -14,30 +17,31 @@ from uqlab.shared.config.classification import ExperimentConfig, ModelConfig, Da
 
 # Models
 from uqlab.models.classification_models import EmbeddingDataset, EmbeddingDropoutMLP
+from uqlab.models.factory import build_model
 from uqlab.models.feature_extractors import create_feature_extractor, DINOv2FeatureExtractor
 
-# Data Loading
+# Data loading
 from uqlab.data.loaders.cifar10n_loader import CIFAR10NDataset
-from uqlab.data import SplitSpec, EmbeddingOrganizer
+from uqlab.data import SplitSpec, EmbeddingOrganizer, sample_indices_for_fast_pilot
+from uqlab.data.fast_pilot_loader import train_feature_model
+from uqlab.data.image_dataset import ClassificationImageDataset, load_image_datasets
+
+# Fast-pilot pipeline
+from uqlab.evaluation.pipeline.data_setup import prepare_fast_pilot_data
+from uqlab.evaluation.pipeline.fast_pilot_eval import collect_uncertainty_signals
 
 # Evaluation
-from uqlab.evaluation.metrics import binary_auroc
-from uqlab.evaluation.evaluator import Evaluator
+from uqlab.evaluation.metrics import binary_auroc, evaluate_three_way_classification
 
 # Training
 from uqlab.training.trainer import Trainer
 from uqlab.training.callbacks import CheckpointCallback
 ```
 
-### ⚠️ Legacy Imports (Compatibility Shims)
+### Removed legacy package
 
-These imports work but redirect to the actual implementations:
-
-```python
-# These are SHIMS - they redirect to actual locations
-from uqlab.evaluation.classification.config import ExperimentConfig  # → uqlab.shared.config.classification
-from uqlab.evaluation.classification.models import EmbeddingDataset  # → uqlab.models.classification_models
-```
+`uqlab.evaluation.classification.*` shims no longer exist. The abandoned `uqlab.api` REST
+routers live in `dead_code/api/`; use `backend/app/api/routes/` instead.
 
 ---
 

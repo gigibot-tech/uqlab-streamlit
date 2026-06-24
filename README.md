@@ -22,14 +22,32 @@ uqlab-streamlit/
 │       ├── core/                 # Core backend logic
 │       ├── db/                   # Database models
 │       └── services/             # Business logic
-├── streamlit_app.py              # Main Streamlit dashboard
-├── streamlit_app_progressive.py  # Advanced/experimental UI
+├── streamlit_app_progressive.py  # Primary Streamlit UI (experiment builder + signal validation)
+├── streamlit_app.py              # Deprecated legacy UI (archived)
 ├── scripts/                      # Utility scripts
 ├── configs/                      # Experiment configurations
 ├── notebooks/                    # Jupyter notebooks
 ├── docker-compose.yml            # Docker orchestration
 └── README.md                     # This file
 ```
+
+## Entry points, datamodels & configs
+
+| Layer | Entry | Config shape |
+|-------|-------|--------------|
+| **UI** | `streamlit_app_progressive.py` | `session_state.workflow` (dict) |
+| **Bridge** | `uqlab_orchestrator.run_spec` | YAML dict via `build_run_yaml` / `generate_sweep_runs` |
+| **Launch** | `experiment_launcher.launch_workflow_experiments` | POST to `/api/v1/experiments/...` |
+| **Backend** | `DirectExecutor` | in-process call to `uqlab.runner.pipeline.run` |
+| **ML core** | `pipeline.run` → `run_experiment_core` | **`ExperimentConfig`** (`from_yaml` only) |
+
+**Single execution datamodel:** `ExperimentConfig` in `src/uqlab/shared/config/classification.py`.  
+**Single on-disk format:** `config.yaml` per experiment under `data/experiments/<id>/`.
+
+**Dependency direction:** `ui_components` → `uqlab_orchestrator` → `uqlab` (ML core).
+
+Full flow diagram and FAQ: [`EXECUTION_FLOW_AND_CONFIG_GUIDE.md`](EXECUTION_FLOW_AND_CONFIG_GUIDE.md).  
+Package boundaries: [`ARCHITECTURE_CLARIFICATION.md`](ARCHITECTURE_CLARIFICATION.md).
 
 ## 🚀 Quick Start
 
@@ -87,12 +105,12 @@ pip install -r requirements.txt
 #### 3. Run Streamlit App
 
 ```bash
-# Main dashboard (legacy)
-#streamlit run streamlit_app.py
-
-# Progressive/advanced UI
+# Primary UI (experiment builder + signal validation tab)
 streamlit run streamlit_app_progressive.py
+# or: make run-frontend
 ```
+
+See `START_HERE.md` for the full run flow. The legacy `streamlit_app.py` is deprecated and archived under `dead_code/`.
 
 The app will open in your browser at `http://localhost:8501`
 

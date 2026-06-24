@@ -22,7 +22,7 @@ This document describes the modular, production-ready architecture for real ML t
 │    - Handles errors and cleanup                             │
 │                              ↓                               │
 │  TrainingExecutor (Strategy Pattern)                        │
-│    - SubprocessExecutor: Run ML script locally              │
+│    - DirectExecutor: in-process uqlab.runner.pipeline.run   │
 │    - DockerExecutor: Run in container (future)              │
 │    - KubernetesExecutor: Run in K8s (future)                │
 │                              ↓                               │
@@ -58,11 +58,10 @@ This document describes the modular, production-ready architecture for real ML t
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
-│                External ML Script (Isolated)                 │
-│  run_fast_uncertainty_classification.py                      │
-│    - Reads config YAML                                       │
-│    - Writes progress to stdout                               │
-│    - Saves results to JSON                                   │
+│                ML Core (uqlab.runner — in-process)           │
+│  uqlab.runner.pipeline.run(config_path, output_dir)           │
+│    - Loads ExperimentConfig from YAML                        │
+│    - run_experiment_core: train + evaluate + artifacts       │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -85,9 +84,9 @@ class TrainingExecutor(ABC):
     async def execute(config_path, output_dir, progress_callback) -> TrainingResult:
         pass
 
-class SubprocessExecutor(TrainingExecutor):
-    # Local execution
-    
+class DirectExecutor(TrainingExecutor):
+    # In-process: calls uqlab.runner.pipeline.run (thread pool)
+
 class DockerExecutor(TrainingExecutor):
     # Container execution (future)
 ```
@@ -132,7 +131,7 @@ backend/app/
 │   └── executors/
 │       ├── __init__.py
 │       ├── base.py                  # TrainingExecutor interface (36 LOC)
-│       └── subprocess_executor.py   # SubprocessExecutor (52 LOC)
+│       └── direct_executor.py       # DirectExecutor (in-process pipeline.run)
 │
 └── api/
     └── routes/
@@ -152,27 +151,26 @@ User → Streamlit → POST /experiments/no-auth
 ```
 User clicks "Start" → POST /experiments/{id}/start
                    → TrainingOrchestrator.start_training()
-                   → Generate config YAML
-                   → SubprocessExecutor.execute()
-                   → Launch ML script
+                   → Write config YAML
+                   → DirectExecutor.execute() (in-process)
+                   → pipeline.run() → run_experiment_core()
                    → Status: RUNNING
 ```
 
 ### 3. Progress Tracking
 ```
-ML Script stdout → ProgressParser.parse_line()
-                → Extract progress/stage
-                → ExperimentRepository.update_status()
-                → Update DB (progress, message)
+ML pipeline progress → progress_callback(ProgressUpdate)
+                    → ExperimentRepository.update_status()
+                    → Update DB (progress, message)
 ```
 
 ### 4. Completion
 ```
-ML Script finishes → Writes results.json
-                   → SubprocessExecutor reads results
-                   → ExperimentRepository.save_results()
-                   → Status: COMPLETED
-                   → AUROC scores saved
+Pipeline finishes → Writes summary.json + results.pt
+                  → DirectExecutor._read_results()
+                  → ExperimentRepository.save_results()
+                  → Status: COMPLETED
+                  → AUROC scores saved
 ```
 
 ### 5. Auto-Refresh (Frontend)
@@ -186,7 +184,7 @@ Streamlit auto-poll → GET /experiments/no-auth
 
 ### ✅ Separation of Concerns
 - Domain logic isolated from infrastructure
-- ML script completely decoupled from backend
+- ML core (`uqlab.runner`) invoked in-process via `DirectExecutor`
 - Easy to test each layer independently
 
 ### ✅ Extensibility
@@ -212,11 +210,9 @@ Streamlit auto-poll → GET /experiments/no-auth
 
 ## Configuration
 
-### ML Script Path
-Set in `backend/app/api/routes/experiments.py`:
-```python
-ML_SCRIPT = Path(__file__).resolve().parents[6] / "Desktop" / "GigiApps" / "dtag" / "experiments" / "run_fast_uncertainty_classification.py"
-```
+Production training uses `DirectExecutor`, which calls `uqlab.runner.pipeline.run` with the experiment's `config.yaml`. CLI dev path: `scripts/runners/run_fast_uncertainty_classification.py` (same pipeline entry).
+
+**Note:** `SubprocessExecutor` was removed (2026-06-24); it had been retired in favor of in-process execution.
 
 ### Dependencies
 Added to `backend/pyproject.toml`:
@@ -284,15 +280,9 @@ class CachedExperimentRepository(ExperimentRepository):
 
 ## Troubleshooting
 
-### ML Script Not Found
-```
-Error: ML script not found at /path/to/script
-Solution: Update ML_SCRIPT path in experiments.py
-```
-
 ### Training Fails Immediately
 ```
-Check: ML script dependencies installed
+Check: uqlab import path (PYTHONPATH includes src/)
 Check: Config YAML is valid
 Check: Output directory is writable
 ```

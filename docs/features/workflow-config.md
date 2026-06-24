@@ -148,7 +148,7 @@ Code: [`plot_probe/`](../../src/uqlab_orchestrator/plot_probe/), UI [`plot_probe
 
 Optional **Preflight detail (debug)** expander (both surfaces) shows diff table when `ui_debug.plot_probe_suggestions` is on.
 
-Suggestions bias **upward** on `epochs`, `mc_passes`, `eval_per_group`, or `sweep_mode → full` (1–2 knobs per failure kind). No silent relaunch — user must **Apply** or **Apply & launch**.
+Suggestions bias **upward** on `epochs`, `mc_passes`, `eval_per_group`, or `sweep_mode → full` (1–2 knobs per failure kind). When a duplicate run already used the **same epoch budget**, Step 5 also offers an **alternative sample-size fix** (+50 under-train, +100 regular-train, +75 eval/group — clamped to CIFAR-10 pool estimates). No silent relaunch — user must **Apply** or **Apply & launch**.
 
 ### Training presets (`TRAINING_CONFIG`)
 

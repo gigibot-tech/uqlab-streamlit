@@ -81,19 +81,23 @@ def render_experiment_results_panel(
 
 Per sweep campaign in the sweep analysis hub:
 
-1. **Config timeline** — shared baseline once, then per-run steps with Δparams vs the previous run (ordered by swept X).
-2. **Sweep line plot** — same signal/pool model as the interactive chart.
+1. **Config (slim)** — page 1: shared setup in **two columns**; following page(s): **compact sweep table** (one row per run with Δ vs previous — not one page per run).
+2. **Plot layouts** (radio in UI):
+   - **By section** — config for epistemic/aleatoric, then one plot page per signal per section.
+   - **Grouped by metric** — config for all sections first, then **one page per signal** with epistemic + aleatoric subplots side-by-side.
+3. **Full group scope** — all completed runs in the selected smart group(s); ignores §2 arm picker.
+4. **Multi-campaign export** — multiselect campaigns; optional Δ shared-setup page between groups.
 
-**Streamlit:** *Build campaign PDF* → *Download campaign PDF* (respects arm, X axis, facet slice).
+**Streamlit:** pick layout → *Build campaign PDF* → *Download*.
 
 **CLI:**
 
 ```bash
-PYTHONPATH=src python3 scripts/generate_campaign_config_timeline.py --run-ids id1,id2,id3 -o timeline.pdf
-PYTHONPATH=src python3 scripts/generate_campaign_report.py --run-ids id1,id2,id3 -o report.pdf
+PYTHONPATH=src python3 scripts/setup/generate_campaign_report.py --run-ids id1,id2,id3 -o report.pdf
+PYTHONPATH=src python3 scripts/setup/generate_campaign_report.py --run-ids id1,id2,id3 --layout by_metric -o report.pdf
 ```
 
-Modules: `campaign_config_timeline.py`, `campaign_report.py`.
+Modules: `campaign_config_timeline.py`, `campaign_sections.py`, `campaign_report.py`.
 
 
 ### Option 1: Add Sweep Metadata to UncertaintyExperiment (Recommended)
@@ -296,6 +300,8 @@ This is a **distinguished engineer-level insight** because it identifies:
 4. **Scalability issue**: O(n²) grouping doesn't scale to 1000s of experiments
 
 ## Sweep line plots: eval pool semantics (config-implicit)
+
+**Canonical eval summary:** [`evaluation-protocol.md`](evaluation-protocol.md).
 
 Each run evaluates samples in three **eval packs** (from `data_loader.py`):
 

@@ -1,5 +1,7 @@
 # Uncertainty Subset Logic: Eval and DualXDA Training Data
 
+> **Canonical eval summary:** [`docs/features/evaluation-protocol.md`](../features/evaluation-protocol.md) — end-to-end protocol (current vs proposed 4-region partition). This doc goes deeper on subset selection mechanics.
+
 ## Overview
 
 This document explains how evaluation samples and DualXDA training subsets are selected for measuring different types of uncertainty (epistemic, aleatoric, hybrid).
