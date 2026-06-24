@@ -10,7 +10,7 @@ sys.path.insert(0, str(_root / "src"))
 sys.path.insert(0, str(_root))
 
 from uqlab.evaluation.signals.attribution import (  # noqa: E402
-    build_fast_pilot_signal_table,
+    build_experiment_signal_table,
     inverse_coherence_from_coherence,
     map_attribution_structure_to_uncertainty,
     reciprocal_uncertainty,
@@ -52,7 +52,7 @@ def test_topk_mass_enables_inverse_mass():
     assert inv > 0.01
 
 
-def test_map_and_build_fast_pilot_share_inverse_coherence():
+def test_map_and_build_experiment_share_inverse_coherence():
     n = 8
     raw = {
         "coherence": torch.linspace(0.2, 0.9, n),
@@ -65,7 +65,7 @@ def test_map_and_build_fast_pilot_share_inverse_coherence():
     }
     raw["inverse_coherence"] = inverse_coherence_from_coherence(raw["coherence"])
     mapped = map_attribution_structure_to_uncertainty(raw)
-    table = build_fast_pilot_signal_table(
+    table = build_experiment_signal_table(
         attribution_signals=raw,
         det_logits=torch.randn(n, 10),
         mean_pred_det=torch.softmax(torch.randn(n, 10), dim=1),
@@ -82,5 +82,5 @@ def test_map_and_build_fast_pilot_share_inverse_coherence():
 if __name__ == "__main__":
     test_coherence_high_when_supporters_align()
     test_coherence_low_when_supporters_cancel()
-    test_map_and_build_fast_pilot_share_inverse_coherence()
+    test_map_and_build_experiment_share_inverse_coherence()
     print("ok")

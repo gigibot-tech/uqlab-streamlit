@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from uqlab.evaluation.classification.config import (
+from uqlab.shared.config.classification import (
     DataConfig,
     EvaluationConfig,
     ExperimentConfig,
@@ -12,8 +12,8 @@ from uqlab.evaluation.classification.config import (
     PathConfig,
     TrainingConfig,
 )
-from uqlab.evaluation.classification.pipeline.eval_signal_config import EvalSignalConfig
-from uqlab.evaluation.classification.pipeline.experiment_setup import extract_run_config
+from uqlab.evaluation.pipeline.eval_signal_config import EvalSignalConfig
+from uqlab.evaluation.pipeline.experiment_setup import extract_run_config
 
 
 def test_from_run_config_maps_eval_fields():

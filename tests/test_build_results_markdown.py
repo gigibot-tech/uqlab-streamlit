@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 from types import SimpleNamespace
 
-from uqlab.evaluation.evaluator import (
+from uqlab.evaluation.result_writers import (
     _format_auroc_markdown,
     build_results_markdown,
     persist_experiment_summaries,

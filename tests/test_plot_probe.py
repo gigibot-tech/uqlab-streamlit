@@ -9,6 +9,7 @@ from uqlab_orchestrator.plot_probe import (
     PlotProbeResult,
     assess_outcome,
     biased_nudge,
+    suggest_sample_size_patch,
     suggest_workflow_patch,
 )
 from uqlab_orchestrator.plot_probe.duplicate_gate import (
@@ -100,6 +101,61 @@ def test_assess_duplicate_outcome_ok_has_no_suggestion():
         outcome = assess_duplicate_outcome(group, wf)
     assert outcome.probe.ok
     assert outcome.suggestion is None
+    assert outcome.sample_size_suggestion is None
+
+
+def test_suggest_sample_size_patch_when_epochs_match():
+    wf = default_workflow()
+    wf["training_config"]["epochs"] = 12
+    probe = PlotProbeResult.fail(
+        stage="viz",
+        failure_kind="build_error",
+        message="plot failed",
+    )
+    dup_cfg = {"training": {"epochs": 12}, "data": {}}
+    alt = suggest_sample_size_patch(
+        wf,
+        probe=probe,
+        source_label="dup-run",
+        duplicate_cfg=dup_cfg,
+    )
+    assert alt is not None
+    assert alt.variant == "sample_size"
+    assert alt.diffs
+    uc = alt.patched_workflow["uncertainty_config"]
+    ev = alt.patched_workflow["evaluation_config"]
+    assert int(uc["regular_train_per_class"]) > 300
+    assert int(ev["eval_per_group"]) > 100
+    assert alt.pool_note
+
+
+def test_suggest_sample_size_patch_skips_when_epochs_differ():
+    wf = default_workflow()
+    wf["training_config"]["epochs"] = 15
+    probe = PlotProbeResult.fail(
+        stage="viz",
+        failure_kind="build_error",
+        message="plot failed",
+    )
+    dup_cfg = {"training": {"epochs": 12}}
+    assert (
+        suggest_sample_size_patch(
+            wf,
+            probe=probe,
+            duplicate_cfg=dup_cfg,
+        )
+        is None
+    )
+
+
+def test_propose_sample_size_targets_respects_pool_at_cap():
+    from uqlab_orchestrator.plot_probe.dataset_pool import propose_sample_size_targets
+
+    wf = default_workflow()
+    wf["uncertainty_config"]["regular_train_per_class"] = 5000
+    wf["uncertainty_config"]["under_train_per_class"] = 4999
+    wf["evaluation_config"]["eval_per_group"] = 2000
+    assert propose_sample_size_targets(wf) is None
 
 
 def test_biased_nudge_upward_majority():

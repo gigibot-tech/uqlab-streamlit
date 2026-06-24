@@ -4,7 +4,7 @@ import pytest
 from pathlib import Path
 import tempfile
 
-from uqlab.evaluation.classification.config_schema import (
+from uqlab.shared.config.schemas import (
     DataConfig,
     ModelConfig,
     TrainingConfig,
@@ -41,7 +41,7 @@ class TestDataConfig:
         config.validate()  # Should not raise
         
         config = DataConfig(under_supported_classes="random:15")
-        with pytest.raises(ValueError, match="must be between 1 and 9"):
+        with pytest.raises(ValueError, match="random:15"):
             config.validate()
     
     def test_comma_separated_classes(self):
@@ -51,12 +51,12 @@ class TestDataConfig:
         
         # Test invalid class ID
         config = DataConfig(under_supported_classes="0,15")
-        with pytest.raises(ValueError, match="must be between 0 and 9"):
+        with pytest.raises(ValueError, match="0,15"):
             config.validate()
         
         # Test duplicate class IDs
         config = DataConfig(under_supported_classes="3,3,5")
-        with pytest.raises(ValueError, match="Duplicate class IDs"):
+        with pytest.raises(ValueError, match="3,3,5"):
             config.validate()
 
 

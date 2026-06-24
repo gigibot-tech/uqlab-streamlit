@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 # Import only the config module to avoid torch dependencies
-from uqlab.evaluation.classification.config import ModelConfig
+from uqlab.shared.config.classification import ModelConfig
 
 def test_default_config():
     """Test default configuration."""

@@ -4,9 +4,10 @@ import pytest
 import torch
 import numpy as np
 
-from uqlab.evaluation.classification.evaluation import (
+from uqlab.evaluation.metrics import (
     binary_auroc,
     confusion_matrix,
+    evaluate_three_way_classification,
     macro_f1,
     standardize,
 )
@@ -147,4 +148,50 @@ class TestStandardize:
         assert not torch.isnan(test_x_std).any()
 
 
-# Made with Bob
+class TestThreeWayClassification:
+    """evaluate_three_way_classification tolerates missing optional signals."""
+
+    def test_without_mutual_info(self):
+        """Dropout=0 runs prune mutual_info; scoring must not KeyError."""
+        n = 30
+        labels = torch.tensor([0] * 10 + [1] * 10 + [2] * 10)
+        signal_table = {
+            "msp_uncertainty": torch.rand(n),
+            "predictive_entropy": torch.rand(n),
+            "inverse_coherence": torch.rand(n),
+            "inverse_dominance": torch.rand(n),
+            "inverse_mass": torch.rand(n),
+            "inverse_logit_magnitude": torch.rand(n),
+        }
+        rows = evaluate_three_way_classification(
+            signal_table,
+            labels,
+            device=torch.device("cpu"),
+            seed=0,
+        )
+        names = {name for name, _ in rows}
+        assert "predictive_only" in names
+        assert "attribution_only" in names
+        assert "combined" in names
+        for _, score in rows:
+            assert 0.0 <= score <= 1.0
+
+    def test_with_suffixed_dualxda_columns_only(self):
+        """Current registry exports inverse_*_dualxda, not legacy alias keys."""
+        n = 30
+        labels = torch.tensor([0] * 10 + [1] * 10 + [2] * 10)
+        signal_table = {
+            "msp_uncertainty": torch.rand(n),
+            "predictive_entropy": torch.rand(n),
+            "inverse_coherence_dualxda": torch.rand(n),
+            "inverse_dominance_dualxda": torch.rand(n),
+            "inverse_mass_dualxda": torch.rand(n),
+            "inverse_logit_magnitude": torch.rand(n),
+        }
+        rows = evaluate_three_way_classification(
+            signal_table,
+            labels,
+            device=torch.device("cpu"),
+            seed=0,
+        )
+        assert {name for name, _ in rows} >= {"attribution_only", "combined"}

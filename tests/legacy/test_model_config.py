@@ -1,6 +1,6 @@
 """Test script to verify ModelConfig architecture selector functionality."""
 
-from uqlab.evaluation.classification.config import ModelConfig
+from uqlab.shared.config.classification import ModelConfig
 
 def test_default_config():
     """Test default configuration."""

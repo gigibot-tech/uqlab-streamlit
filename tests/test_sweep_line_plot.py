@@ -5,7 +5,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from uqlab.evaluation.classification.pipeline.sweep_line_plot import (
+from uqlab.evaluation.pipeline.sweep_line_plot import (
     SWEEP_KIND_DATASET_SIZE,
     SWEEP_KIND_LABEL_NOISE,
     build_sweep_line_plot,
@@ -16,12 +16,18 @@ from uqlab.evaluation.classification.pipeline.sweep_line_plot import (
 )
 
 
+from uqlab.shared.config.signals import (
+    PLOT_DEFAULT_ALEATORIC_SIGNAL,
+    PLOT_DEFAULT_EPISTEMIC_SIGNAL,
+)
+
+
 def test_default_signal_label_noise():
-    assert default_signal_for_sweep(SWEEP_KIND_LABEL_NOISE) == "inverse_coherence"
+    assert default_signal_for_sweep(SWEEP_KIND_LABEL_NOISE) == PLOT_DEFAULT_ALEATORIC_SIGNAL
 
 
 def test_default_signal_dataset_size():
-    assert default_signal_for_sweep(SWEEP_KIND_DATASET_SIZE) == "inverse_mass"
+    assert default_signal_for_sweep(SWEEP_KIND_DATASET_SIZE) == PLOT_DEFAULT_EPISTEMIC_SIGNAL
 
 
 def test_infer_sweep_kind_from_noise_column():
@@ -66,7 +72,7 @@ def test_list_plottable_signals_primary_pool_only():
     assert list_plottable_signals(alea_df, SWEEP_KIND_LABEL_NOISE) == []
 
     alea_df = pd.DataFrame([{"inverse_coherence_mean_aleatoric": 0.5}])
-    assert list_plottable_signals(alea_df, SWEEP_KIND_LABEL_NOISE) == ["inverse_coherence"]
+    assert list_plottable_signals(alea_df, SWEEP_KIND_LABEL_NOISE) == [PLOT_DEFAULT_ALEATORIC_SIGNAL]
 
     epis_df = pd.DataFrame([{"mutual_info_mean_epistemic": 0.3}])
     assert list_plottable_signals(epis_df, SWEEP_KIND_DATASET_SIZE) == ["mutual_info"]
@@ -82,11 +88,11 @@ def test_list_plottable_signals_old_both_pools_not_required_for_noise():
             }
         ]
     )
-    assert list_plottable_signals(df, SWEEP_KIND_LABEL_NOISE) == ["inverse_coherence"]
+    assert list_plottable_signals(df, SWEEP_KIND_LABEL_NOISE) == [PLOT_DEFAULT_ALEATORIC_SIGNAL]
 
 
 def test_detect_facet_columns_learning_rate():
-    from uqlab.evaluation.classification.pipeline.sweep_line_plot import detect_facet_columns
+    from uqlab.evaluation.pipeline.sweep_line_plot import detect_facet_columns
 
     df = pd.DataFrame(
         {
@@ -153,12 +159,12 @@ training:
         signal="inverse_coherence",
     )
     d = payload.to_dict()
-    assert d["signal"] == "inverse_coherence"
+    assert d["signal"] == PLOT_DEFAULT_ALEATORIC_SIGNAL
     assert d["x_col"] == "noise_percent"
     assert d["points"] == 3
     assert d["primary_pool"] == "aleatoric"
     assert d.get("plot_config")
-    assert d["plot_config"]["signal"]["id"] == "inverse_coherence"
+    assert d["plot_config"]["signal"]["id"] == PLOT_DEFAULT_ALEATORIC_SIGNAL
     assert d["plot_config"]["x_axis"]["column"] == "noise_percent"
     left_traces = [t for t in d["traces"] if t.get("yaxis") == "left"]
     assert len(left_traces) >= 1
@@ -210,10 +216,12 @@ model:
     )
     d = payload.to_dict()
     left_traces = [t for t in d["traces"] if t.get("yaxis") == "left"]
-    assert len(left_traces) == 1
-    assert left_traces[0]["dash"] == "solid"
-    assert d["has_mirror_line"] is False
-    assert d["mirror_note"] is not None
+    solid = [t for t in left_traces if t.get("dash") == "solid"]
+    assert len(solid) == 1
+    assert solid[0]["dash"] == "solid"
+    assert d["signal"] == PLOT_DEFAULT_ALEATORIC_SIGNAL
+    # run-50 still has an epistemic eval pack, so a dashed mirror can appear in the sweep frame.
+    assert d["has_mirror_line"] is True
 
 
 def test_build_sweep_line_plot_facet_slice(tmp_path):

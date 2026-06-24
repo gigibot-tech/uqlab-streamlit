@@ -8,7 +8,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 
-from uqlab.evaluation.classification.config import (
+from uqlab.shared.config.classification import (
     DataConfig,
     EvaluationConfig,
     ExperimentConfig,
@@ -16,7 +16,7 @@ from uqlab.evaluation.classification.config import (
     PathConfig,
     TrainingConfig,
 )
-from uqlab.evaluation.classification.pipeline.thesis_diagram import (
+from uqlab.evaluation.pipeline.thesis_diagram import (
     build_thesis_figure,
     load_thesis_diagram_inputs,
     save_thesis_figure,

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from uqlab.evaluation.classification.config import ExperimentConfig
-from uqlab.evaluation.classification.pipeline.experiment_setup import (
+from uqlab.shared.config.classification import ExperimentConfig
+from uqlab.evaluation.pipeline.experiment_setup import (
     extract_run_config,
     require_complete_config,
 )

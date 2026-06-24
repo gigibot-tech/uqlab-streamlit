@@ -23,7 +23,11 @@ def test_auroc_by_signal_tolerates_null_auroc_fields():
         source="summary.json",
     )
     scores = artifacts.auroc_by_signal()
-    assert scores["inverse_coherence"] == {"aleatoric": 0.0, "epistemic": 0.0}
+    assert scores["inverse_coherence"] == {
+        "aleatoric": 0.0,
+        "epistemic": 0.0,
+        "ood": 0.0,
+    }
 
 
 def test_metrics_row_from_run_with_null_auroc_summary(tmp_path):

@@ -28,6 +28,31 @@ def test_mirror_perspectives_single_includes_all():
     assert len(mirrors) == perspective_count()
 
 
+def test_resolve_launch_actions_four_region_single_button():
+    import copy
+
+    from uqlab.data.class_regions import DEFAULT_FOUR_REGION_PRESET
+    from uqlab_orchestrator.config.workflow_defaults import default_workflow
+    from uqlab_orchestrator.uncertainty import resolve_launch_actions, resolve_launch_plan
+
+    wf = default_workflow()
+    wf["uncertainty_config"] = {
+        **wf["uncertainty_config"],
+        "partition_mode": "four_region",
+        "class_regions": copy.deepcopy(DEFAULT_FOUR_REGION_PRESET),
+        "sweep_target": "single",
+        "sweep_enabled": False,
+        "sweep_kind": "four_region",
+    }
+    plan = resolve_launch_plan(wf)
+    assert plan.sweep_target == "single"
+    assert plan.primary["profile"] == "four_region"
+    assert plan.mirror_arms == ()
+    actions = resolve_launch_actions(wf)
+    assert len(actions) == 1
+    assert "four-region" in actions[0].label.lower()
+
+
 def test_resolve_launch_actions_sweep_both_single_button():
     wf = default_workflow()
     wf["uncertainty_config"]["sweep_target"] = "sweep_both"
@@ -39,7 +64,7 @@ def test_resolve_launch_actions_sweep_both_single_button():
     actions = resolve_launch_actions(wf)
     assert len(actions) == 1
     assert actions[0].kind == "primary"
-    assert "Launch both sweeps" in actions[0].label
+    assert "Run benchmark" in actions[0].label
 
 
 def test_resolve_launch_plan_sweep_one():

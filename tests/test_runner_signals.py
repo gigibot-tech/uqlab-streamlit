@@ -7,12 +7,22 @@ from unittest.mock import MagicMock
 import pytest
 import torch
 
-from uqlab.evaluation.signals.attribution import build_fast_pilot_signal_table
-from uqlab.evaluation.signals.primitives import ATTR_COHERENCE
+from uqlab.evaluation.signals.attribution import build_experiment_signal_table
+from uqlab.evaluation.signals.primitives import (
+    ATTR_COHERENCE,
+    DUALXDA_COHERENCE,
+    DUALXDA_DOMINANCE,
+    DUALXDA_MASS,
+    EK_FAK_COHERENCE,
+    EK_FAK_DOMINANCE,
+    EK_FAK_MASS,
+    namespaced_attribution_store,
+)
 from uqlab.evaluation.signals.registry import (
     METRICS,
     build_signal_table_from_store,
     legacy_store_from_kwargs,
+    normalize_signal_id,
     predicted_class_logit_magnitude,
     signals_from_flat_list,
 )
@@ -24,8 +34,10 @@ from uqlab.evaluation.signals.sources import (
 from uqlab.models.architecture import normalize_architecture, scope_to_training_mode
 from uqlab.shared.config.signals import (
     DEFAULT_SIGNALS,
+    DISENTANGLING_BRIDGE_PRESETS,
     flatten_signals,
     prune_signals_for_runtime,
+    resolve_disentangling_signal_pair,
     validate_evaluation_signals,
 )
 from uqlab_orchestrator.run_spec import build_run_yaml
@@ -102,13 +114,14 @@ def test_inverse_dominance_is_one_minus_raw_dominance():
         mean_pred_det=torch.softmax(torch.randn(3, 10), dim=1),
         mc_uq=_mc_uq(3),
     )
-    table = build_signal_table_from_store(store, enabled={"inverse_dominance"})
-    assert torch.allclose(table["inverse_dominance"], 1.0 - dom)
+    table = build_signal_table_from_store(store, enabled={"inverse_dominance_dualxda"})
+    assert torch.allclose(table["inverse_dominance_dualxda"], 1.0 - dom)
 
 
 def test_mutual_info_pruned_when_dropout_zero():
     pruned = prune_signals_for_runtime(DEFAULT_SIGNALS, mc_passes=10, dropout=0.0)
     assert "mutual_info" not in pruned["predictive"]
+    assert "expected_entropy" not in pruned["predictive"]
 
     n = 4
     store = legacy_store_from_kwargs(
@@ -121,6 +134,7 @@ def test_mutual_info_pruned_when_dropout_zero():
         store, enabled=set(flatten_signals(pruned)), mc_passes=10, dropout=0.0
     )
     assert "mutual_info" not in table
+    assert "expected_entropy" not in table
 
 
 def test_selected_signals_round_trip_into_yaml():
@@ -151,12 +165,12 @@ def test_selected_signals_round_trip_into_yaml():
     }
     cfg = build_run_yaml(workflow)
     flat = flatten_signals(cfg["evaluation"]["signals"])
-    assert flat == ["msp_uncertainty", "inverse_coherence", "inverse_mass"]
+    assert flat == ["msp_uncertainty", "inverse_coherence_dualxda", "inverse_mass_dualxda"]
 
 
 def test_signals_from_flat_list_aliases_dominance():
     families = signals_from_flat_list(["dominance", "msp_uncertainty"])
-    assert families["attribution"] == ["inverse_dominance"]
+    assert families["attribution"] == ["inverse_dominance_dualxda"]
     assert families["predictive"] == ["msp_uncertainty"]
 
 
@@ -169,10 +183,33 @@ def test_enabled_subset_filters_exported_columns():
         mc_uq=_mc_uq(n),
     )
     table = build_signal_table_from_store(
-        store, enabled={"msp_uncertainty", "inverse_mass"}, mc_passes=10, dropout=0.0
+        store, enabled={"msp_uncertainty", "inverse_mass_dualxda"}, mc_passes=10, dropout=0.0
     )
-    assert set(table.keys()) == {"msp_uncertainty", "inverse_mass"}
-    assert len(METRICS) == 7
+    assert set(table.keys()) == {"msp_uncertainty", "inverse_mass_dualxda"}
+    assert len(METRICS) == 14
+
+
+def test_expected_entropy_equals_entropy_minus_mutual_info():
+    n = 5
+    entropy = torch.linspace(0.5, 1.5, n)
+    mutual = torch.linspace(0.1, 0.4, n)
+    mc = _mc_uq(n)
+    mc["entropy"] = entropy
+    mc["mutual_info"] = mutual
+    store = legacy_store_from_kwargs(
+        attribution_signals=_attr_raw(n),
+        det_logits=torch.ones(n, 10),
+        mean_pred_det=torch.softmax(torch.ones(n, 10), dim=1),
+        mc_uq=mc,
+    )
+    table = build_signal_table_from_store(
+        store, enabled={"expected_entropy", "predictive_entropy", "mutual_info"}, dropout=0.1
+    )
+    assert torch.allclose(table["expected_entropy"], entropy - mutual)
+    assert torch.allclose(table["predictive_entropy"], entropy)
+    assert torch.allclose(table["mutual_info"], mutual)
+    assert METRICS["expected_entropy"].aleatoric is True
+    assert METRICS["mutual_info"].epistemic is True
 
 
 def test_sources_for_metrics_skips_attribution_when_not_needed():
@@ -186,11 +223,13 @@ def test_mock_attribution_method_feeds_inverse_coherence():
     coherence = torch.linspace(0.1, 0.9, n)
 
     def mock_primitives(ctx: EvalContext):
-        return {
-            ATTR_COHERENCE: coherence,
-            "attribution.mass": torch.ones(n),
-            "attribution.dominance": torch.zeros(n),
-        }
+        return namespaced_attribution_store(
+            "dualxda",
+            coherence,
+            torch.ones(n),
+            torch.zeros(n),
+            write_legacy_alias=True,
+        )
 
     original = ATTRIBUTION_METHODS.get("dualxda")
     ATTRIBUTION_METHODS["mock"] = mock_primitives
@@ -210,8 +249,10 @@ def test_mock_attribution_method_feeds_inverse_coherence():
                 run_cache_dir=MagicMock(),
             )
         )
-        table = build_signal_table_from_store(store, enabled={"inverse_coherence"})
-        assert torch.allclose(table["inverse_coherence"], 1.0 - coherence)
+        table = build_signal_table_from_store(store, enabled={"inverse_coherence_dualxda"})
+        assert torch.allclose(table["inverse_coherence_dualxda"], 1.0 - coherence)
+        table_alias = build_signal_table_from_store(store, enabled={"inverse_coherence"})
+        assert torch.allclose(table_alias["inverse_coherence_dualxda"], 1.0 - coherence)
     finally:
         if original is not None:
             ATTRIBUTION_METHODS["dualxda"] = original
@@ -223,15 +264,192 @@ def test_signal_calculator_archived():
         from uqlab.evaluation.signals import SignalCalculator  # noqa: F401
 
 
-def test_build_fast_pilot_signal_table_legacy_path():
+def test_build_experiment_signal_table_legacy_path():
     n = 8
     raw = _attr_raw(n)
     mean_pred = torch.softmax(torch.randn(n, 10), dim=1)
-    table = build_fast_pilot_signal_table(
+    table = build_experiment_signal_table(
         attribution_signals=raw,
         det_logits=torch.randn(n, 10),
         mean_pred_det=mean_pred,
         mc_uq=_mc_uq(n, mean_pred),
-        enabled={"inverse_coherence"},
+        enabled={"inverse_coherence_dualxda"},
     )
-    assert "inverse_coherence" in table
+    assert "inverse_coherence_dualxda" in table
+
+
+def test_signal_id_aliases_resolve_to_dualxda():
+    assert normalize_signal_id("inverse_coherence") == "inverse_coherence_dualxda"
+    assert normalize_signal_id("inverse_mass") == "inverse_mass_dualxda"
+    assert normalize_signal_id("dominance") == "inverse_dominance_dualxda"
+
+
+def test_bridge_presets_signal_and_ek_fak():
+    assert resolve_disentangling_signal_pair(predict_mode="signal") == (
+        "inverse_coherence_dualxda",
+        "inverse_mass_dualxda",
+    )
+    assert resolve_disentangling_signal_pair(predict_mode="signal_ek_fak") == (
+        "inverse_coherence_ek_fak",
+        "inverse_mass_ek_fak",
+    )
+    assert DISENTANGLING_BRIDGE_PRESETS["signal_dualxda"] == (
+        "inverse_coherence_dualxda",
+        "inverse_mass_dualxda",
+    )
+
+
+def test_mock_ek_fak_primitives_feed_suffixed_metrics():
+    n = 4
+    coherence = torch.linspace(0.2, 0.8, n)
+
+    def mock_ek(ctx: EvalContext):
+        return namespaced_attribution_store(
+            "ek_fak",
+            coherence,
+            torch.ones(n) * 2.0,
+            torch.ones(n) * 0.25,
+        )
+
+    store = mock_ek(
+        EvalContext(
+            model=MagicMock(),
+            train_dataset=MagicMock(),
+            eval_inputs=torch.zeros(n, 3),
+            eval_x=torch.zeros(n, 3),
+            device=torch.device("cpu"),
+            train_batch_size=2,
+            top_k=2,
+            mc_passes=0,
+            dropout=0.0,
+            attribution_method="ek_fak",
+            run_cache_dir=MagicMock(),
+        )
+    )
+    table = build_signal_table_from_store(
+        store,
+        enabled={
+            "inverse_coherence_ek_fak",
+            "inverse_mass_ek_fak",
+            "inverse_dominance_ek_fak",
+        },
+    )
+    assert torch.allclose(table["inverse_coherence_ek_fak"], 1.0 - coherence)
+    assert torch.allclose(table["inverse_mass_ek_fak"], 1.0 / (torch.ones(n) * 2.0 + 1e-8))
+    assert torch.allclose(table["inverse_dominance_ek_fak"], torch.full((n,), 0.75))
+
+
+def test_dual_backend_primitive_store_builds_both_metric_families():
+    n = 3
+    dx = namespaced_attribution_store(
+        "dualxda",
+        torch.tensor([0.1, 0.5, 0.9]),
+        torch.ones(n),
+        torch.zeros(n),
+        write_legacy_alias=True,
+    )
+    ek = namespaced_attribution_store(
+        "ek_fak",
+        torch.tensor([0.2, 0.4, 0.6]),
+        torch.ones(n) * 3.0,
+        torch.ones(n) * 0.1,
+    )
+    store = {
+        **dx,
+        **ek,
+        "forward.det_logits": torch.ones(n, 10),
+        "forward.mean_pred": torch.softmax(torch.ones(n, 10), dim=1),
+        "mc.mean_prediction": torch.softmax(torch.ones(n, 10), dim=1),
+        "mc.entropy": torch.zeros(n),
+        "mc.mutual_info": torch.zeros(n),
+    }
+    table = build_signal_table_from_store(
+        store,
+        enabled={
+            "inverse_coherence_dualxda",
+            "inverse_mass_dualxda",
+            "inverse_coherence_ek_fak",
+            "inverse_mass_ek_fak",
+        },
+    )
+    assert set(table.keys()) == {
+        "inverse_coherence_dualxda",
+        "inverse_mass_dualxda",
+        "inverse_coherence_ek_fak",
+        "inverse_mass_ek_fak",
+    }
+
+
+def test_sources_for_metrics_includes_both_attribution_backends():
+    needed = sources_for_metrics(
+        {
+            "inverse_coherence_dualxda",
+            "inverse_coherence_ek_fak",
+        }
+    )
+    assert needed == {"attribution_dualxda", "attribution_ek_fak"}
+
+
+def test_derive_attribution_backends_from_enabled_metrics():
+    from uqlab.shared.config.signals import derive_attribution_backends_from_signals
+
+    assert derive_attribution_backends_from_signals(["expected_entropy", "mutual_info"]) == ()
+    assert derive_attribution_backends_from_signals(["inverse_coherence_dualxda"]) == ("dualxda",)
+    assert derive_attribution_backends_from_signals(["inverse_coherence_ek_fak"]) == ("ek_fak",)
+    assert derive_attribution_backends_from_signals(["inverse_coherence_graddot"]) == ("graddot",)
+    both = derive_attribution_backends_from_signals(
+        ["inverse_coherence_dualxda", "inverse_mass_ek_fak"]
+    )
+    assert both == ("dualxda", "ek_fak")
+    triple = derive_attribution_backends_from_signals(
+        ["inverse_coherence_dualxda", "inverse_mass_ek_fak", "inverse_mass_graddot"]
+    )
+    assert triple == ("dualxda", "ek_fak", "graddot")
+
+
+def test_sources_for_metrics_includes_graddot_backend():
+    needed = sources_for_metrics({"inverse_coherence_graddot", "inverse_mass_graddot"})
+    assert needed == {"attribution_graddot"}
+
+
+def test_score_bridge_pairs_from_results(tmp_path):
+    from uqlab.evaluation.benchmarks.disentangling.bridge_sweep import score_bridge_pairs_from_results
+
+    n = 10
+    torch.save(
+        {
+            "signal_table": {
+                "expected_entropy": torch.linspace(0.2, 0.8, n),
+                "mutual_info": torch.linspace(0.1, 0.5, n),
+                "inverse_coherence_dualxda": torch.linspace(0.3, 0.7, n),
+                "inverse_mass_dualxda": torch.linspace(0.4, 0.9, n),
+            },
+            "predictions": torch.zeros(n, dtype=torch.long),
+        },
+        tmp_path / "results.pt",
+    )
+    rows = score_bridge_pairs_from_results(tmp_path / "results.pt", modes=["paper", "signal_dualxda"])
+    assert len(rows) == 2
+    assert rows[0]["preset"] == "paper"
+    assert rows[0]["n_samples"] == n
+    assert "error" not in rows[0]
+
+
+def test_structure_signals_from_influence_matrix():
+    from uqlab.evaluation.signals.ek_fak import structure_signals_from_influence_matrix
+
+    scores = torch.tensor([[3.0, -1.0, 2.0], [0.5, -0.5, 0.0]])
+    out = structure_signals_from_influence_matrix(scores, top_k=2)
+    assert out["coherence"].shape == (2,)
+    assert out["mass"].shape == (2,)
+    assert out["dominance"].shape == (2,)
+    assert out["mass"][0] > 0
+
+    from uqlab.evaluation.signals.ek_fak import structure_signals_from_influence_matrix
+
+    scores = torch.tensor([[3.0, -1.0, 2.0], [0.5, -0.5, 0.0]])
+    out = structure_signals_from_influence_matrix(scores, top_k=2)
+    assert out["coherence"].shape == (2,)
+    assert out["mass"].shape == (2,)
+    assert out["dominance"].shape == (2,)
+    assert out["mass"][0] > 0
