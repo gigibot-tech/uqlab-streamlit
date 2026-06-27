@@ -12,8 +12,8 @@ from uqlab.shared.config.classification import (
     PathConfig,
     TrainingConfig,
 )
-from uqlab.evaluation.pipeline.eval_signal_config import EvalSignalConfig
-from uqlab.evaluation.pipeline.experiment_setup import extract_run_config
+from uqlab.runner.phases.eval_signal_config import EvalSignalConfig
+from uqlab.runner.phases.config_view import extract_run_config
 
 
 def test_from_run_config_maps_eval_fields():

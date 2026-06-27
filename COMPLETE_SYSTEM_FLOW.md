@@ -87,7 +87,7 @@ run_fast_uncertainty_classification.py (CLI script)
     ↓ main() function
     ↓ Parses command-line arguments
     ↓ Loads config from YAML
-    ↓ Calls pipeline.run()
+    ↓ Calls run_from_yaml()
 ```
 
 **File**: [`scripts/runners/run_fast_uncertainty_classification.py`](scripts/runners/run_fast_uncertainty_classification.py:16)
@@ -95,14 +95,14 @@ run_fast_uncertainty_classification.py (CLI script)
 **Code**:
 ```python
 def main() -> None:
-    """Parse args and delegate to uqlab.runner.pipeline.run."""
+    """Parse args and delegate to uqlab.runner.execute.run_from_yaml."""
     parser = argparse.ArgumentParser(description="Fast uncertainty classification pilot")
     parser.add_argument("--config", type=str, required=True)
     args = parser.parse_args()
     
     config = ExperimentConfig.from_yaml(args.config)
     
-    from uqlab.runner.pipeline import run as pipeline_run
+    from uqlab.runner.execute import run_from_yaml as pipeline_run
     
     pipeline_run(
         config_path,
@@ -117,7 +117,7 @@ def main() -> None:
 ### Layer 5: Pipeline Orchestrator
 
 ```
-pipeline.run() (pipeline.py:112)
+run_from_yaml() (execute.py)
     ↓ Creates RunContext
     ↓ Executes 3-stage pipeline:
     ↓
@@ -131,7 +131,7 @@ pipeline.run() (pipeline.py:112)
         └─ Calls run_experiment_core() ← MAIN EXECUTION
 ```
 
-**File**: [`src/uqlab/runner/pipeline.py`](src/uqlab/runner/pipeline.py:112)
+**File**: [`src/uqlab/runner/execute.py`](src/uqlab/runner/execute.py)
 
 **Code**:
 ```python
@@ -389,7 +389,7 @@ UI Auto-Refresh (every 5 seconds)
 ┌─────────────────────────────────────────────────────────────────┐
 │                    CLI ENTRY POINT                               │
 │  run_fast_uncertainty_classification.py                         │
-│  main() → pipeline.run()                                         │
+│  main() → run_from_yaml()                                         │
 └────────────────────────────┬────────────────────────────────────┘
                              ↓
 ┌─────────────────────────────────────────────────────────────────┐
@@ -436,7 +436,7 @@ UI Auto-Refresh (every 5 seconds)
 
 **Location**: [`src/uqlab/runner/fast_pilot_core.py:200`](src/uqlab/runner/fast_pilot_core.py:200)
 
-**Called by**: [`pipeline.py:78`](src/uqlab/runner/pipeline.py:78) in `_stage_execute()`
+**Called by**: [`execute.py`](src/uqlab/runner/execute.py) in `_stage_execute()`
 
 ```python
 # pipeline.py line 78
@@ -455,12 +455,12 @@ summary = run_experiment_core(
 | Name | Purpose | File |
 |------|---------|------|
 | `run_fast_uncertainty_classification.py` | CLI entry point script | `scripts/runners/` |
-| `pipeline.run()` | Pipeline orchestrator | `src/uqlab/runner/pipeline.py` |
+| `run_from_yaml()` | Experiment orchestrator | `src/uqlab/runner/execute.py` |
 | `run_experiment_core()` | Main execution function | `src/uqlab/runner/fast_pilot_core.py` |
 
 **Relationship**:
 ```
-CLI script → pipeline.run() → run_experiment_core()
+CLI script → run_from_yaml() → run_experiment_core()
 ```
 
 ### 3. Evaluation Location

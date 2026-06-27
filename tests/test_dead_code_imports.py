@@ -4,8 +4,8 @@ from __future__ import annotations
 
 
 def test_core_evaluation_imports():
-    from uqlab.evaluation.metrics import binary_auroc
-    from uqlab.evaluation.legacy.triage.dualxda_axioms import DualXDATracer
+    from uqlab.evaluation.metrics.scoring import binary_auroc
+    from uqlab.evaluation.signals.dualxda_tracer import DualXDATracer
 
     assert callable(binary_auroc)
     assert DualXDATracer is not None

@@ -22,7 +22,7 @@ This document describes the modular, production-ready architecture for real ML t
 │    - Handles errors and cleanup                             │
 │                              ↓                               │
 │  TrainingExecutor (Strategy Pattern)                        │
-│    - DirectExecutor: in-process uqlab.runner.pipeline.run   │
+│    - DirectExecutor: in-process uqlab.runner.execute.run_from_yaml   │
 │    - DockerExecutor: Run in container (future)              │
 │    - KubernetesExecutor: Run in K8s (future)                │
 │                              ↓                               │
@@ -59,7 +59,7 @@ This document describes the modular, production-ready architecture for real ML t
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
 │                ML Core (uqlab.runner — in-process)           │
-│  uqlab.runner.pipeline.run(config_path, output_dir)           │
+│  uqlab.runner.execute.run_from_yaml(config_path, output_dir)           │
 │    - Loads ExperimentConfig from YAML                        │
 │    - run_experiment_core: train + evaluate + artifacts       │
 └─────────────────────────────────────────────────────────────┘
@@ -85,7 +85,7 @@ class TrainingExecutor(ABC):
         pass
 
 class DirectExecutor(TrainingExecutor):
-    # In-process: calls uqlab.runner.pipeline.run (thread pool)
+    # In-process: calls uqlab.runner.execute.run_from_yaml (thread pool)
 
 class DockerExecutor(TrainingExecutor):
     # Container execution (future)
@@ -210,7 +210,7 @@ Streamlit auto-poll → GET /experiments/no-auth
 
 ## Configuration
 
-Production training uses `DirectExecutor`, which calls `uqlab.runner.pipeline.run` with the experiment's `config.yaml`. CLI dev path: `scripts/runners/run_fast_uncertainty_classification.py` (same pipeline entry).
+Production training uses `DirectExecutor`, which calls `uqlab.runner.execute.run_from_yaml` with the experiment's `config.yaml`. CLI dev path: `scripts/runners/run_fast_uncertainty_classification.py` (same pipeline entry).
 
 **Note:** `SubprocessExecutor` was removed (2026-06-24); it had been retired in favor of in-process execution.
 

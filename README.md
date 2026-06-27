@@ -38,8 +38,8 @@ uqlab-streamlit/
 | **UI** | `streamlit_app_progressive.py` | `session_state.workflow` (dict) |
 | **Bridge** | `uqlab_orchestrator.run_spec` | YAML dict via `build_run_yaml` / `generate_sweep_runs` |
 | **Launch** | `experiment_launcher.launch_workflow_experiments` | POST to `/api/v1/experiments/...` |
-| **Backend** | `DirectExecutor` | in-process call to `uqlab.runner.pipeline.run` |
-| **ML core** | `pipeline.run` → `run_experiment_core` | **`ExperimentConfig`** (`from_yaml` only) |
+| **Backend** | `DirectExecutor` | in-process call to `uqlab.runner.execute.run_from_yaml` |
+| **ML core** | `run_from_yaml` → `run_experiment_core` | **`ExperimentConfig`** (`from_yaml` only) |
 
 **Single execution datamodel:** `ExperimentConfig` in `src/uqlab/shared/config/classification.py`.  
 **Single on-disk format:** `config.yaml` per experiment under `data/experiments/<id>/`.
@@ -48,6 +48,8 @@ uqlab-streamlit/
 
 Full flow diagram and FAQ: [`EXECUTION_FLOW_AND_CONFIG_GUIDE.md`](EXECUTION_FLOW_AND_CONFIG_GUIDE.md).  
 Package boundaries: [`ARCHITECTURE_CLARIFICATION.md`](ARCHITECTURE_CLARIFICATION.md).
+
+**Scripts:** `scripts/runners/` trains via `ExperimentConfig` → `run_from_yaml`; `scripts/analysis/` scores finished runs (disentanglement, four-region validation, paper CSVs).
 
 ## 🚀 Quick Start
 

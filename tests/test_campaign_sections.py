@@ -7,7 +7,7 @@ from pathlib import Path
 import torch
 import yaml
 
-from uqlab.evaluation.pipeline.campaign_sections import split_campaign_sections
+from uqlab.evaluation.reporting.campaign_sections import split_campaign_sections
 
 
 def _minimal_run(exp_dir: Path, run_id: str, name: str, cfg: dict) -> None:

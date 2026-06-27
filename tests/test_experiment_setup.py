@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from uqlab.shared.config.classification import ExperimentConfig
-from uqlab.evaluation.pipeline.experiment_setup import (
+from uqlab.runner.phases.config_view import (
     extract_run_config,
     require_complete_config,
 )

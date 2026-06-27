@@ -1,6 +1,6 @@
 # Workflow config map (wizard → YAML)
 
-The progressive UI never builds flat training dicts on the hot path. It edits a **`workflow`** session dict; [`run_spec.build_run_yaml(workflow)`](../../src/uqlab_orchestrator/run_spec.py) produces nested YAML for [`pipeline.run`](../../src/uqlab/runner/pipeline.py).
+The progressive UI never builds flat training dicts on the hot path. It edits a **`workflow`** session dict; [`run_spec.build_run_yaml(workflow)`](../../src/uqlab_orchestrator/run_spec.py) produces nested YAML for [`run_from_yaml`](../../src/uqlab/runner/execute.py).
 
 ## Step 1 — Dataset
 

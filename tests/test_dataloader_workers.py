@@ -33,5 +33,28 @@ class TestDataLoaderWorkers(unittest.TestCase):
         self.assertEqual(tuple(labels.shape), (4,))
 
 
+    def test_fashion_mnist_transform_dataloader_workers(self):
+        from torch.utils.data import DataLoader
+
+        from uqlab.data.dataset_registry import load_classification_dataset
+        from uqlab.data.image_dataset import ClassificationImageDataset
+        from uqlab.data.preprocessing import get_dataset_image_transform
+
+        root = PROJECT_ROOT / "data" / "fashion_mnist"
+        ds = load_classification_dataset(
+            "fashion_mnist",
+            root=root,
+            noise_type="clean_label",
+            train=True,
+            download=False,
+        )
+        transform = get_dataset_image_transform("fashion_mnist")
+        subset = ClassificationImageDataset(ds, list(range(8)), transform=transform)
+        loader = DataLoader(subset, batch_size=4, num_workers=2)
+        images, labels = next(iter(loader))
+        self.assertEqual(tuple(images.shape), (4, 3, 32, 32))
+        self.assertEqual(tuple(labels.shape), (4,))
+
+
 if __name__ == "__main__":
     unittest.main()

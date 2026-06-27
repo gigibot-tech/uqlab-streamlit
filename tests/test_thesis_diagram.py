@@ -16,7 +16,7 @@ from uqlab.shared.config.classification import (
     PathConfig,
     TrainingConfig,
 )
-from uqlab.evaluation.pipeline.thesis_diagram import (
+from uqlab.evaluation.reporting.thesis_diagram import (
     build_thesis_figure,
     load_thesis_diagram_inputs,
     save_thesis_figure,

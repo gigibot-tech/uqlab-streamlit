@@ -1,10 +1,10 @@
 """Tests for config-implicit sweep pool expectations."""
 
-from uqlab.evaluation.pipeline.sweep_plot_pools import (
+from uqlab.evaluation.reporting.sweep_plot_pools import (
     pool_expectations_from_data_config,
     primary_pool_for_sweep,
 )
-from uqlab.evaluation.pipeline.sweep_line_plot import (
+from uqlab.evaluation.reporting.sweep_line_plot import (
     SWEEP_KIND_DATASET_SIZE,
     SWEEP_KIND_LABEL_NOISE,
 )
@@ -43,7 +43,7 @@ def test_pool_expectations_four_region():
 def test_eval_pool_counts_includes_ood(tmp_path):
     import torch
 
-    from uqlab.evaluation.pipeline.sweep_plot_pools import eval_pool_counts_from_results_dir
+    from uqlab.evaluation.reporting.sweep_plot_pools import eval_pool_counts_from_results_dir
     from uqlab.run_artifacts import GROUP_OOD
 
     results_dir = tmp_path / "results"

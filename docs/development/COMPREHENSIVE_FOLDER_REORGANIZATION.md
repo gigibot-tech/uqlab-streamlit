@@ -1,5 +1,7 @@
 # Comprehensive Folder Reorganization Plan
 
+> **Superseded (2026-06):** Numbered `1_data`…`7_orchestration` layout was never implemented. Current layout: [`docs/architecture/PACKAGE_REDESIGN.md`](../architecture/PACKAGE_REDESIGN.md).
+
 **Date**: 2026-06-17  
 **Goal**: Clean up and consolidate scattered folders in `src/uqlab/`
 

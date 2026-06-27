@@ -44,7 +44,7 @@
                      ▼
 ┌─────────────────────────────────────────────────────────┐
 │  ML CORE — uqlab/                                       │
-│  runner.pipeline.run → fast_pilot_core.run_experiment   │
+│  runner.execute.run_from_yaml → experiment_core.run_experiment   │
 │  data / models / evaluation                             │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -83,7 +83,7 @@ Frontend collects sweep parameters; bridge generates concrete configs. That spli
 1. UI builds workflow dict (session_state)
 2. Bridge: generate_sweep_runs / build_run_yaml → config YAML dict
 3. experiment_launcher: POST /api/v1/experiments/no-auth (+ /start)
-4. Backend DirectExecutor: uqlab.runner.pipeline.run(config_path, ...)  [in-process]
+4. Backend DirectExecutor: uqlab.runner.execute.run_from_yaml(config_path, ...)  [in-process]
 5. pipeline.run → run_experiment_core → train + evaluate + write artifacts
 ```
 
@@ -91,7 +91,7 @@ Frontend collects sweep parameters; bridge generates concrete configs. That spli
 
 | Class | Status | Behavior |
 |-------|--------|----------|
-| [`DirectExecutor`](backend/app/services/executors/direct_executor.py) | **Production** | Calls `uqlab.runner.pipeline.run` **in-process** (thread pool) |
+| [`DirectExecutor`](backend/app/services/executors/direct_executor.py) | **Production** | Calls `uqlab.runner.execute.run_from_yaml` **in-process** (thread pool) |
 
 `SubprocessExecutor` was removed (2026-06-24). The `TrainingExecutor` ABC remains as the DI seam for future executors (Docker, Celery, etc.).
 
@@ -103,7 +103,7 @@ Frontend collects sweep parameters; bridge generates concrete configs. That spli
 
 ## Q4: When do we enter the `uqlab` package?
 
-At **`uqlab.runner.pipeline.run`**, whether called from:
+At **`uqlab.runner.execute.run_from_yaml`**, whether called from:
 
 - `DirectExecutor` (backend, in-process), or
 - CLI `run_fast_uncertainty_classification.py` (local dev)
@@ -111,7 +111,7 @@ At **`uqlab.runner.pipeline.run`**, whether called from:
 Inside `uqlab`:
 
 1. **`pipeline.run`** — load/validate `ExperimentConfig`, call core
-2. **`fast_pilot_core.run_experiment_core`** — data setup, train, signal eval, artifacts
+2. **`experiment_core.run_experiment_core`** — data setup, train, signal eval, artifacts
 
 See also [`docs/architecture/evaluation-pipeline.md`](docs/architecture/evaluation-pipeline.md) for the evaluation phase breakdown.
 

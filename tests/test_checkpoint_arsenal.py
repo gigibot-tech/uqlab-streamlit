@@ -7,11 +7,11 @@ from pathlib import Path
 
 import yaml
 
-from uqlab.evaluation.pipeline.checkpoint_arsenal import (
+from uqlab.evaluation.reporting.checkpoint_arsenal import (
     build_checkpoint_arsenal,
     filter_arsenal_sections,
 )
-from uqlab.evaluation.pipeline.config_diff import (
+from uqlab.evaluation.reporting.config_diff import (
     arsenal_tracked_flat,
     chip_display_label,
     chip_tooltip_lines,

@@ -4,96 +4,98 @@
 
 Upstream package: [ivopascal/disentanglement_error](https://github.com/ivopascal/disentanglement_error) — vendored under `src/uqlab/vendor/disentanglement_error/` (see `UPSTREAM.md`).
 
-## User API (matches upstream README)
+## Two phases (training vs analysis)
 
-```python
-from uqlab.evaluation.benchmarks.disentangling import (
-    FastPilotDisentanglingModel,
-    calculate_disentanglement_error,
-    collect_cifar10_arrays,
-    json_results_to_df,
-)
+| Phase | Entry | Config | Output |
+|-------|-------|--------|--------|
+| **Train** | `scripts/runners/run_fast_uncertainty_classification.py` or API launch | `ExperimentConfig` YAML (`config.yaml`) | `results.pt`, `summary.json`, … |
+| **Analyze** | `scripts/analysis/disentanglement_error.py` | Finished run dir / campaign run IDs | CSV scores, paper curves, optional PNGs |
 
-X, y = collect_cifar10_arrays()
-model = FastPilotDisentanglingModel.from_workflow_defaults()
-score = calculate_disentanglement_error(X, y, model, return_json=False)
+Disentanglement is **post-hoc**: it reads uncertainty vectors from `results.pt`. It does not train models or call `model.fit()`.
+
+## Training (ExperimentConfig)
+
+Run a sweep point (or four-region experiment) like any other job:
+
+```bash
+PYTHONPATH=src python scripts/runners/run_fast_uncertainty_classification.py \
+  --config configs/experiment/four_region.yaml \
+  --output_dir results/my_run
 ```
 
-CLI entrypoint (~15 lines): `scripts/runners/run_disentanglement_benchmark.py` (local `pipeline.run`, no API).
+Paper sweeps from Streamlit use `uqlab_orchestrator.disentanglement_launcher` → `experiment_launcher` → API → `DirectExecutor` → `run_from_yaml` (same `ExperimentConfig` path).
 
-## Architecture (Option A)
+## Analysis CLI
+
+### Score one finished run
+
+```bash
+PYTHONPATH=src python scripts/analysis/disentanglement_error.py score \
+  --results-dir data/experiments/<run_id>/results \
+  --mode paper \
+  --output disentanglement_score.csv
+```
+
+Uses `score_bridge_pair_with_vendor_metric` from `uqlab.evaluation.benchmarks.disentangling.bridge_sweep` (reads `results.pt`, no re-training).
+
+### Paper curves from a campaign
+
+```bash
+PYTHONPATH=src python scripts/analysis/disentanglement_error.py curves \
+  --run-ids run_a,run_b,run_c \
+  --sweep-kind label_noise \
+  --plot \
+  --out-dir results/disentanglement_curves
+```
+
+Builds the three-line plot (accuracy + global aleatoric + global epistemic vs `Percentage`) via `build_paper_benchmark_plot` — same series semantics as `json_results_to_df`, but sourced from on-disk campaign runs instead of the removed vendor `fit()` sweep.
+
+## Architecture
 
 | Layer | Role |
 |-------|------|
-| `uqlab_orchestrator.disentanglement_launcher` | **Primary launch** — workflow → vendored `Config` grids → per-point `build_run_yaml` + API create/start |
-| `uqlab_orchestrator.campaign_paper_score` | API bridge — aggregate `ExperimentResults` from `results.pt` (global mean aleatoric/epistemic via `uncertainty_pairs`) |
-| `uqlab.vendor.disentanglement_error` | Paper metric loops (`label_noise`, `decreasing_dataset`) + `calculate_disentanglement_error` |
-| `uqlab.evaluation.benchmarks.disentangling.FastPilotDisentanglingModel` | **Vendor-port adapter** (job runner, not Keras): `fit` → `pipeline.run`, `predict_disentangling` → `results.pt` (Paper mode default) |
-| `uqlab.runner.pipeline` | Unchanged single-run engine (API + CLI) |
+| `uqlab_orchestrator.disentanglement_launcher` | Primary launch — workflow → per-point `build_run_yaml` + API |
+| `uqlab.evaluation.pipeline.campaign_score` | Aggregate `results.pt` → paper `ExperimentResults` |
+| `uqlab.evaluation.pipeline.paper_benchmark_plot` | Three-line plot payload from campaign runs |
+| `uqlab.evaluation.benchmarks.disentangling.ExperimentDisentanglingModel` | **`results.pt` reader** — `predict_disentangling` extracts signal columns |
+| `uqlab.vendor.disentanglement_error` | Vendor metric (`calculate_disentanglement_error`) on precomputed vectors |
+| `uqlab.runner.execute` | Single-run training engine |
 
-Default uncertainty pairing in `FastPilotDisentanglingModel` (`predict_mode="paper"`):
+Default uncertainty pairing (`predict_mode="paper"`):
 
-- aleatoric ← `expected_entropy` (E[H[p(y|x,θ)]])
-- epistemic ← `mutual_info` (H[mean] − E[H])
+- aleatoric ← `expected_entropy`
+- epistemic ← `mutual_info`
 
-**Signal preset · DualXDA** (`predict_mode="signal"`): `inverse_coherence_dualxda` + `inverse_mass_dualxda` (legacy alias: `inverse_coherence` + `inverse_mass`).
+Signal presets: `signal` / `signal_dualxda`, `signal_ek_fak`. Override with `aleatoric_signal` / `epistemic_signal`.
 
-**Signal preset · EK-FAC** (`predict_mode="signal_ek_fak"`): `inverse_coherence_ek_fak` + `inverse_mass_ek_fak`.
-
-**Swappable:** pass `aleatoric_signal` / `epistemic_signal` explicitly (any keys in `signal_table`) — they override `predict_mode`. Workflow keys `uncertainty_config.aleatoric_signal` / `epistemic_signal` apply when kwargs are omitted.
-
-MC paper metrics require `dropout > 0` and sufficient `mc_passes`; they are pruned from `signal_table` when dropout is zero.
-
-**`predict_disentangling` does not run MC or attribution** — it reads `signal_table` from `results.pt`. Paper bridge columns require MC during the job; DualXDA / EK-FAC bridge columns require the matching backend during the job. See [`shared/config/signals.py`](../../src/uqlab/shared/config/signals.py) (`PREDICT_DISENTANGLING_NOTE`, `bridge_job_requirements`).
-
-Sweep kwargs passed from vendored loops (CLI) or launcher grids (Streamlit):
-
-- `label_noise=` (0–1 fraction) → `aleatoric_noise_percentage` in run YAML
-- `dataset_size=` (0–1 fraction) → `under_train_per_class` scaled from `regular_train_per_class`
-
-### Streamlit launch
-
-Step 5 / sidebar **Run benchmark** calls `launch_benchmark_primary` / `launch_benchmark_both` from `uqlab_orchestrator.disentanglement_launcher`. Legacy `launch_paper_profile` in `experiment_launcher.py` delegates to the same module.
-
-Each sweep point is a normal API experiment with `data/experiments/<id>/results/results.pt` — campaign grouping and sweep plots are unchanged.
+`predict_disentangling` does **not** run MC or attribution — those must be enabled during the training job. See `uqlab.shared.config.signals` (`PREDICT_DISENTANGLING_NOTE`, `bridge_job_requirements`).
 
 ## Paper plots vs uqlab sweep plots
 
-Both views read the same on-disk campaign runs, but aggregate uncertainty differently.
+| Aspect | Paper plot (`paper_benchmark_plot`) | uqlab sweep line plot |
+|--------|-------------------------------------|------------------------|
+| Data | Global means from `predict_disentangling` | Pool-filtered means from `results.pt` |
+| X axis | `Percentage` 0–1 | `noise_percent` or `under_train_per_class` |
+| Y curves | scores + aleatorics + epistemics | One signal + accuracy per pool |
+| UI | `paper_benchmark_plot_viz.py` | `sweep_line_plot_viz.py` |
+| CLI | `scripts/analysis/disentanglement_error.py curves --plot` | — |
 
-| Aspect | Paper (`disentanglement_error` / primary UI plot) | uqlab sweep line plot (secondary expander) |
-|--------|---------------------------------------------------|--------------------------------------------|
-| **Data source** | `ExperimentResults`: `scores`, `aleatorics`, `epistemics` per sweep point | Per-run `results.pt` pool means via `build_sweep_metrics_frame` |
-| **X axis** | `Percentage` 0–1 (`label_noises` fraction or `dataset_sizes` fraction) | `noise_percent` 0–100 or `under_train_per_class` (absolute counts) |
-| **Y curves** | Three lines on one axis: accuracy + global aleatoric + global epistemic | Left: **one** signal's mean in **one** eval pool; right: accuracy; optional dashed mirror pool |
-| **Uncertainty semantics** | Global mean over **all** eval samples from `predict_disentangling` (`{signal}_mean`) | Pool-filtered means (`{signal}_mean_aleatoric` / `{signal}_mean_epistemic`) |
-| **Signal pairing** | Paper default: `expected_entropy` + `mutual_info`; swappable via bridge kwargs or `predict_mode="signal"` | User-selectable signal; primary pool follows sweep axis (aleatoric pack for noise, epistemic for under-train) |
-| **Correlation** | Label-noise arm → ρ(aleatorics, scores); decreasing-dataset arm → ρ(epistemics, scores) | Not shown (AUROC / UDE live elsewhere) |
-| **Implementation** | `campaign_score.py` → `paper_benchmark_plot.py` → `paper_benchmark_plot_viz.py` | `sweep_line_plot.py` → `sweep_line_plot_viz.py` |
+## Script layout
 
-### Mapping for paper-primary viz
+```
+scripts/runners/     ExperimentConfig → run_from_yaml
+  run_fast_uncertainty_classification.py   (default config: four_region.yaml)
+  run_validation_experiments.py            (sweep orchestrator)
+  run_fast.py                              (wrapper)
 
-| Paper field | uqlab campaign equivalent | Aligns today? |
-|-------------|---------------------------|---------------|
-| `scores[i]` | `accuracy` from `results.pt` | Yes |
-| `aleatorics[i]` | mean of `expected_entropy` over all eval samples (paper default) | Yes when `results.pt` present and MC signals computed |
-| `epistemics[i]` | mean of `mutual_info` over all eval samples (paper default) | Yes when `results.pt` present and MC signals computed |
-| `Percentage` (label noise) | `noise_percent / 100` | Yes (scale conversion) |
-| `Percentage` (dataset size) | `under_train_per_class / regular_train_per_class` | Yes (needs config) |
-| Pool-filtered diagnostic | `{signal}_mean_aleatoric` / `_mean_epistemic` | **Different** — kept as secondary plot only |
-
-## Legacy / archived
-
-| Item | Location |
-|------|----------|
-| `run_validation_experiments.py` | `dead_code/scripts/` (UI imports via `validation_runner.py`) |
-| Facade coordinators + `BackendExperimentFacade` | `dead_code/facade/` |
-| CLI-only `run_disentanglement_benchmark` wrapper | `uqlab.evaluation.benchmarks.disentangling.disentanglement_launcher` |
+scripts/analysis/    post-hoc (no training)
+  disentanglement_error.py                 (score + curves)
+  four_region_validation.py                (correlation report)
+  paper_benchmarks.py                      (Keras paper CSV flatten)
+```
 
 ## Tests
 
-- `tests/test_disentanglement_launcher.py` — workflow → Config grid; mock API launch
+- `tests/test_disentangling_model.py` — `ExperimentDisentanglingModel`, `json_results_to_df`
 - `tests/test_campaign_paper_score.py` — aggregate mock `results.pt` → paper point
-- `tests/test_disentangling_model.py` — mocked `pipeline.run`, `predict_disentangling` shapes, `json_results_to_df`
-- `tests/test_paper_benchmark_plot.py` — campaign → paper series, plot payload, correlations
-- `tests/test_dead_code_imports.py` — smoke imports after archive moves
+- `tests/test_paper_benchmark_plot.py` — campaign → plot payload, correlations

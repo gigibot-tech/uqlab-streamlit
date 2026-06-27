@@ -5,7 +5,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from uqlab.evaluation.pipeline.sweep_line_plot import (
+from uqlab.evaluation.reporting.sweep_line_plot import (
     SWEEP_KIND_DATASET_SIZE,
     SWEEP_KIND_LABEL_NOISE,
     build_sweep_line_plot,
@@ -92,7 +92,7 @@ def test_list_plottable_signals_old_both_pools_not_required_for_noise():
 
 
 def test_detect_facet_columns_learning_rate():
-    from uqlab.evaluation.pipeline.sweep_line_plot import detect_facet_columns
+    from uqlab.evaluation.reporting.sweep_line_plot import detect_facet_columns
 
     df = pd.DataFrame(
         {

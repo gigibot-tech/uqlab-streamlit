@@ -11,7 +11,7 @@ from uqlab_orchestrator.campaign_paper_score import (
     aggregate_paper_point_from_results_dir,
     sweep_kind_for_profile,
 )
-from uqlab.evaluation.pipeline.sweep_line_plot import (
+from uqlab.evaluation.reporting.sweep_line_plot import (
     SWEEP_KIND_DATASET_SIZE,
     SWEEP_KIND_LABEL_NOISE,
 )

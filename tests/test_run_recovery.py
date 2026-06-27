@@ -6,7 +6,7 @@ from pathlib import Path
 
 import torch
 
-from uqlab.evaluation.pipeline.run_recovery import (
+from uqlab.runner.phases.recovery import (
     assess_run_recovery,
     finalize_run_from_zwischen,
     sync_run_from_disk,

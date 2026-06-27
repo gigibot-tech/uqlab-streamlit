@@ -15,20 +15,20 @@ import matplotlib.pyplot as plt
 import torch
 import yaml
 
-from uqlab.evaluation.pipeline.campaign_config_timeline import (
+from uqlab.evaluation.reporting.campaign_config_timeline import (
     _paginate_entries,
     build_campaign_timeline,
     config_timeline_entries,
 )
-from uqlab.evaluation.pipeline.campaign_report import (
+from uqlab.evaluation.reporting.campaign_report import (
     CampaignExportBundle,
     CampaignReportSummary,
     _sweep_plot_figure,
     build_campaign_report_pdf,
     build_multi_campaign_report_pdf,
 )
-from uqlab.evaluation.pipeline.campaign_sections import split_campaign_sections
-from uqlab.evaluation.pipeline.sweep_line_plot import (
+from uqlab.evaluation.reporting.campaign_sections import split_campaign_sections
+from uqlab.evaluation.reporting.sweep_line_plot import (
     build_sweep_line_plot,
     resolve_sweep_trace_xy,
 )

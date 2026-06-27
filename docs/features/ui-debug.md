@@ -22,7 +22,18 @@ Hide or show blocks in [`streamlit_app_progressive.py`](../../streamlit_app_prog
 | §1 Live status | `Results · §1 live status` |
 | §2 3-line sweep plots | `Results · §2 sweep analysis` |
 | §3 Campaign expanders | `Results · §3 campaign expanders` |
+| §3 Per-run metrics (AUROC tables) | `Results · per-run details + bar charts` |
 | §4 Training data | `Results · training data inspection` |
+
+### Per-run details parent chain
+
+`results_experiment_details` is **off by default** and requires two ancestors enabled:
+
+1. `Results · entire section` (`results_section`)
+2. `Results · §3 campaign expanders` (`results_sweep_campaigns`)
+3. Then enable **↳ Results · per-run details + bar charts**
+
+When per-run details is on, **5s auto-rerun (JS)** is automatically turned off — heavy per-run rendering and scheduled reruns do not combine.
 
 Parent toggles cascade: turning off **entire section** disables all children.
 

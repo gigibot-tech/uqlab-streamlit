@@ -13,11 +13,11 @@
 | **Run YAML** | Built by `run_spec.build_run_yaml` | Dict matching `ExperimentConfig` schema |
 | **Entry config** | `ExperimentConfig` | Single dataclass loaded by the pipeline |
 | **Launch** | `experiment_launcher` | POST configs to backend API |
-| **Execution** | `DirectExecutor` → `pipeline.run` | In-process ML (executor wraps runner) |
+| **Execution** | `DirectExecutor` → `run_from_yaml` | In-process ML (executor wraps runner) |
 
 **One datamodel at execution time:** [`ExperimentConfig`](src/uqlab/shared/config/classification.py)  
 **One on-disk format:** YAML (`config.yaml` per experiment)  
-**One execution API:** `uqlab.runner.pipeline.run(config_path, output_dir)`
+**One execution API:** `uqlab.runner.execute.run_from_yaml(config_path, output_dir)`
 
 ---
 
@@ -39,14 +39,14 @@
    DirectExecutor.execute(config_path, output_dir)
 
 4. DirectExecutor (in-process, thread pool)
-   from uqlab.runner.pipeline import run
-   pipeline.run(config_path, output_dir)
+   from uqlab.runner.execute import run_from_yaml
+   run_from_yaml(config_path, output_dir)
 
 5. Pipeline (uqlab.runner)
    ExperimentConfig.from_yaml(config_path)
    validate → run_experiment_core(config, results_dir)
 
-6. Core (uqlab.runner.fast_pilot_core)
+6. Core (uqlab.runner.experiment_core)
    train → evaluate signals → write artifacts
 ```
 
@@ -54,13 +54,25 @@
 
 | Layer | Package | What it does |
 |-------|---------|--------------|
-| **DirectExecutor** | `backend/` | Backend infra: thread pool, progress callbacks, DB updates; **calls** `pipeline.run` |
-| **pipeline.run** | `uqlab/runner/` | ML job: load YAML → validate → `run_experiment_core` |
+| **DirectExecutor** | `backend/` | Backend infra: thread pool, progress callbacks, DB updates; **calls** `run_from_yaml` |
+| **run_from_yaml** | `uqlab/runner/` | ML job: load YAML → validate → `run_experiment_core` |
 | **run_experiment_core** | `uqlab/runner/` | Actual training + evaluation |
 
 The executor does **not** replace the runner. It is a thin wrapper so the FastAPI process can invoke the ML stack in-process (no subprocess). `SubprocessExecutor` was removed (2026-06-24); only `DirectExecutor` remains.
 
-CLI dev path (no backend): `scripts/runners/run_fast_uncertainty_classification.py` → `pipeline.run` directly.
+CLI dev path (no backend): `scripts/runners/run_fast_uncertainty_classification.py` → `run_from_yaml` directly.
+
+Default CLI config: [`configs/experiment/four_region.yaml`](configs/experiment/four_region.yaml) (`partition_mode: four_region`).
+
+### Runners vs analysis scripts
+
+| Directory | Role | Uses `ExperimentConfig`? |
+|-----------|------|---------------------------|
+| `scripts/runners/` | Train/evaluate via `run_from_yaml` | Yes (YAML → `from_yaml`) |
+| `scripts/analysis/` | Post-hoc scoring/plots on finished runs | No (reads `results.pt` / metrics JSON) |
+
+Runners: `run_fast_uncertainty_classification.py`, `run_validation_experiments.py`, `run_fast.py` (wrapper).  
+Analysis: `disentanglement_error.py`, `four_region_validation.py`, `paper_benchmarks.py`.
 
 ---
 
@@ -84,7 +96,7 @@ class ExperimentConfig:
     def from_yaml(cls, path: Path) -> ExperimentConfig: ...
 ```
 
-Loaded only inside `pipeline.run` (or `run_config` for tests). There is no `to_yaml` on the dataclass — YAML is produced as a dict by `run_spec` and written to disk by the backend.
+Loaded only inside `run_from_yaml` (or `run_from_python_config` for tests). There is no `to_yaml` on the dataclass — YAML is produced as a dict by `run_spec` and written to disk by the backend.
 
 ---
 
@@ -105,7 +117,7 @@ workflow dict  →  build_run_yaml()  →  { data, model, training, evaluation, 
 
 ---
 
-## Q4: Does experiment_launcher use the runner/pipeline?
+## Q4: Does experiment_launcher use the runner execute module?
 
 **No.** It submits to the backend API only.
 
@@ -118,7 +130,7 @@ for sweep_kind, wf in runs:
     requests.post(f".../experiments/no-auth/{exp_id}/start", ...)
 ```
 
-The backend's `DirectExecutor` is what eventually calls `pipeline.run`.
+The backend's `DirectExecutor` is what eventually calls `run_from_yaml`.
 
 ---
 
@@ -148,7 +160,7 @@ uqlab_orchestrator/     Config bridge, launch, disk registry
     ↓ imports
 uqlab/                  ML core: data, models, runner, evaluation
     ├─ shared/config/   ExperimentConfig schema
-    └─ runner/          pipeline.run → run_experiment_core
+    └─ runner/          run_from_yaml → run_experiment_core
 ```
 
 **Wrinkle:** `ui_components` is physically inside the `uqlab` Python package namespace but is logically the UI layer.
@@ -191,7 +203,7 @@ uqlab/                  ML core: data, models, runner, evaluation
                              │
                              ▼
 ┌──────────────────────────────────────────────────────────────┐
-│ uqlab.runner.pipeline.run                                      │
+│ uqlab.runner.execute.run_from_yaml                             │
 │ load ExperimentConfig.from_yaml → validate → run_experiment_core│
 └────────────────────────────┬─────────────────────────────────┘
                              │

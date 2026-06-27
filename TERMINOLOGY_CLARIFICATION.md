@@ -1,5 +1,7 @@
 # Terminology Clarification: runners vs runner
 
+> **Superseded (2026-06):** Module names below predate `runner/execute.py`, `runner/experiment_core.py`, and the evaluation package split. See [`docs/architecture/PACKAGE_REDESIGN.md`](docs/architecture/PACKAGE_REDESIGN.md) and [`START_HERE.md`](START_HERE.md).
+
 **Date**: 2026-06-24  
 **Question**: "so technically the runners and runner are the same right?"
 

@@ -10,7 +10,7 @@ matplotlib.use("Agg")
 
 import pandas as pd
 
-from uqlab.evaluation.pipeline.campaign_config_timeline import (
+from uqlab.evaluation.reporting.campaign_config_timeline import (
     build_campaign_timeline,
     build_campaign_timeline_figure,
 )
@@ -67,11 +67,11 @@ def test_build_campaign_timeline_noise_sweep(monkeypatch, tmp_path):
     )
 
     monkeypatch.setattr(
-        "uqlab.evaluation.pipeline.campaign_config_timeline.build_sweep_metrics_frame",
+        "uqlab.evaluation.reporting.campaign_config_timeline.build_sweep_metrics_frame",
         lambda _ids, _dir: df,
     )
     monkeypatch.setattr(
-        "uqlab.evaluation.pipeline.campaign_config_timeline.run_ids_for_experiments",
+        "uqlab.evaluation.reporting.campaign_config_timeline.run_ids_for_experiments",
         lambda exps, **kw: [str(e["id"]) for e in exps],
     )
 
@@ -101,7 +101,7 @@ def test_build_campaign_timeline_noise_sweep(monkeypatch, tmp_path):
 
 
 def test_shared_config_with_list_values():
-    from uqlab.evaluation.pipeline.campaign_config_timeline import _shared_config
+    from uqlab.evaluation.reporting.campaign_config_timeline import _shared_config
 
     flat_a = {
         "data.under_supported_classes": [3, 7],

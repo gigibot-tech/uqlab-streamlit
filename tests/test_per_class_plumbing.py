@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from uqlab.evaluation.pipeline.data_setup import (
+from uqlab.data.setup import (
     PilotDataRequest,
     parse_pilot_data_request,
     validate_pilot_data_request,
