@@ -83,7 +83,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    from uqlab.evaluation.pipeline.campaign_config_timeline import (
+    from uqlab.evaluation.reporting.campaign_config_timeline import (
         build_campaign_timeline,
         build_campaign_timeline_figure,
         save_timeline_figure,

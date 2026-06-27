@@ -35,10 +35,10 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-uqlab = { path = "..", editable = true }
+uqlab = { workspace = true }
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "ruff<1.0.0,>=0.2.2",
     "pre-commit>=4.5.1",
     "types-passlib<2.0.0.0,>=1.7.7.20240106",

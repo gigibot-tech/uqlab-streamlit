@@ -57,7 +57,7 @@ def verify_ml_stack() -> None:
         from uqlab.data.dataset_registry import compute_dataset_stats  # noqa: F401
         from uqlab.data.experiment_loader import sample_indices_for_experiment  # noqa: F401
         from uqlab.runner.experiment_core import run_experiment_core
-        from uqlab.evaluation.result_writers import build_results_markdown
+        from uqlab.evaluation.reporting.result_writers import build_results_markdown
         from uqlab.evaluation.signals.registry import (
             METRICS,
             resolve_signal_table_key,
@@ -128,7 +128,7 @@ def reload_training_modules() -> None:
 
     for name in (
         "uqlab.runner.experiment_core",
-        "uqlab.runner.pipeline",
+        "uqlab.runner.execute",
         "uqlab.evaluation.signals.registry",
         "uqlab.evaluation.signals.primitives",
         "uqlab.evaluation.signals.sources",
@@ -136,11 +136,11 @@ def reload_training_modules() -> None:
         "uqlab.data.loaders.cifar10_loader",
         "uqlab.data.dataset_registry",
         "uqlab.evaluation.metrics",
-        "uqlab.evaluation.result_writers",
+        "uqlab.evaluation.reporting.result_writers",
         "uqlab.data.experiment_loader",
-        "uqlab.evaluation.pipeline.data_setup",
-        "uqlab.evaluation.pipeline.experiment_setup",
-        "uqlab.evaluation.pipeline.experiment_eval",
+        "uqlab.data.setup",
+        "uqlab.runner.phases.config_view",
+        "uqlab.runner.phases.eval",
     ):
         mod = sys.modules.get(name)
         if mod is not None:

@@ -1,6 +1,6 @@
 # UQLab Flask UI
 
-Lean Flask shell over the existing uqlab runner (`uqlab.runner.pipeline.run`).
+Lean Flask shell over the existing uqlab runner (`uqlab.runner.execute.run_from_yaml`).
 
 ## Patterns (see `src/uqlab/runner/patterns.py`)
 

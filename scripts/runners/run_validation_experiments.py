@@ -53,6 +53,20 @@ from uqlab_orchestrator.config.validation_config import (
 )
 
 
+def _try_campaign_paper_plot(sweep_dir: Path, sweep_kind: str) -> None:
+    """SAVE: paper three-line PNG + curves CSV at campaign end (if ≥2 runs)."""
+    try:
+        from uqlab.evaluation.reporting.paper_benchmark_plot import persist_campaign_paper_plot
+
+        paths = persist_campaign_paper_plot(sweep_dir, sweep_kind=sweep_kind)
+        print(f"   📈 Paper plot → {paths['png']}")
+        print(f"   📄 Curves CSV → {paths['csv']}")
+    except ValueError as exc:
+        print(f"   ⚠️  Paper plot skipped ({exc})")
+    except ImportError as exc:
+        print(f"   ⚠️  Paper plot skipped (matplotlib): {exc}")
+
+
 def run_experiment(
     config: Dict,
     output_dir: Path,
@@ -67,7 +81,7 @@ def run_experiment(
         config_path = Path(f.name)
 
     try:
-        from uqlab.runner.pipeline import run as pipeline_run
+        from uqlab.runner.execute import run_from_yaml as pipeline_run
 
         print(f"\n{'='*80}")
         print(f"Running: {experiment_name}")
@@ -379,7 +393,7 @@ def run_validation_sweep_inprocess(
     """
     Run preset validation sweeps in-process (Streamlit / notebooks).
 
-    Uses ``uqlab.runner.pipeline.run`` via :func:`run_experiment`.
+    Uses ``uqlab.runner.execute.run_from_yaml`` via :func:`run_experiment`.
     """
     import contextlib
     import io
@@ -558,6 +572,7 @@ Examples:
                 else pd.DataFrame()
             )
         print(f"\n✅ Dataset size sweep CSV: {metrics_file}  ({len(merged)} rows)")
+        _try_campaign_paper_plot(dataset_size_dir, "dataset_size")
 
         results_summary['dataset_size'] = {
             'experiments': len(merged),
@@ -593,6 +608,7 @@ Examples:
                 else pd.DataFrame()
             )
         print(f"\n✅ Label noise sweep CSV: {metrics_file}  ({len(merged)} rows)")
+        _try_campaign_paper_plot(label_noise_dir, "label_noise")
 
         results_summary['label_noise'] = {
             'experiments': len(merged),

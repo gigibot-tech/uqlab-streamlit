@@ -398,7 +398,7 @@ async def start_experiment_no_auth(experiment_id: str, session: SessionDep) -> d
             exc_info=True,
             extra={
                 "experiment_id": experiment_id,
-                "runner": "uqlab.runner.pipeline.run",
+                "runner": "uqlab.runner.execute.run_from_yaml",
                 "traceback": traceback.format_exc()
             }
         )
@@ -413,7 +413,7 @@ async def start_experiment_no_auth(experiment_id: str, session: SessionDep) -> d
             exc_info=True,
             extra={
                 "experiment_id": experiment_id,
-                "runner": "uqlab.runner.pipeline.run",
+                "runner": "uqlab.runner.execute.run_from_yaml",
                 "traceback": traceback.format_exc()
             }
         )
@@ -444,7 +444,7 @@ async def start_experiment_no_auth(experiment_id: str, session: SessionDep) -> d
                 "experiment_id": experiment_id,
                 "experiment_name": db_experiment.name,
                 "user_id": user.id if user else None,
-                "runner": "uqlab.runner.pipeline.run",
+                "runner": "uqlab.runner.execute.run_from_yaml",
                 "error_type": type(e).__name__,
                 "traceback": traceback.format_exc()
             }

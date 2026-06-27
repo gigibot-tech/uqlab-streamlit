@@ -1,4 +1,4 @@
-"""Direct import executor - runs ML via ``uqlab.runner.pipeline.run`` in-process."""
+"""Direct import executor - runs ML via ``uqlab.runner.execute.run_from_yaml`` in-process."""
 import asyncio
 import json
 import logging
@@ -39,7 +39,7 @@ class DirectExecutor(TrainingExecutor):
     def _resolve_pipeline_run(self) -> PipelineRunFn:
         if self._pipeline_run is not None:
             return self._pipeline_run
-        from uqlab.runner.pipeline import run as pipeline_run
+        from uqlab.runner.execute import run_from_yaml as pipeline_run
 
         return pipeline_run
 
@@ -60,7 +60,7 @@ class DirectExecutor(TrainingExecutor):
             assert callable(pipeline_run)
 
             logger.info(
-                "Pre-flight check passed: uqlab.runner.pipeline.run and experiment_core import cleanly"
+                "Pre-flight check passed: uqlab.runner.execute.run_from_yaml and experiment_core import cleanly"
             )
         except ImportError as e:
             logger.error("Pre-flight check failed: %s", e, exc_info=True)
@@ -72,7 +72,7 @@ class DirectExecutor(TrainingExecutor):
         """Execute training via the injected or default runner pipeline."""
         logger.info("=" * 80)
         logger.info("DIRECT IMPORT EXECUTION")
-        logger.info("Runner: uqlab.runner.pipeline.run")
+        logger.info("Runner: uqlab.runner.execute.run_from_yaml")
         logger.info("Config: %s (exists: %s)", config_path, config_path.exists())
         logger.info("Output: %s (exists: %s)", output_dir, output_dir.exists())
         logger.info("=" * 80)
@@ -139,7 +139,7 @@ class DirectExecutor(TrainingExecutor):
 
         pipeline_run = self._resolve_pipeline_run()
         logger.info(
-            "Calling uqlab.runner.pipeline.run(config=%s, output=%s)",
+            "Calling uqlab.runner.execute.run_from_yaml(config=%s, output=%s)",
             config_path,
             output_dir,
         )

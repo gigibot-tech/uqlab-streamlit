@@ -1,5 +1,10 @@
-streamlit>=1.31.0
-requests>=2.31.0
-pandas>=2.0.0
-plotly>=5.18
+# Deprecated — use uv from the repo root instead:
+#   uv sync
+#   ./start.sh
+#
+# Installs uqlab[ui] from the workspace (torch, streamlit, sklearn, …) plus scipy/kaleido.
+
+-e ./src/uqlab[ui]
+scipy>=1.10.0
 kaleido>=0.2.1
+requests>=2.31

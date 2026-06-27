@@ -82,7 +82,7 @@ def main(argv: list[str] | None = None) -> int:
         help="by_section: plots grouped per sweep; by_metric: one page per signal with all sweeps.",
     )
 
-    from uqlab.evaluation.pipeline.campaign_report import build_campaign_report_pdf
+    from uqlab.evaluation.reporting.campaign_report import build_campaign_report_pdf
 
     run_ids = [r.strip() for r in args.run_ids.split(",") if r.strip()]
     experiments = [{"id": rid, "status": "completed", "name": rid[:8]} for rid in run_ids]

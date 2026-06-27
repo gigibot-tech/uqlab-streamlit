@@ -118,7 +118,7 @@ class TrainingOrchestrator:
                 self._current_training = None
 
     def _prepare_paths_from_yaml(self, experiment_id: uuid.UUID, cfg: dict) -> tuple[Path, Path]:
-        """Write grouped YAML dict for ``uqlab.runner.pipeline.run``."""
+        """Write grouped YAML dict for ``uqlab.runner.execute.run_from_yaml``."""
         from app.core.runtime_paths import experiment_dir
 
         exp_dir = experiment_dir(experiment_id)

@@ -104,7 +104,7 @@ class RunRecoveryService:
         )
 
     def assess_experiment(self, experiment: UncertaintyExperiment) -> RecoverabilityEntry:
-        from uqlab.evaluation.pipeline.run_recovery import assess_run_recovery
+        from uqlab.runner.phases.recovery import assess_run_recovery
 
         results_dir = self._results_dir_for(experiment)
         report = assess_run_recovery(results_dir)
@@ -140,7 +140,7 @@ class RunRecoveryService:
         seed: int = 42,
         device: str = "cpu",
     ) -> dict[str, Any]:
-        from uqlab.evaluation.pipeline.run_recovery import assess_run_recovery, recover_run_on_disk
+        from uqlab.runner.phases.recovery import assess_run_recovery, recover_run_on_disk
 
         experiment = self.repository.get(experiment_id)
         if not experiment:

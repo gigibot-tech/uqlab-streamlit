@@ -47,7 +47,7 @@ def main(argv: list[str] | None = None) -> int:
         dis = paper["disentanglement"].nunique()
         print(f"Paper rows: {len(paper)} ({methods} methods × {dis} disentanglements)")
     else:
-        print("Paper rows not found — run scripts/run_paper_benchmarks.py (requires Keras)")
+        print("Paper rows not found — run scripts/analysis/paper_benchmarks.py (requires Keras)")
 
     print(df.groupby(["source", "method", "disentanglement"], dropna=False).size().to_string())
 

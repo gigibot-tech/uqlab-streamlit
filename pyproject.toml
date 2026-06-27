@@ -7,15 +7,13 @@ name = "uqlab-streamlit"
 version = "0.1.0"
 description = "Uncertainty Quantification Lab - Streamlit Dashboard & Experiment Management"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11,<3.14"
 dependencies = [
-    "pandas>=2.0",
-    "numpy>=1.24",
-    "streamlit>=1.33",
-    "plotly>=5.18",
+    # Workspace package — torch, sklearn, streamlit, plotly, pydantic, etc.
+    "uqlab[ui]",
+    "scipy>=1.10.0",
     "kaleido>=0.2.1",
     "requests>=2.31",
-    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -33,8 +31,11 @@ members = [
     "backend",
 ]
 
-[tool.uv]
-dev-dependencies = [
+[tool.uv.sources]
+uqlab = { workspace = true }
+
+[dependency-groups]
+dev = [
     "ruff>=0.8.0",
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",

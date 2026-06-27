@@ -24,10 +24,10 @@ from uqlab.data.loaders.cifar10n_loader import CIFAR10NDataset
 from uqlab.data.experiment_loader import (
     EmbeddingOrganizer,
     sample_indices_for_experiment,
-    train_feature_model,
+    build_and_train_feature_model,
 )
 from uqlab.models.classification_models import EmbeddingDataset
-from uqlab.evaluation.metrics import binary_auroc
+from uqlab.evaluation.metrics.scoring import binary_auroc
 from uqlab.shared.utils.classification import auto_device, dino_transform, set_seed
 from uqlab.evaluation.signals.mc_dropout import calculate_mc_dropout_uncertainty
 
@@ -96,7 +96,7 @@ def run_minimal_experiment():
     )
     
     print("Training classifier...")
-    model = train_feature_model(
+    model = build_and_train_feature_model(
         train_dataset,
         device=device,
         num_classes=10,

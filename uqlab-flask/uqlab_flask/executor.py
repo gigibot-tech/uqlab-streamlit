@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 
-from uqlab.runner.pipeline import run as pipeline_run
+from uqlab.runner.execute import run_from_yaml as pipeline_run
 
 log = logging.getLogger("uqlab_flask.executor")
 
