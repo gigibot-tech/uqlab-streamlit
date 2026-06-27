@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import torch
 
-from uqlab.evaluation.pipeline.experiment_eval import score_uncertainty_signals
+from uqlab.runner.phases.eval import score_uncertainty_signals
 from uqlab.run_artifacts import GROUP_ALEATORIC, GROUP_CLEAN, GROUP_EPISTEMIC, GROUP_OOD
 
 

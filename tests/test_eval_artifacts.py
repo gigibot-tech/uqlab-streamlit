@@ -6,7 +6,7 @@ from pathlib import Path
 
 import torch
 
-from uqlab.evaluation.artifacts import EvalRunArtifacts, uncertainty_vectors_from_results_pt
+from uqlab.evaluation.metrics.artifacts import EvalRunArtifacts, uncertainty_vectors_from_results_pt
 
 
 def test_eval_run_artifacts_from_results_pt(tmp_path: Path) -> None:

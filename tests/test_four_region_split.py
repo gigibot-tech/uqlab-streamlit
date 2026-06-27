@@ -87,6 +87,24 @@ def test_four_region_split_populates_all_pools():
     assert 8 not in train_labels and 9 not in train_labels
 
 
+def test_build_four_region_experiment_config_uses_dataset_name_and_pixel_mlp():
+    from uqlab.evaluation.four_region_validation import (
+        FOUR_REGION_ARCHITECTURES,
+        build_four_region_experiment_config,
+    )
+
+    assert "pixel_mlp" in FOUR_REGION_ARCHITECTURES
+    cfg = build_four_region_experiment_config(
+        DEFAULT_FOUR_REGION_PRESET,
+        dataset="fashion_mnist",
+        architecture="pixel_mlp",
+    )
+    assert cfg["data"]["dataset_name"] == "fashion_mnist"
+    assert "dataset" not in cfg["data"]
+    assert cfg["model"]["architecture"] == "pixel_mlp"
+    assert cfg["data"]["partition_mode"] == "four_region"
+
+
 def test_build_run_yaml_four_region():
     workflow = default_workflow()
     workflow["uncertainty_config"] = {

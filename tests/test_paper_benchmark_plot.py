@@ -9,16 +9,16 @@ import pandas as pd
 import pytest
 import torch
 
-from uqlab.evaluation.pipeline.campaign_score import (
+from uqlab.evaluation.reporting.campaign_score import (
     build_paper_sweep_series,
     paper_correlations,
     paper_point_from_results_dir,
     percentage_from_run_row,
 )
-from uqlab.evaluation.pipeline.paper_benchmark_plot import (
+from uqlab.evaluation.reporting.paper_benchmark_plot import (
     build_paper_benchmark_plot,
 )
-from uqlab.evaluation.pipeline.sweep_line_plot import (
+from uqlab.evaluation.reporting.sweep_line_plot import (
     SWEEP_KIND_DATASET_SIZE,
     SWEEP_KIND_LABEL_NOISE,
 )
@@ -94,14 +94,18 @@ def test_paper_point_from_results_dir(tmp_path):
         results_dir / "results.pt",
     )
 
-    point = paper_point_from_results_dir(results_dir)
+    point = paper_point_from_results_dir(
+        results_dir,
+        aleatoric_signal="inverse_coherence",
+        epistemic_signal="inverse_mass",
+    )
     assert point is not None
     assert point["score"] == pytest.approx(1.0)
     assert point["aleatorics"] == pytest.approx(0.3)
     assert point["epistemics"] == pytest.approx(0.7)
 
 
-@patch("uqlab.evaluation.pipeline.campaign_score.build_sweep_metrics_frame")
+@patch("uqlab.evaluation.reporting.campaign_score.build_sweep_metrics_frame")
 def test_build_paper_sweep_series(mock_frame, tmp_path):
     exp_root = tmp_path / "experiments"
     _write_run(exp_root, "r0", noise_percent=0.0, accuracy=0.95, alea_mean=0.1, epi_mean=0.9)
@@ -118,6 +122,8 @@ def test_build_paper_sweep_series(mock_frame, tmp_path):
         ["r0", "r1"],
         exp_root,
         sweep_kind=SWEEP_KIND_LABEL_NOISE,
+        aleatoric_signal="inverse_coherence",
+        epistemic_signal="inverse_mass",
     )
 
     assert series.experiment == "Label Noise"
@@ -137,7 +143,7 @@ def test_build_paper_sweep_series(mock_frame, tmp_path):
 def test_paper_correlations_label_noise():
     from uqlab.vendor.disentanglement_error.util import ExperimentResults
 
-    from uqlab.evaluation.pipeline.campaign_score import PaperSweepSeries
+    from uqlab.evaluation.reporting.campaign_score import PaperSweepSeries
 
     series = PaperSweepSeries(
         experiment="Label Noise",
@@ -155,7 +161,7 @@ def test_paper_correlations_label_noise():
     assert corr["primary_correlation"] == pytest.approx(-1.0, abs=0.01)
 
 
-@patch("uqlab.evaluation.pipeline.campaign_score.build_sweep_metrics_frame")
+@patch("uqlab.evaluation.reporting.campaign_score.build_sweep_metrics_frame")
 def test_build_paper_benchmark_plot_payload(mock_frame, tmp_path):
     exp_root = tmp_path / "experiments"
     _write_run(exp_root, "r0", noise_percent=0.0)
@@ -172,6 +178,8 @@ def test_build_paper_benchmark_plot_payload(mock_frame, tmp_path):
         ["r0", "r1"],
         exp_root,
         sweep_kind=SWEEP_KIND_LABEL_NOISE,
+        aleatoric_signal="inverse_coherence",
+        epistemic_signal="inverse_mass",
     )
     data = payload.to_dict()
 
@@ -179,3 +187,82 @@ def test_build_paper_benchmark_plot_payload(mock_frame, tmp_path):
     assert data["points"] == 2
     assert data["x_label"] == "Percentage (0–1)"
     assert {t["metric"] for t in data["traces"]} == {"scores", "aleatorics", "epistemics"}
+
+
+def test_persist_campaign_paper_plot_flat_campaign(tmp_path):
+    """Flat campaign dir (validation layout) → PNG + CSV at campaign end."""
+    campaign = tmp_path / "label_noise_sweep"
+
+    def _flat(name: str, noise_pct: float) -> None:
+        run_dir = campaign / name
+        run_dir.mkdir(parents=True)
+        torch.save(
+            {
+                "signal_table": {
+                    "expected_entropy": torch.tensor([0.3, 0.4]),
+                    "mutual_info": torch.tensor([0.7, 0.6]),
+                },
+                "predictions": torch.tensor([1, 0]),
+                "eval_clean_labels": torch.tensor([1, 1]),
+            },
+            run_dir / "results.pt",
+        )
+        import json
+
+        (run_dir / "summary.json").write_text(
+            json.dumps({"config": {"data": {"aleatoric_noise_percentage": noise_pct}}})
+        )
+
+    _flat("arch_noise0", 0.0)
+    _flat("arch_noise50", 50.0)
+
+    pytest.importorskip("matplotlib")
+    from uqlab.evaluation.reporting.paper_benchmark_plot import persist_campaign_paper_plot
+
+    paths = persist_campaign_paper_plot(campaign, sweep_kind=SWEEP_KIND_LABEL_NOISE)
+    assert paths["png"].is_file()
+    assert paths["csv"].is_file()
+    assert paths["png"].name == "label_noise_three_line.png"
+
+
+@patch("uqlab.evaluation.reporting.campaign_score.build_sweep_metrics_frame")
+def test_paper_dataframe_from_campaign_dir_wide_for_plot(mock_frame, tmp_path):
+    """Wide numeric columns so the paper one-liner groupby().mean().plot() works."""
+    campaign = tmp_path / "label_noise_sweep"
+
+    def _flat(name: str, noise_pct: float) -> None:
+        run_dir = campaign / name
+        run_dir.mkdir(parents=True)
+        torch.save(
+            {
+                "signal_table": {
+                    "expected_entropy": torch.tensor([0.3, 0.4]),
+                    "mutual_info": torch.tensor([0.7, 0.6]),
+                },
+                "predictions": torch.tensor([1, 0]),
+                "eval_clean_labels": torch.tensor([1, 1]),
+            },
+            run_dir / "results.pt",
+        )
+        import json
+
+        (run_dir / "summary.json").write_text(
+            json.dumps({"config": {"data": {"aleatoric_noise_percentage": noise_pct}}})
+        )
+
+    _flat("arch_noise0", 0.0)
+    _flat("arch_noise50", 50.0)
+
+    from uqlab.evaluation.reporting.paper_benchmark_plot import paper_dataframe_from_campaign_dir
+
+    df = paper_dataframe_from_campaign_dir(campaign, sweep_kind=SWEEP_KIND_LABEL_NOISE)
+    assert list(df.columns) == [
+        "Experiment",
+        "Percentage",
+        "scores",
+        "aleatorics",
+        "epistemics",
+        "Run_Index",
+    ]
+    plot_df = df.drop("Run_Index", axis=1).groupby(["Experiment", "Percentage"]).mean()
+    assert {"scores", "aleatorics", "epistemics"}.issubset(plot_df.columns)

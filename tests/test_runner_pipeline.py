@@ -1,4 +1,4 @@
-"""Tests for unified runner pipeline entry."""
+"""Tests for unified runner execute entry."""
 
 from __future__ import annotations
 
@@ -6,11 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from uqlab.runner.pipeline import run
+from uqlab.runner.execute import run_from_yaml
 
 
 def test_run_config_skips_yaml_load_when_config_in_context():
-    from uqlab.runner.pipeline import RunContext, _stage_load_config
+    from uqlab.runner.execute import RunContext, _stage_load_config
 
     sentinel = object()
     ctx = RunContext(data={"config": sentinel, "config_path": None})
@@ -19,7 +19,7 @@ def test_run_config_skips_yaml_load_when_config_in_context():
 
 
 def test_run_load_stage_reads_yaml(tmp_path):
-    from uqlab.runner.pipeline import RunContext, _stage_load_config
+    from uqlab.runner.execute import RunContext, _stage_load_config
 
     yaml_path = tmp_path / "config.yaml"
     yaml_path.write_text(
@@ -51,4 +51,4 @@ paths:
 def test_run_requires_existing_config_path(tmp_path):
     missing = tmp_path / "missing.yaml"
     with pytest.raises(FileNotFoundError):
-        run(missing, tmp_path / "out")
+        run_from_yaml(missing, tmp_path / "out")

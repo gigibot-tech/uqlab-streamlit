@@ -100,3 +100,40 @@ def test_graddot_pairwise_scores_tiny_model(tmp_path):
     assert raw["mass"].shape == (2,)
     assert raw["dominance"].shape == (2,)
     assert raw["mass"][0] >= 0
+
+
+class _TinyImageTrainDataset:
+    def __init__(self) -> None:
+        self._x = torch.randn(3, 3, 32, 32)
+        self._y = torch.tensor([0, 1, 0])
+
+    def __len__(self) -> int:
+        return 3
+
+    def __getitem__(self, index: int):
+        return self._x[index], self._y[index]
+
+
+def test_graddot_batchnorm_model_single_sample_batches(tmp_path):
+    """Grad-dot runs one-sample forwards; BatchNorm must stay in eval mode."""
+    model = nn.Sequential(
+        nn.Conv2d(3, 8, kernel_size=3, padding=1),
+        nn.BatchNorm2d(8),
+        nn.ReLU(),
+        nn.AdaptiveAvgPool2d(1),
+        nn.Flatten(),
+        nn.Linear(8, 2),
+    )
+    train_ds = _TinyImageTrainDataset()
+    eval_x = torch.randn(2, 3, 32, 32)
+    mean_pred = torch.softmax(torch.randn(2, 2), dim=1)
+    raw = compute_graddot_structure_signals(
+        model,
+        train_ds,
+        eval_x,
+        mean_pred,
+        device=torch.device("cpu"),
+        top_k=2,
+        run_cache_dir=tmp_path / "bn",
+    )
+    assert raw["coherence"].shape == (2,)
