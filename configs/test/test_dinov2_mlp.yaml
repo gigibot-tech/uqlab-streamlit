@@ -1,0 +1,25 @@
+dataset:
+  name: cifar10n
+  noise_type: worse_label
+  under_supported: "random:2"
+  under_train_per_class: 50
+  regular_train_per_class: 300
+  eval_per_group: 100
+
+model:
+  architecture: dinov2_mlp
+  training_mode: feature_space
+  dinov2_model: small
+  hidden_dim: 256
+  dropout: 0.2
+
+training:
+  epochs: 5  # Quick test
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  batch_size: 256
+
+evaluation:
+  mc_passes: 10  # Quick test
+
+# Made with Bob

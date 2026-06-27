@@ -1,0 +1,64 @@
+# Four-region Fashion-MNIST + small pixel MLP (assignment default)
+# Mirrors notebooks/four_region_benchmark.ipynb RUNS[0]
+
+seed: 42
+device: auto
+
+data:
+  dataset_name: fashion_mnist
+  noise_type: clean_label
+  partition_mode: four_region
+  class_regions:
+    noisy:
+      classes: [0, 1, 2, 3]
+      label_flip_pct: 30.0
+      train_fraction: 1.0
+    sparse:
+      classes: [4, 5]
+      train_fraction: 0.10
+    clean:
+      classes: [6, 7]
+      train_fraction: 1.0
+    ood:
+      classes: [8, 9]
+      train_fraction: 0.0
+  eval_per_group: 200
+
+model:
+  architecture: pixel_mlp
+  training_mode: end_to_end
+  hidden_dim: 256
+  dropout: 0.3
+
+training:
+  epochs: 12
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  train_batch_size: 256
+  feature_batch_size: 64
+
+evaluation:
+  mc_passes: 10
+  top_k: 10
+  attribution_method: dualxda
+  # Notebook cell 2 toggles ENABLE_GRADDOT / ENABLE_EK_FAC override these at runtime.
+  attribution_backends: [dualxda, graddot, ek_fak]
+  signals:
+    predictive: [expected_entropy, mutual_info]
+    logit: [inverse_logit_magnitude]
+    attribution:
+      - inverse_coherence_dualxda
+      - inverse_mass_dualxda
+      - inverse_dominance_dualxda
+      - inverse_coherence_graddot
+      - inverse_mass_graddot
+      - inverse_dominance_graddot
+      - inverse_coherence_ek_fak
+      - inverse_mass_ek_fak
+      - inverse_dominance_ek_fak
+
+paths:
+  data_root: ./data/fashion_mnist
+  cifar10n_root: ./data/fashion_mnist
+  feature_cache_dir: ./cache/fast_uncertainty_classification/features
+  results_base_dir: ./results
