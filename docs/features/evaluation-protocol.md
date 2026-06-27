@@ -9,6 +9,7 @@ For deeper detail see:
 - [`docs/signals/UNCERTAINTY_SUBSET_LOGIC.md`](../signals/UNCERTAINTY_SUBSET_LOGIC.md) — training subset + eval pool selection
 - [`docs/features/disentanglement-benchmark.md`](disentanglement-benchmark.md) — paper metric vs pool-filtered sweep plots
 - [`docs/features/sweep-grouping.md`](sweep-grouping.md) — campaign grouping + eval pool plot semantics
+- [`docs/features/ATTRIBUTION_ARTIFACTS.md`](ATTRIBUTION_ARTIFACTS.md) — `zwischen/` influence matrices + assignment notebook/YAML mapping
 
 Reference paper: [`src/uqlab/2408.12175v3.pdf`](../../src/uqlab/2408.12175v3.pdf)
 
@@ -25,7 +26,7 @@ Reference paper: [`src/uqlab/2408.12175v3.pdf`](../../src/uqlab/2408.12175v3.pdf
 | Step 4 (signals, MC, attribution) | **Yes** | Same signal registry and eval config |
 | Step 5 launch | **Mostly yes** | New preset for `four_region`; Fig 3/4 paper sweeps unchanged |
 | `run_spec` → `config.yaml` | **Thin extension** | Compile Step 3 regions → `data.class_regions`; legacy keys still work |
-| `pipeline.run` / `fast_pilot_core` | **Yes** | Same train → eval → persist flow |
+| `run_from_yaml` / `experiment_core` | **Yes** | Same train → eval → persist flow |
 | `collect_uncertainty_signals` / `score_uncertainty_signals` | **Yes** | Same per-sample signals + AUROC; optional 4th positive set for OOD |
 | `results.pt` / `summary.json` / recovery | **Yes** | Same artifact shape; add `{signal}_mean_ood` when OOD pack exists |
 | Plots | **Extend, not replace** | Same pool-mean machinery; **four pool lines** instead of two primary uncertainty regions + clean |
@@ -38,7 +39,7 @@ flowchart LR
     S1[Step1 dataset]
     S2[Step2 training]
     S4[Step4 signals]
-    RUN[pipeline.run]
+    RUN[run_from_yaml]
     SIG[collect + score signals]
     ART[results.pt]
     S1 --> S2 --> RUN
@@ -71,7 +72,7 @@ The paper ([2408.12175v3.pdf](../../src/uqlab/2408.12175v3.pdf)) uses **swept ax
 
 ## How evaluation is done today
 
-Source of truth: [`src/uqlab/data/fast_pilot_loader.py`](../../src/uqlab/data/fast_pilot_loader.py), [`src/uqlab/runner/fast_pilot_core.py`](../../src/uqlab/runner/fast_pilot_core.py), [`src/uqlab/evaluation/pipeline/fast_pilot_eval.py`](../../src/uqlab/evaluation/pipeline/fast_pilot_eval.py).
+Source of truth: [`src/uqlab/data/setup.py`](../../src/uqlab/data/setup.py), [`src/uqlab/runner/experiment_core.py`](../../src/uqlab/runner/experiment_core.py), [`src/uqlab/runner/phases/eval.py`](../../src/uqlab/runner/phases/eval.py).
 
 ### End-to-end path
 
@@ -210,7 +211,7 @@ Implementation touch points (four-region mode). Everything else reuses the exist
 | **Noise injection** | Per-region label flip before split | `dataset.noise_mask` contract |
 | **`sample_train_eval_indices`** | Interpret `class_regions` when `partition_mode=four_region` | Same `SplitSpec` return type |
 | **Group labels + artifacts** | `GROUP_OOD = 3`; `{signal}_mean_ood` in metrics | [`run_artifacts.py`](../../src/uqlab/run_artifacts.py) pool loop |
-| **Scoring** | Optional OOD one-vs-rest AUROC | [`evaluator.py`](../../src/uqlab/evaluation/evaluator.py) |
+| **Scoring** | Optional OOD one-vs-rest AUROC | [`evaluation/metrics/scoring.py`](../../src/uqlab/evaluation/metrics/scoring.py) |
 | **Plots** | Fixed-run dashboard: 4 pool mean traces (or 2×2 grid) | [`sweep_plot_pools.py`](../../src/uqlab/evaluation/pipeline/sweep_plot_pools.py) |
 
 **Explicitly unchanged:** `pipeline.run`, DualXDA/MC signal collection, zwischen recovery, API, Fig 3/4 launch arms, paper benchmark sweeps.

@@ -252,7 +252,7 @@ class TrainingOrchestrator:
 class DirectExecutor:
     async def execute(self, config_path, output_dir, progress_callback):
         # Import canonical runner
-        from uqlab.runner.pipeline import run as pipeline_run
+        from uqlab.runner.execute import run_from_yaml as pipeline_run
         
         # Run in thread pool (non-blocking)
         result = await asyncio.to_thread(
@@ -270,7 +270,7 @@ class DirectExecutor:
 
 ### PHASE 5: ML Pipeline Execution
 
-**File:** [`src/uqlab/runner/pipeline.py`](../src/uqlab/runner/pipeline.py:90-120)
+**File:** [`src/uqlab/runner/execute.py`](../src/uqlab/runner/execute.py)
 
 ```python
 def run(config_path: Path, output_dir: Path, progress_callback=None):
@@ -292,7 +292,7 @@ def run(config_path: Path, output_dir: Path, progress_callback=None):
     return summary
 ```
 
-**File:** [`src/uqlab/runner/fast_pilot_core.py`](../src/uqlab/runner/fast_pilot_core.py:200-400)
+**File:** [`src/uqlab/runner/experiment_core.py`](../src/uqlab/runner/experiment_core.py)
 
 ```python
 def run_experiment_core(config, results_dir, seed, device_str, progress_callback=None):
@@ -512,8 +512,8 @@ group,dataset_index,clean_label,noisy_label,is_noisy,predictive_entropy,mutual_i
 | 3. API | `backend/app/api/routes/experiments.py` | HTTP endpoints |
 | 4. Execution | `backend/app/services/training_orchestrator.py` | Job management |
 | 4. Execution | `backend/app/services/executors/direct_executor.py` | Pipeline invocation |
-| 5. ML | `src/uqlab/runner/pipeline.py` | Entry point |
-| 5. ML | `src/uqlab/runner/fast_pilot_core.py` | Core training/eval |
+| 5. ML | `src/uqlab/runner/execute.py` | Entry point |
+| 5. ML | `src/uqlab/runner/experiment_core.py` | Core training/eval |
 | 6. Artifacts | `src/uqlab/run_artifacts.py` | Result loading |
 | 7. Visualization | `src/uqlab/ui_components/results/` | Charts & tables |
 

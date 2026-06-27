@@ -22,14 +22,14 @@
 ```
 scripts/runners/run_fast_uncertainty_classification.py  (CLI)
     ↓
-runner/pipeline.run()
+runner/execute.run_from_yaml()
     ↓
 runner/experiment_core.run_experiment_core()
     ↓ [setup]      prepare_experiment_data → _prepare_eval_data_and_model
     ↓ [train]      train_feature_model / train_image_model
     ↓ [post-train] save_training_data_csv, save_interim (zwischen/)
-    ↓ [signals]    experiment_eval.collect_uncertainty_signals
-    ↓ [score]      experiment_eval.score_uncertainty_signals
+    ↓ [signals]    runner.phases.eval.collect_uncertainty_signals
+    ↓ [score]      runner.phases.eval.score_uncertainty_signals
     ↓ [summary]    _build_run_summary → persist_experiment_summaries (once)
     ↓ [export]     checkpoint.pt, results.pt (_export_run_results), console AUROC tables
 ```
@@ -43,10 +43,11 @@ Evaluation is **not** a separate job. It starts after `model.eval()` in the same
 | Module | Role | Notes |
 |--------|------|-------|
 | [`runner/experiment_core.py`](../../src/uqlab/runner/experiment_core.py) | Orchestrator (`run_experiment_core`) | Phase helpers below |
-| [`evaluation/pipeline/experiment_eval.py`](../../src/uqlab/evaluation/pipeline/experiment_eval.py) | Signal collection + AUROC scoring | Clean boundary |
-| [`evaluation/metrics.py`](../../src/uqlab/evaluation/metrics.py) | AUROC math, confusion matrix, signal classifiers | Pure computation |
-| [`evaluation/result_writers.py`](../../src/uqlab/evaluation/result_writers.py) | `summary.json`/`summary.md`/CSV output, `persist_experiment_summaries` | File/format output |
-| [`evaluation/artifacts.py`](../../src/uqlab/evaluation/artifacts.py) | `results.pt` read contract (`EvalRunArtifacts`) | Consumed by plots/API/bridge |
+| [`runner/phases/eval.py`](../../src/uqlab/runner/phases/eval.py) | Signal collection + AUROC scoring | Runner phase |
+| [`evaluation/metrics/scoring.py`](../../src/uqlab/evaluation/metrics/scoring.py) | AUROC math, confusion matrix, signal classifiers | Pure computation |
+| [`evaluation/reporting/result_writers.py`](../../src/uqlab/evaluation/reporting/result_writers.py) | `summary.json`/`summary.md`/CSV output, `persist_experiment_summaries` | File/format output |
+| [`evaluation/metrics/artifacts.py`](../../src/uqlab/evaluation/metrics/artifacts.py) | `results.pt` read contract (`EvalRunArtifacts`) | Consumed by plots/API/bridge |
+| [`data/setup.py`](../../src/uqlab/data/setup.py) | Load dataset + build train/eval splits | Data phase |
 | [`evaluation/signals/sources.py`](../../src/uqlab/evaluation/signals/sources.py) | Signal source wiring | Clean |
 | [`evaluation/signals/registry.py`](../../src/uqlab/evaluation/signals/registry.py) | Metric definitions | Clean |
 
@@ -77,7 +78,7 @@ Private functions in [`experiment_core.py`](../../src/uqlab/runner/experiment_co
 
 ### Phase A — Signal collection
 
-**File**: [`evaluation/pipeline/experiment_eval.py`](../../src/uqlab/evaluation/pipeline/experiment_eval.py) — `collect_uncertainty_signals`
+**File**: [`runner/phases/eval.py`](../../src/uqlab/runner/phases/eval.py) — `collect_uncertainty_signals`
 
 - MC dropout (if enabled)
 - Attribution signals (DualXDA, EK-FAC, GradDot)

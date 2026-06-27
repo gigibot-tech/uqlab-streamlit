@@ -12,7 +12,7 @@ Single map for experiments, uncertainty, and the paper disentanglement benchmark
 YOUR KERAS NOTEBOOK                    UQLAB (disentanglement CLI)
 ─────────────────────                ─────────────────────────────
 calculate_disentanglement_error      calculate_disentanglement_error   ← same vendor
-  └ fit → train CNN in RAM             └ fit → pipeline.run → train+eval → results.pt
+  └ fit → train CNN in RAM             └ fit → run_from_yaml → train+eval → results.pt
   └ predict → MC samples + entropy()   └ predict → read signal_table from results.pt
 ```
 
@@ -33,7 +33,7 @@ The vendor loops ([`label_noise.py`](../../src/uqlab/vendor/disentanglement_erro
 
 | Method | Your Keras demo | UQLab adapter |
 |--------|-----------------|---------------|
-| **`fit`** | Train CNN 5 epochs in RAM | Run **one full experiment job** (`pipeline.run`) for this sweep point (train + eval + write artifacts). Ignores `x, y` — CIFAR-10N loaded inside runner. |
+| **`fit`** | Train CNN 5 epochs in RAM | Run **one full experiment job** (`run_from_yaml`) for this sweep point (train + eval + write artifacts). Ignores `x, y` — CIFAR-10N loaded inside runner. |
 | **`predict_disentangling`** | Run **25 MC forward passes now**, compute entropy/MI on stacked softmax | **Does not run inference.** Reads **`signal_table`** from the last job. **Paper** columns need MC during the job; **DualXDA** / **EK-FAC** columns need the matching attribution backend during the job. |
 
 ### `predict_disentangling` runtime requirements
@@ -71,8 +71,8 @@ If we renamed things for honesty: `fit` ≈ `run_experiment_at_sweep_point`, `pr
 vendor: calculate_disentanglement_error
   └ model.fit(…, label_noise=0.3)
        evaluation/benchmarks/disentangling/fast_pilot.py
-         └ build_run_yaml → runner/pipeline.run
-              uqlab/runner/fast_pilot_core.py  (train + MC eval)
+         └ build_run_yaml → runner/run_from_yaml
+              uqlab/runner/experiment_core.py  (train + MC eval)
               → results.pt { signal_table, predictions }
   └ model.predict_disentangling(x_test)   # x_test ignored
        └ evaluation/artifacts.py       EvalRunArtifacts.disentangling_vectors
@@ -85,7 +85,7 @@ vendor: calculate_disentanglement_error
 | Box | Folder | Owns |
 |-----|--------|------|
 | **Train** | [`models/`](../src/uqlab/models/) | Architectures, training loops, MC **forward** primitives |
-| **Run** | [`runner/`](../src/uqlab/runner/) | `pipeline.run` — load YAML, validate, execute once |
+| **Run** | [`runner/`](../src/uqlab/runner/) | `run_from_yaml` — load YAML, validate, execute once |
 | **Evaluate** | [`evaluation/`](../src/uqlab/evaluation/) | **`signal_table`**, [`artifacts.py`](../src/uqlab/evaluation/artifacts.py), METRICS, bridge, plots |
 | **Vendor** | [`vendor/`](../src/uqlab/vendor/) | Frozen paper loops + ABC only — no `signal_table` schema |
 
@@ -101,7 +101,7 @@ vendor: calculate_disentanglement_error
 |------|---------|
 | **workflow** | Streamlit session dict (Steps 1–5); [`workflow_defaults.py`](../src/uqlab_orchestrator/config/workflow_defaults.py) |
 | **RunSpec** | `build_run_yaml(workflow)` → validated nested config / `config.yaml` |
-| **Runner** | [`pipeline.run`](../src/uqlab/runner/pipeline.py) — single execution entry |
+| **Runner** | [`run_from_yaml`](../src/uqlab/runner/execute.py) — single execution entry |
 | **Pipeline** | Overloaded: runner stages **or** [`evaluation/pipeline/`](../src/uqlab/evaluation/pipeline/) (plots, campaign) |
 | **Vendor port** | Class implementing vendor `DisentanglingModel` — [`fast_pilot.py`](../src/uqlab/evaluation/benchmarks/disentangling/fast_pilot.py) |
 | **signal_table** | `dict[str, Tensor]` in `results.pt` — all enabled uncertainty metrics per eval sample |
@@ -110,23 +110,23 @@ vendor: calculate_disentanglement_error
 
 | Path | Chain |
 |------|--------|
-| CLI | `config.yaml` → `pipeline.run` → `results/` |
+| CLI | `config.yaml` → `run_from_yaml` → `results/` |
 | Teach this | **Config → RunSpec → Runner → Results** |
 | Streamlit + API | **Config → RunSpec → Launch → Runner → Results** (+ job infra: DB/async only) |
 
 ### Layering (dependency rule)
 
-- **Engine** lives in [`uqlab/runner/fast_pilot_core.py`](../src/uqlab/runner/fast_pilot_core.py) (`run_experiment_core`).
-- **Runner** ([`pipeline.py`](../src/uqlab/runner/pipeline.py)) loads YAML, validates, tees `experiment.log`, calls the engine.
-- **Scripts** ([`scripts/runners/run_fast_uncertainty_classification.py`](../../scripts/runners/run_fast_uncertainty_classification.py)) are thin CLIs → `pipeline.run` only.
-- **Backend** (`TrainingOrchestrator` + `DirectExecutor`) is job infrastructure (DI, DB, WebSocket) — **not** a separate ML stage. It injects and calls `pipeline.run`.
+- **Engine** lives in [`uqlab/runner/experiment_core.py`](../src/uqlab/runner/experiment_core.py) (`run_experiment_core`).
+- **Runner** ([`execute.py`](../src/uqlab/runner/execute.py)) loads YAML, validates, tees `experiment.log`, calls the engine.
+- **Scripts** ([`scripts/runners/run_fast_uncertainty_classification.py`](../../scripts/runners/run_fast_uncertainty_classification.py)) are thin CLIs → `run_from_yaml` only.
+- **Backend** (`TrainingOrchestrator` + `DirectExecutor`) is job infrastructure (DI, DB, WebSocket) — **not** a separate ML stage. It injects and calls `run_from_yaml`.
 
 | Layer | ML logic? |
 |-------|-----------|
 | Config / RunSpec | Validation only |
 | Launch (`experiment_launcher`) | HTTP transport only |
 | Job infra (orchestrator + executor) | Persistence + async wrapper |
-| **Runner + fast_pilot_core** | **Yes — single ML job** |
+| **Runner + experiment_core** | **Yes — single ML job** |
 
 Dependencies flow **`scripts → uqlab`**, never `uqlab → scripts`.
 
@@ -135,7 +135,7 @@ Dependencies flow **`scripts → uqlab`**, never `uqlab → scripts`.
 | Module | Role | Imported by |
 |--------|------|-------------|
 | [`signals/catalog.py`](../src/uqlab/evaluation/signals/catalog.py) | `MetricMeta`, Step 4 groups, aliases — **no torch** | `shared.config.signals`, orchestrator facades, UI |
-| [`signals/registry.py`](../src/uqlab/evaluation/signals/registry.py) | `MetricEntry` + `compute`, `build_signal_table` — **torch** | Runner, `fast_pilot_eval`, evaluator |
+| [`signals/registry.py`](../src/uqlab/evaluation/signals/registry.py) | `MetricEntry` + `compute`, `build_signal_table` — **torch** | Runner, `runner.phases.eval` |
 
 #### UI facade boundary
 
@@ -151,11 +151,11 @@ Rule: workflow steps import **`uqlab_orchestrator.*`** and **`uqlab.ui_component
 
 **Keep the runner at `uqlab` level.** It is ML execution — same layer as `models/` and `evaluation/`, not UI.
 
-| Layer | Package | Calls `pipeline.run`? |
+| Layer | Package | Calls `run_from_yaml`? |
 |-------|---------|------------------------|
 | **Runner (canonical)** | [`uqlab/runner/`](../src/uqlab/runner/) | **Defines** `run` / `run_config` |
 | **Backend** | `backend/.../direct_executor.py` | Yes — in-process worker for API jobs |
-| **CLI / scripts** | `scripts/run_fast_uncertainty_classification.py` (CLI → `pipeline.run`) | Yes |
+| **CLI / scripts** | `scripts/run_fast_uncertainty_classification.py` (CLI → `run_from_yaml`) | Yes |
 | **Flask wizard** | `uqlab-flask/executor.py` | Yes (local, no API) |
 | **Orchestrator** | `uqlab_orchestrator/experiment_launcher.py` | **No** — HTTP create/start only |
 | **Streamlit UI** | `uqlab/ui_components/` | **No** (except `read_experiment_log` for failed-run debug) |
@@ -163,14 +163,14 @@ Rule: workflow steps import **`uqlab_orchestrator.*`** and **`uqlab.ui_component
 ```text
 Streamlit  →  experiment_launcher  →  POST /api/v1/experiments  →  TrainingOrchestrator
                                                                       → DirectExecutor
-                                                                      → uqlab.runner.pipeline.run
+                                                                      → uqlab.runner.run_from_yaml
 ```
 
-**Do not** move the runner into `ui_components/` or teach Streamlit widgets to import `pipeline.run` for training. That duplicates the backend path and breaks long-run async (DB status, WebSocket progress).
+**Do not** move the runner into `ui_components/` or teach Streamlit widgets to import `run_from_yaml` for training. That duplicates the backend path and breaks long-run async (DB status, WebSocket progress).
 
 **Do** document the runner in [`uqlab/runner/README.md`](../src/uqlab/runner/README.md) and this file; Streamlit docs only need: “launch via orchestrator → API → runner on backend.”
 
-Optional local dev without API: run `pipeline.run` from CLI or Flask — still `uqlab.runner`, not Streamlit.
+Optional local dev without API: run `run_from_yaml` from CLI or Flask — still `uqlab.runner`, not Streamlit.
 
 ---
 
@@ -258,7 +258,7 @@ Full METRICS table: [features/registries.md](features/registries.md).
 
 | File | When | Contents |
 |------|------|----------|
-| `experiment.log` | Whole `pipeline.run` | stdout/stderr tee |
+| `experiment.log` | Whole `run_from_yaml` | stdout/stderr tee |
 | `summary.json` | After eval | AUROC, config snapshot |
 | `per_sample_signals.csv` | After eval | Flat signal rows |
 | **`results.pt`** | After eval | **`signal_table`**, `predictions`, eval packs |
@@ -276,12 +276,12 @@ flowchart TB
   end
 
   subgraph adapter["evaluation — adapter"]
-    FIT[fit → pipeline.run]
+    FIT[fit → run_from_yaml]
     PRED[predict_disentangling → read signal_table]
   end
 
   subgraph runner["runner"]
-    RUN[pipeline.run]
+    RUN[run_from_yaml]
     CORE[run_experiment_core]
   end
 
@@ -301,10 +301,10 @@ flowchart TB
 
 | Concern | Path |
 |---------|------|
-| Runner | `src/uqlab/runner/pipeline.py` |
-| Train + eval core | `src/uqlab/runner/fast_pilot_core.py` |
+| Runner | `src/uqlab/runner/execute.py` |
+| Train + eval core | `src/uqlab/runner/experiment_core.py` |
 | CLI wrapper | `scripts/runners/run_fast_uncertainty_classification.py` |
 | Signals / signal_table | `src/uqlab/evaluation/signals/` |
 | Disentanglement adapter | `src/uqlab/evaluation/benchmarks/disentangling/` |
 | Vendor metric | `src/uqlab/vendor/disentanglement_error/` |
-| CLI benchmark | `scripts/runners/run_disentanglement_benchmark.py` |
+| CLI analysis | `scripts/analysis/disentanglement_error.py` |
