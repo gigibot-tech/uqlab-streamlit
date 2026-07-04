@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 
 from uqlab.evaluation.reporting.result_writers import build_results_markdown
-from uqlab.data.experiment_loader import SplitSpec, _label_tensors_for_indices
+from uqlab.data.splits.experiment_loader import SplitSpec, _label_tensors_for_indices
 import numpy as np
 
 
@@ -31,10 +31,10 @@ def test_build_results_markdown_accepts_four_tuple_auroc_rows():
 
 
 def test_label_tensors_for_indices_cifar10_synthetic_noise(tmp_path):
-    from uqlab.data.loaders.cifar10_loader import CIFAR10ClassificationDataset
+    from uqlab.data.datasets.registry import load_classification_dataset
 
     root = tmp_path / "cifar"
-    ds = CIFAR10ClassificationDataset(root=str(root), train=True, download=True)
+    ds = load_classification_dataset("cifar10", root=root, train=True, download=True)
     ds.inject_custom_noise(noise_percentage=20.0, seed=42)
     noisy, clean, is_noisy = _label_tensors_for_indices(ds, [0, 1, 2, 3, 4])
     assert int(is_noisy.sum()) > 0

@@ -19,7 +19,7 @@ for entry in (str(SRC), str(SCRIPTS)):
 import yaml
 
 from uqlab.shared.config.classification import ExperimentConfig
-from uqlab.data.setup import prepare_experiment_data
+from uqlab.data.setup import step1_load_dataset_and_splits as prepare_experiment_data
 
 pytestmark = pytest.mark.skip(reason="Experiment facade archived to dead_code/facade/")
 

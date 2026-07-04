@@ -6,8 +6,8 @@ from pathlib import Path
 
 import numpy as np
 
-from uqlab.data.dataset_registry import load_classification_dataset
-from uqlab.data.experiment_loader import sample_indices_for_experiment
+from uqlab.data.datasets.registry import load_classification_dataset
+from uqlab.data.splits.experiment_loader import sample_indices_for_experiment
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 

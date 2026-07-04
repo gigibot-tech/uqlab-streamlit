@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from uqlab.data.dataset_registry import (
+from uqlab.data.datasets.registry import (
     DATASET_SPECS,
     get_dataset_spec,
     list_dataset_names,

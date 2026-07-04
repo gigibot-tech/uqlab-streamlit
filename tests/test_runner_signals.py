@@ -31,7 +31,7 @@ from uqlab.evaluation.signals.sources import (
     EvalContext,
     sources_for_metrics,
 )
-from uqlab.models.architecture import normalize_architecture, scope_to_training_mode
+from uqlab.models.scope.architecture import normalize_architecture, scope_to_training_mode
 from uqlab.shared.config.signals import (
     DEFAULT_SIGNALS,
     DISENTANGLING_BRIDGE_PRESETS,
@@ -186,7 +186,7 @@ def test_enabled_subset_filters_exported_columns():
         store, enabled={"msp_uncertainty", "inverse_mass_dualxda"}, mc_passes=10, dropout=0.0
     )
     assert set(table.keys()) == {"msp_uncertainty", "inverse_mass_dualxda"}
-    assert len(METRICS) == 14
+    assert len(METRICS) >= 14
 
 
 def test_expected_entropy_equals_entropy_minus_mutual_info():

@@ -14,9 +14,9 @@ class TestDataLoaderWorkers(unittest.TestCase):
     def test_classification_image_dataset_dataloader_workers(self):
         from torch.utils.data import DataLoader
 
-        from uqlab.data.dataset_registry import load_classification_dataset
-        from uqlab.data.image_dataset import ClassificationImageDataset
-        from uqlab.data.preprocessing import get_dataset_image_transform
+        from uqlab.data.datasets.registry import load_classification_dataset
+        from uqlab.data.datasets.image import ClassificationImageDataset
+        from uqlab.data.datasets.preprocessing import get_dataset_image_transform
 
         root = PROJECT_ROOT / "data" / "cifar10n"
         if not root.exists():
@@ -36,9 +36,9 @@ class TestDataLoaderWorkers(unittest.TestCase):
     def test_fashion_mnist_transform_dataloader_workers(self):
         from torch.utils.data import DataLoader
 
-        from uqlab.data.dataset_registry import load_classification_dataset
-        from uqlab.data.image_dataset import ClassificationImageDataset
-        from uqlab.data.preprocessing import get_dataset_image_transform
+        from uqlab.data.datasets.registry import load_classification_dataset
+        from uqlab.data.datasets.image import ClassificationImageDataset
+        from uqlab.data.datasets.preprocessing import get_dataset_image_transform
 
         root = PROJECT_ROOT / "data" / "fashion_mnist"
         ds = load_classification_dataset(
