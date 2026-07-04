@@ -1,0 +1,923 @@
+"""
+Single place to read **and write** outputs from one fast-pilot run.
+
+Every run folder should contain (when successful):
+
+| File | Writer | Paper analogue |
+|------|--------|----------------|
+| ``training_data.csv`` | :func:`persist_run_outputs` | train split stats |
+| ``zwischen/00_eval_setup.pt`` | :func:`save_zwischen_result` (orchestrator) | eval indices |
+| ``zwischen/01..05_*.pt`` | ``runner.phases.eval.collect_uncertainty_signals`` | MC / attribution |
+| ``per_sample_signals.csv`` | ``runner.phases.eval.score_uncertainty_signals`` | ``predict_disentangling`` columns |
+| ``summary.json`` / ``summary.md`` | :func:`persist_run_outputs` | run record |
+| ``signal_formulas.json`` | :func:`persist_run_outputs` | signal provenance |
+| ``checkpoint.pt`` | :func:`save_run_checkpoint` | ``model.fit`` weights |
+| ``results.pt`` | :func:`export_results_pt` | bridge for ``predict_disentangling`` |
+
+See ``docs/features/PAPER_FLOW.md`` for the Keras demo mapping.
+
+Use :func:`load_run_directory` to inspect a run; use :func:`metrics_row_from_run`
+when building ``metrics.csv`` rows.
+"""
+
+from __future__ import annotations
+
+import json
+import math
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Tuple
+
+import pandas as pd
+
+GROUP_CLEAN, GROUP_ALEATORIC, GROUP_EPISTEMIC, GROUP_OOD = 0, 1, 2, 3
+
+GROUP_NAMES: dict[int, str] = {
+    GROUP_CLEAN: "clean",
+    GROUP_ALEATORIC: "aleatoric_like",
+    GROUP_EPISTEMIC: "epistemic_like",
+    GROUP_OOD: "ood_like",
+}
+
+# Columns in ``per_sample_signals.csv`` / ``build_experiment_signal_table``.
+from uqlab_core.evaluation.signals.catalog import signal_names
+
+FAST_PILOT_SIGNAL_NAMES: tuple[str, ...] = tuple(signal_names())
+_EVAL_PACK_TAGS = ("epistemic", "aleatoric", "clean", "ood")
+
+
+def _optional_auroc(source: dict[str, Any], *keys: str) -> float:
+    """AUROC value or ``nan`` when skipped / missing (JSON null, empty pool, etc.)."""
+    for key in keys:
+        if key not in source:
+            continue
+        val = source[key]
+        if val is None:
+            return math.nan
+        try:
+            f = float(val)
+            if f == f:  # not NaN
+                return f
+        except (TypeError, ValueError):
+            continue
+    return math.nan
+
+
+def _coalesce_float(source: dict[str, Any], *keys: str, default: float = 0.0) -> float:
+    """First non-null, numeric value among *keys*, else *default*."""
+    for key in keys:
+        if key not in source or source[key] is None:
+            continue
+        try:
+            value = float(source[key])
+            if value == value:  # not NaN
+                return value
+        except (TypeError, ValueError):
+            continue
+    return default
+
+
+@dataclass(frozen=True)
+class RunArtifacts:
+    """Normalized view of one experiment output directory."""
+
+    run_dir: Path
+    summary_path: Path | None
+    experiment_log_path: Path | None
+    per_sample_path: Path | None
+    results_pt_path: Path | None
+    eval_sizes: dict[str, int] = field(default_factory=dict)
+    one_vs_rest_auroc: list[dict[str, Any]] = field(default_factory=list)
+    train_size: int | None = None
+    source: str = "none"  # "summary.json" | "results.pt" | "none"
+
+    @property
+    def has_data(self) -> bool:
+        return self.source != "none"
+
+    def auroc_by_signal(self) -> dict[str, dict[str, float]]:
+        """``{signal: {"aleatoric": float, "epistemic": float, "ood": float}}``."""
+        out: dict[str, dict[str, float]] = {}
+        for row in self.one_vs_rest_auroc:
+            name = row.get("signal")
+            if not name:
+                continue
+            out[str(name)] = {
+                "aleatoric": _optional_auroc(
+                    row, "aleatoric_like_auroc", "aleatoric_auroc"
+                ),
+                "epistemic": _optional_auroc(
+                    row, "epistemic_like_auroc", "epistemic_auroc"
+                ),
+                "ood": _optional_auroc(row, "ood_like_auroc", "ood_auroc"),
+            }
+        return out
+
+
+def _experiment_log_path(run_dir: Path) -> Path | None:
+    path = run_dir / "experiment.log"
+    return path if path.is_file() else None
+
+
+def load_run_directory(run_dir: Path) -> RunArtifacts:
+    """
+    Load run artifacts from *run_dir*.
+
+    Prefers ``summary.json`` (human-readable, same numbers as the backend).
+    Falls back to ``results.pt`` when only that exists.
+    """
+    run_dir = Path(run_dir)
+    summary_path = run_dir / "summary.json"
+    per_sample_path = run_dir / "per_sample_signals.csv"
+    results_pt_path = run_dir / "results.pt"
+
+    if summary_path.is_file():
+        with summary_path.open() as f:
+            summary = json.load(f)
+        return RunArtifacts(
+            run_dir=run_dir,
+            summary_path=summary_path,
+            experiment_log_path=_experiment_log_path(run_dir),
+            per_sample_path=per_sample_path if per_sample_path.is_file() else None,
+            results_pt_path=results_pt_path if results_pt_path.is_file() else None,
+            eval_sizes=dict(summary.get("eval_sizes") or {}),
+            one_vs_rest_auroc=list(summary.get("one_vs_rest_auroc") or []),
+            train_size=summary.get("train_size"),
+            source="summary.json",
+        )
+
+    if results_pt_path.is_file():
+        return _artifacts_from_results_pt(
+            run_dir, results_pt_path, per_sample_path, summary_path
+        )
+
+    return RunArtifacts(
+        run_dir=run_dir,
+        summary_path=None,
+        experiment_log_path=_experiment_log_path(run_dir),
+        per_sample_path=per_sample_path if per_sample_path.is_file() else None,
+        results_pt_path=None,
+        source="none",
+    )
+
+
+def _artifacts_from_results_pt(
+    run_dir: Path,
+    results_pt_path: Path,
+    per_sample_path: Path,
+    summary_path: Path,
+) -> RunArtifacts:
+    import torch
+
+    data = torch.load(results_pt_path, map_location="cpu", weights_only=False)
+    one_vs_rest: list[dict[str, Any]] = []
+    if "auroc_rows" in data:
+        for row in data["auroc_rows"]:
+            if isinstance(row, dict):
+                signal_name = row.get("signal")
+                alea_val = row.get("aleatoric_auroc", row.get("aleatoric_like_auroc"))
+                epis_val = row.get("epistemic_auroc", row.get("epistemic_like_auroc"))
+                ood_val = row.get("ood_auroc", row.get("ood_like_auroc"))
+            else:
+                signal_name, alea_val, epis_val = row[:3]
+                ood_val = row[3] if len(row) > 3 else None
+            alea_val = float(alea_val.item() if hasattr(alea_val, "item") else alea_val) if alea_val is not None else math.nan
+            epis_val = float(epis_val.item() if hasattr(epis_val, "item") else epis_val) if epis_val is not None else math.nan
+            entry: dict[str, Any] = {
+                "signal": signal_name,
+                "aleatoric_like_auroc": alea_val,
+                "epistemic_like_auroc": epis_val,
+            }
+            if ood_val is not None:
+                entry["ood_like_auroc"] = float(
+                    ood_val.item() if hasattr(ood_val, "item") else ood_val
+                )
+            one_vs_rest.append(entry)
+
+    eval_sizes: dict[str, int] = {}
+    if "eval_group_labels" in data:
+        import numpy as np
+
+        labels = data["eval_group_labels"]
+        if hasattr(labels, "cpu"):
+            labels = labels.cpu().numpy()
+        labels = np.asarray(labels)
+        eval_sizes = {
+            "clean": int((labels == GROUP_CLEAN).sum()),
+            "aleatoric_like": int((labels == GROUP_ALEATORIC).sum()),
+            "epistemic_like": int((labels == GROUP_EPISTEMIC).sum()),
+            "ood_like": int((labels == GROUP_OOD).sum()),
+        }
+
+    return RunArtifacts(
+        run_dir=run_dir,
+        summary_path=summary_path if summary_path.is_file() else None,
+        experiment_log_path=_experiment_log_path(run_dir),
+        per_sample_path=per_sample_path if per_sample_path.is_file() else None,
+        results_pt_path=results_pt_path,
+        eval_sizes=eval_sizes,
+        one_vs_rest_auroc=one_vs_rest,
+        train_size=None,
+        source="results.pt",
+    )
+
+
+def load_per_sample_table(run_dir: Path, *, max_rows: int | None = 500) -> pd.DataFrame | None:
+    """Load ``per_sample_signals.csv`` if present.
+
+    Pass ``max_rows=None`` to load the full table (required for per-group aggregation
+    when eval pools are written clean-first).
+    """
+    path = Path(run_dir) / "per_sample_signals.csv"
+    if not path.is_file():
+        return None
+    df = pd.read_csv(path)
+    if max_rows is not None and len(df) > max_rows:
+        return df.head(max_rows)
+    return df
+
+
+def metrics_row_from_run(run_dir: Path) -> dict[str, Any]:
+    """
+    Build a flat metrics dict for one run (for ``metrics.csv`` / unified loaders).
+
+    Merges AUROC from artifacts with per-signal means from ``results.pt`` when
+    available (summary alone does not carry ``<signal>_mean_*`` columns).
+    """
+    artifacts = load_run_directory(run_dir)
+    metrics: dict[str, Any] = {}
+
+    for signal, scores in artifacts.auroc_by_signal().items():
+        for pack, key_suffix in (
+            ("aleatoric", "aleatoric_auroc"),
+            ("epistemic", "epistemic_auroc"),
+            ("ood", "ood_auroc"),
+        ):
+            val = scores[pack]
+            if val == val:  # not NaN
+                metrics[f"{signal}_{key_suffix}"] = val
+
+    results_pt = run_dir / "results.pt"
+    if results_pt.is_file():
+        metrics.update(_signal_means_from_results_pt(results_pt))
+
+    if "predictions" in _results_pt_keys(results_pt) and results_pt.is_file():
+        import torch
+
+        data = torch.load(results_pt, map_location="cpu", weights_only=False)
+        if "predictions" in data and "eval_clean_labels" in data:
+            pred = data["predictions"]
+            labels = data["eval_clean_labels"]
+            if not isinstance(pred, torch.Tensor):
+                pred = torch.tensor(pred)
+            if not isinstance(labels, torch.Tensor):
+                labels = torch.tensor(labels)
+            metrics["accuracy"] = float((pred == labels).float().mean().item())
+
+    return metrics
+
+
+def _metric_float(metrics: dict[str, Any], key: str, fallback: str | None = None) -> float | None:
+    for k in (key, fallback):
+        if not k or k not in metrics or metrics[k] is None:
+            continue
+        try:
+            v = float(metrics[k])
+            if v == v:  # not NaN
+                return v
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def format_run_metrics_console_lines(metrics: dict[str, Any]) -> list[str]:
+    """Human-readable lines for terminal output after one run."""
+    lines: list[str] = []
+
+    acc = _metric_float(metrics, "accuracy")
+    if acc is not None:
+        lines.append(f"   Accuracy: {acc:.4f}")
+
+    lines.append("   --- Signal means (all eval samples) ---")
+    n_mean_lines = len(lines)
+    for signal in FAST_PILOT_SIGNAL_NAMES:
+        val = _metric_float(metrics, f"{signal}_mean")
+        if val is not None:
+            lines.append(f"   {signal}: {val:.4f}")
+    if len(lines) == n_mean_lines:
+        lines.append("   (no per-signal means — re-run with results.pt)")
+
+    pool_lines: list[str] = []
+    for signal in FAST_PILOT_SIGNAL_NAMES:
+        parts: list[str] = []
+        for tag in _EVAL_PACK_TAGS:
+            val = _metric_float(metrics, f"{signal}_mean_{tag}")
+            if val is not None:
+                parts.append(f"{tag}={val:.4f}")
+        if parts:
+            pool_lines.append(f"   {signal}: {', '.join(parts)}")
+    if pool_lines:
+        lines.append("   --- Means by eval pack ---")
+        lines.extend(pool_lines)
+
+    auroc_lines: list[str] = []
+    for signal in FAST_PILOT_SIGNAL_NAMES:
+        alea = _metric_float(metrics, f"{signal}_aleatoric_auroc")
+        epis = _metric_float(metrics, f"{signal}_epistemic_auroc")
+        ood = _metric_float(metrics, f"{signal}_ood_auroc")
+        if alea is not None or epis is not None or ood is not None:
+            a = f"{alea:.4f}" if alea is not None else "—"
+            e = f"{epis:.4f}" if epis is not None else "—"
+            o = f"{ood:.4f}" if ood is not None else "—"
+            auroc_lines.append(
+                f"   {signal}: aleatoric_auroc={a}, epistemic_auroc={e}, ood_auroc={o}"
+            )
+    if auroc_lines:
+        lines.append("   --- AUROC (one-vs-rest on eval packs) ---")
+        lines.extend(auroc_lines)
+
+    if not lines:
+        lines.append("   (no metrics available)")
+    return lines
+
+
+def print_run_metrics_summary(metrics: dict[str, Any]) -> None:
+    """Print :func:`format_run_metrics_console_lines` to stdout."""
+    for line in format_run_metrics_console_lines(metrics):
+        print(line)
+
+
+def _sweep_key_column(sweep_kind: str) -> str:
+    if sweep_kind == "label_noise":
+        return "noise_percent"
+    if sweep_kind == "dataset_size":
+        return "under_train_per_class"
+    raise ValueError(f"sweep_kind must be 'label_noise' or 'dataset_size', got {sweep_kind!r}")
+
+
+def save_signal_formula_manifest(run_dir: Path, manifest: dict[str, Any]) -> Path:
+    """Write ``signal_formulas.json`` (operands, operators, eval protocol)."""
+    path = Path(run_dir) / "signal_formulas.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w") as f:
+        json.dump(manifest, f, indent=2)
+    return path
+
+
+def save_run_metrics_row_csv(run_dir: Path, metrics: dict[str, Any]) -> Path:
+    """Write one experiment's metrics as a single-row CSV inside the run folder."""
+    path = Path(run_dir) / "metrics_row.csv"
+    pd.DataFrame([metrics]).to_csv(path, index=False)
+    return path
+
+
+def append_metrics_row_to_csv(
+    metrics: dict[str, Any],
+    csv_path: Path,
+    *,
+    sweep_kind: str,
+) -> int:
+    """
+    Append one experiment row to ``metrics.csv`` immediately (dedupe on write).
+
+    Dedupe key: ``(architecture, dataset_size|noise_percent)``; latest
+    ``timestamp`` wins. Returns total row count after write.
+    """
+    csv_path = Path(csv_path)
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
+    key_col = _sweep_key_column(sweep_kind)
+    if key_col not in metrics and sweep_kind == "dataset_size" and "dataset_size" in metrics:
+        metrics = {**metrics, key_col: metrics["dataset_size"]}
+
+    row_df = pd.DataFrame([metrics])
+    if csv_path.is_file():
+        try:
+            existing = pd.read_csv(csv_path)
+        except Exception:
+            existing = pd.DataFrame()
+        combined = pd.concat([existing, row_df], ignore_index=True, sort=False)
+    else:
+        combined = row_df
+
+    if combined.empty:
+        combined.to_csv(csv_path, index=False)
+        return 0
+
+    if {"architecture", key_col}.issubset(combined.columns):
+        if "timestamp" in combined.columns:
+            combined = combined.sort_values("timestamp", kind="stable")
+        combined = combined.drop_duplicates(
+            subset=["architecture", key_col],
+            keep="last",
+        )
+        combined = combined.sort_values(["architecture", key_col]).reset_index(drop=True)
+
+    combined.to_csv(csv_path, index=False)
+    return len(combined)
+
+
+def save_zwischen_result(run_dir: Path, stage: str, payload: dict[str, Any]) -> Path:
+    """
+    Persist intermediate eval artifacts under ``<run_dir>/zwischen/<stage>.pt``.
+
+    Always written during fast-pilot eval so runs can resume/debug without
+    re-running DualXDA or MC dropout.
+    """
+    import torch
+
+    zwischen = Path(run_dir) / "zwischen"
+    zwischen.mkdir(parents=True, exist_ok=True)
+    safe = stage.replace(" ", "_").replace("/", "_")
+    path = zwischen / f"{safe}.pt"
+    torch.save(payload, path)
+    manifest = zwischen / "manifest.json"
+    entries: list[dict[str, str]] = []
+    if manifest.is_file():
+        try:
+            entries = json.loads(manifest.read_text())
+        except json.JSONDecodeError:
+            entries = []
+    entries = [e for e in entries if e.get("stage") != safe]
+    entries.append({"stage": safe, "path": str(path.name)})
+    manifest.write_text(json.dumps(entries, indent=2))
+    return path
+
+
+# --- results.pt read contract (EvalRunArtifacts) ---
+
+import numpy as np
+
+_MC_DROPOUT_SIGNALS = frozenset({"expected_entropy", "mutual_info", "predictive_entropy", "msp_uncertainty"})
+_ATTRIBUTION_SIGNALS = frozenset({
+    "inverse_coherence",
+    "inverse_dominance",
+    "inverse_mass",
+    "inverse_coherence_dualxda",
+    "inverse_dominance_dualxda",
+    "inverse_mass_dualxda",
+    "inverse_coherence_ek_fak",
+    "inverse_dominance_ek_fak",
+    "inverse_mass_ek_fak",
+})
+
+
+def _artifact_as_numpy(tensor) -> np.ndarray:
+    if hasattr(tensor, "detach"):
+        return tensor.detach().cpu().numpy()
+    return np.asarray(tensor)
+
+
+def _lookup_signal_vector(
+    signal_table: dict[str, np.ndarray],
+    signal_id: str,
+) -> np.ndarray | None:
+    from uqlab_core.evaluation.signals.registry import resolve_signal_table_key
+
+    key = resolve_signal_table_key(signal_table, signal_id)
+    if key is None:
+        return None
+    return signal_table[key]
+
+
+def _numpy_signal_table(raw: dict) -> dict[str, np.ndarray]:
+    out: dict[str, np.ndarray] = {}
+    for key, value in raw.items():
+        out[str(key)] = _artifact_as_numpy(value).reshape(-1)
+    return out
+
+
+def _missing_signal_message(path: Path, signal: str, role: str, paired: str) -> str:
+    msg = f"Missing {role} signal {signal!r} in {path}"
+    if signal in _MC_DROPOUT_SIGNALS or paired in _MC_DROPOUT_SIGNALS:
+        msg += (
+            ". MC-dropout metrics are omitted when dropout=0 or mc_passes is too low "
+            f"(enable dropout and include {signal!r} in evaluation.signals)."
+        )
+    elif signal in _ATTRIBUTION_SIGNALS or paired in _ATTRIBUTION_SIGNALS:
+        msg += (
+            ". Attribution metrics require the matching DA backend during the job "
+            f"(evaluation.attribution_backends: dualxda and/or ek_fak, include {signal!r} "
+            "in evaluation.signals)."
+        )
+    return msg
+
+
+@dataclass
+class EvalRunArtifacts:
+    """Runner output consumed by plots, API, and the disentanglement bridge."""
+
+    run_dir: Path | None
+    results_path: Path
+    predictions: np.ndarray
+    signal_table: dict[str, np.ndarray] = field(default_factory=dict)
+
+    @classmethod
+    def from_results_pt(cls, path: Path | str) -> EvalRunArtifacts:
+        import torch
+
+        results_path = Path(path)
+        data = torch.load(results_path, map_location="cpu", weights_only=False)
+        signal_table = _numpy_signal_table(data.get("signal_table") or {})
+
+        if "predictions" in data:
+            predictions = _artifact_as_numpy(data["predictions"]).reshape(-1)
+        elif "eval_clean_labels" in data:
+            predictions = _artifact_as_numpy(data["eval_clean_labels"]).reshape(-1)
+        else:
+            raise KeyError(f"No predictions or eval_clean_labels in {results_path}")
+
+        run_dir = results_path.parent if results_path.name == "results.pt" else None
+        return cls(
+            run_dir=run_dir,
+            results_path=results_path,
+            predictions=predictions.astype(np.int64),
+            signal_table=signal_table,
+        )
+
+    def disentangling_vectors(
+        self,
+        *,
+        aleatoric_signal: str,
+        epistemic_signal: str,
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Vendored ``predict_disentangling`` shape: ``(pred, aleatoric, epistemic)``."""
+        path = self.results_path
+        aleatoric = _lookup_signal_vector(self.signal_table, aleatoric_signal)
+        if aleatoric is None:
+            raise KeyError(
+                _missing_signal_message(path, aleatoric_signal, "aleatoric", epistemic_signal)
+            )
+        epistemic = _lookup_signal_vector(self.signal_table, epistemic_signal)
+        if epistemic is None:
+            raise KeyError(
+                _missing_signal_message(path, epistemic_signal, "epistemic", aleatoric_signal)
+            )
+        predictions = self.predictions
+
+        n = len(predictions)
+        if len(aleatoric) != n or len(epistemic) != n:
+            raise ValueError(
+                f"Signal length mismatch in {path}: pred={n}, "
+                f"alea={len(aleatoric)}, epi={len(epistemic)}"
+            )
+
+        return (
+            predictions,
+            aleatoric.astype("float64"),
+            epistemic.astype("float64"),
+        )
+
+
+def uncertainty_vectors_from_results_pt(
+    results_path: Path | str,
+    *,
+    aleatoric_signal: str,
+    epistemic_signal: str,
+) -> Tuple["np.ndarray", "np.ndarray", "np.ndarray"]:
+    """Backward-compatible wrapper around :class:`EvalRunArtifacts`."""
+    return EvalRunArtifacts.from_results_pt(results_path).disentangling_vectors(
+        aleatoric_signal=aleatoric_signal,
+        epistemic_signal=epistemic_signal,
+    )
+
+
+def _results_pt_keys(path: Path) -> set[str]:
+    if not path.is_file():
+        return set()
+    import torch
+
+    data = torch.load(path, map_location="cpu", weights_only=False)
+    return set(data.keys()) if isinstance(data, dict) else set()
+
+
+def _signal_means_from_results_pt(results_pt: Path) -> dict[str, float]:
+    """
+    Extract per-signal means, FILTERED BY EVALUATION POOL.
+    
+    This function performs the critical "pool filtering" step that creates
+    separate uncertainty curves for different evaluation groups in sweep plots.
+    
+    Input (from results.pt):
+        - signal_table: dict[signal_name → tensor[N_samples]]
+          Example: {"mutual_info": [0.15, 0.23, 0.08, 0.12, ...]}
+        - eval_group_labels: tensor[N_samples] with values 0, 1, or 2
+          Example: [GROUP_EPISTEMIC, GROUP_EPISTEMIC, GROUP_ALEATORIC, GROUP_CLEAN, ...]
+    
+    Output:
+        - Dict with overall means AND pool-filtered means:
+          {
+            "mutual_info_mean": 0.18,  # Mean across ALL samples
+            "mutual_info_mean_epistemic": 0.25,  # Mean of epistemic samples ONLY
+            "mutual_info_mean_aleatoric": 0.075, # Mean of aleatoric samples ONLY
+            "mutual_info_mean_clean": 0.12,      # Mean of clean samples ONLY
+            ...
+          }
+    
+    These pool-filtered means become the Y-values in the three-line sweep plot!
+    See POOL_FILTERED_SWEEP_PLOT_DATA_FLOW.md for complete explanation.
+    """
+    import numpy as np
+    import torch
+
+    # Load saved evaluation results
+    data = torch.load(results_pt, map_location="cpu", weights_only=False)
+    if "signal_table" not in data:
+        return {}
+
+    # Extract signal_table: dict or DataFrame with per-sample uncertainty values
+    signal_table = data["signal_table"]
+    if hasattr(signal_table, "columns"):
+        # DataFrame format: convert to dict of numpy arrays
+        signal_iter = {name: signal_table[name].to_numpy() for name in signal_table.columns}
+    elif isinstance(signal_table, dict):
+        # Dict format: ensure all values are numpy arrays
+        signal_iter = {}
+        for name, values in signal_table.items():
+            if hasattr(values, "cpu"):
+                values = values.cpu().numpy()
+            signal_iter[name] = np.asarray(values)
+    else:
+        return {}
+
+    # Extract eval_group_labels: which pool does each sample belong to?
+    # GROUP_CLEAN = 0, GROUP_ALEATORIC = 1, GROUP_EPISTEMIC = 2
+    group_labels = data.get("eval_group_labels")
+    if group_labels is not None and hasattr(group_labels, "cpu"):
+        group_labels = group_labels.cpu().numpy()
+    elif group_labels is not None:
+        group_labels = np.asarray(group_labels)
+
+    metrics: dict[str, float] = {}
+    
+    # For each uncertainty signal (mutual_info, predictive_entropy, etc.)...
+    for name, values in signal_iter.items():
+        if values is None or len(values) == 0:
+            continue
+        
+        # Compute OVERALL mean (all samples, no filtering)
+        metrics[f"{name}_mean"] = float(np.nanmean(values))
+        
+        # ========== POOL FILTERING: Compute separate means per evaluation group ==========
+        # This is what creates the separate lines in the sweep plot!
+        
+        if group_labels is not None and group_labels.shape == values.shape:
+            for tag, code in (
+                ("epistemic", GROUP_EPISTEMIC),
+                ("aleatoric", GROUP_ALEATORIC),
+                ("clean", GROUP_CLEAN),
+                ("ood", GROUP_OOD),
+            ):
+                # Create boolean mask: True for samples in this pool, False otherwise
+                mask = group_labels == code
+                
+                # Only compute mean if this pool has at least one sample
+                if mask.any():
+                    # Filter values to ONLY this pool's samples and compute mean
+                    pool_values = values[mask]
+                    metrics[f"{name}_mean_{tag}"] = float(np.nanmean(pool_values))
+                    
+                    # Example:
+                    # If values = [0.15, 0.23, 0.08, 0.12] and mask = [True, True, False, False]
+                    # Then pool_values = [0.15, 0.23] and mean = 0.19
+
+    # Row-1 plot proxies: mean_total_* aliases for notebooks; values are MC-dropout signals.
+    # total = predictive_entropy, epistemic = mutual_info, aleatoric = total − epistemic.
+    if "predictive_entropy_mean" in metrics:
+        metrics["mean_total_uncertainty"] = metrics["predictive_entropy_mean"]
+    if "mutual_info_mean" in metrics:
+        metrics["mean_epistemic_uncertainty"] = metrics["mutual_info_mean"]
+    if "mean_total_uncertainty" in metrics and "mean_epistemic_uncertainty" in metrics:
+        metrics["mean_aleatoric_uncertainty"] = (
+            metrics["mean_total_uncertainty"] - metrics["mean_epistemic_uncertainty"]
+        )
+
+    return metrics
+
+
+@dataclass(frozen=True)
+class WrittenArtifacts:
+    """Paths written during :func:`persist_run_outputs` (disk contract)."""
+
+    training_data_csv: Path | None = None
+    eval_setup_zwischen: Path | None = None
+    per_sample_signals_csv: Path | None = None
+    summary_json: Path | None = None
+    summary_md: Path | None = None
+    signal_formulas_json: Path | None = None
+    checkpoint_pt: Path | None = None
+    results_pt: Path | None = None
+
+    def labeled_paths(self) -> list[tuple[str, Path | None]]:
+        return [
+            ("training_data.csv", self.training_data_csv),
+            ("zwischen/00_eval_setup", self.eval_setup_zwischen),
+            ("per_sample_signals.csv", self.per_sample_signals_csv),
+            ("summary.json", self.summary_json),
+            ("summary.md", self.summary_md),
+            ("signal_formulas.json", self.signal_formulas_json),
+            ("checkpoint.pt", self.checkpoint_pt),
+            ("results.pt", self.results_pt),
+        ]
+
+
+def save_run_checkpoint(
+    results_dir: Path,
+    *,
+    model,
+    prior_epoch_loaded: int,
+    epochs: int,
+    hidden_dim: int,
+    dropout: float,
+    num_classes: int,
+    dinov2_model: str,
+) -> Path | None:
+    """Write ``checkpoint.pt`` (model weights for export/resume)."""
+    import torch
+
+    model.eval()
+    for module in model.modules():
+        module._forward_hooks.clear()
+        module._forward_pre_hooks.clear()
+        module._backward_hooks.clear()
+
+    checkpoint = {
+        "model": model,
+        "model_state_dict": model.state_dict(),
+        "epoch": prior_epoch_loaded + epochs,
+        "loss": 0.0,
+        "config": {
+            "hidden_dim": hidden_dim,
+            "dropout": dropout,
+            "num_classes": num_classes,
+            "dinov2_model": dinov2_model,
+        },
+    }
+    path = results_dir / "checkpoint.pt"
+    try:
+        torch.save(checkpoint, path)
+    except Exception:
+        return None
+    return path
+
+
+def export_results_pt(
+    results_dir: Path,
+    *,
+    uq: dict,
+    mean_pred_det,
+    train_dataset,
+    eval_inputs,
+    mode: str,
+    eval_clean_labels,
+    eval_is_noisy,
+    eval_group_labels,
+    clean_eval_pack: dict,
+    aleatoric_eval_pack: dict,
+    epistemic_eval_pack: dict,
+    ood_eval_pack: dict | None,
+    signal_table: dict,
+    auroc_rows: list,
+) -> Path | None:
+    """Write ``results.pt`` for sweep pools and ``ExperimentDisentanglingModel`` bridge."""
+    import torch
+
+    mean_for_results = uq.get("mean_prediction") if uq else mean_pred_det
+    if mean_for_results is None:
+        raise TypeError("collect_uncertainty_signals() returned no mean predictions for results export")
+
+    eval_packs_for_export = [clean_eval_pack, aleatoric_eval_pack, epistemic_eval_pack]
+    if ood_eval_pack is not None and len(ood_eval_pack.get("features", [])) > 0:
+        eval_packs_for_export.append(ood_eval_pack)
+
+    results_data = {
+        "predictions": mean_for_results.argmax(dim=1),
+        "confidences": mean_for_results.max(dim=1).values,
+        "mean_prediction_deterministic": mean_pred_det,
+        "train_embeddings": getattr(train_dataset, "features", None),
+        "train_images": eval_inputs.new_empty((0,)) if not hasattr(train_dataset, "features") else None,
+        "train_labels": train_dataset.clean_labels,
+        "train_noisy_labels": train_dataset.targets,
+        "train_is_noisy": train_dataset.is_noisy,
+        "train_indices": train_dataset.original_indices,
+        "eval_embeddings": eval_inputs if mode == "embeddings" else None,
+        "eval_images": eval_inputs if mode == "images" else None,
+        "eval_clean_labels": eval_clean_labels,
+        "eval_noisy_labels": torch.cat(
+            [p["noisy_labels"] for p in eval_packs_for_export], dim=0
+        ),
+        "eval_is_noisy": eval_is_noisy,
+        "eval_group_labels": eval_group_labels,
+        "eval_indices": torch.cat(
+            [p["original_indices"] for p in eval_packs_for_export], dim=0
+        ),
+        "signal_table": signal_table,
+        "auroc_rows": auroc_rows,
+    }
+    path = results_dir / "results.pt"
+    try:
+        torch.save(results_data, path)
+    except Exception:
+        return None
+    return path
+
+
+def persist_run_outputs(
+    results_dir: Path,
+    *,
+    train_dataset,
+    config_dict: dict,
+    summary: dict,
+    signal_formulas: dict,
+    config_ns,
+    split_spec,
+    auroc_rows: list,
+    clf_rows: list,
+    per_sample_csv_path: Path | None,
+    eval_setup_zwischen_path: Path | None,
+    model,
+    prior_epoch_loaded: int,
+    epochs: int,
+    hidden_dim: int,
+    dropout: float,
+    num_classes: int,
+    dinov2_model: str,
+    uq: dict,
+    mean_pred_det,
+    eval_inputs,
+    mode: str,
+    eval_clean_labels,
+    eval_is_noisy,
+    eval_group_labels,
+    clean_eval_pack: dict,
+    aleatoric_eval_pack: dict,
+    epistemic_eval_pack: dict,
+    ood_eval_pack: dict | None,
+    signal_table: dict,
+) -> WrittenArtifacts:
+    """Persist all post-eval disk artifacts for one run."""
+    from uqlab_core.evaluation.reporting import (
+        persist_experiment_summaries,
+        save_training_data_csv,
+    )
+
+    results_dir.mkdir(parents=True, exist_ok=True)
+
+    training_csv = results_dir / "training_data.csv"
+    save_training_data_csv(
+        output_path=training_csv,
+        train_dataset=train_dataset,
+        config=config_dict,
+    )
+
+    persist_experiment_summaries(
+        results_dir,
+        summary=summary,
+        args=config_ns,
+        split_spec=split_spec,
+        train_size=len(train_dataset),
+        eval_sizes=summary["eval_sizes"],
+        auroc_rows=auroc_rows,
+        clf_rows=clf_rows,
+    )
+
+    formulas_path = save_signal_formula_manifest(results_dir, signal_formulas)
+
+    checkpoint_path = save_run_checkpoint(
+        results_dir,
+        model=model,
+        prior_epoch_loaded=prior_epoch_loaded,
+        epochs=epochs,
+        hidden_dim=hidden_dim,
+        dropout=dropout,
+        num_classes=num_classes,
+        dinov2_model=dinov2_model,
+    )
+
+    results_path = export_results_pt(
+        results_dir,
+        uq=uq,
+        mean_pred_det=mean_pred_det,
+        train_dataset=train_dataset,
+        eval_inputs=eval_inputs,
+        mode=mode,
+        eval_clean_labels=eval_clean_labels,
+        eval_is_noisy=eval_is_noisy,
+        eval_group_labels=eval_group_labels,
+        clean_eval_pack=clean_eval_pack,
+        aleatoric_eval_pack=aleatoric_eval_pack,
+        epistemic_eval_pack=epistemic_eval_pack,
+        ood_eval_pack=ood_eval_pack,
+        signal_table=signal_table,
+        auroc_rows=auroc_rows,
+    )
+
+    return WrittenArtifacts(
+        training_data_csv=training_csv,
+        eval_setup_zwischen=eval_setup_zwischen_path,
+        per_sample_signals_csv=per_sample_csv_path,
+        summary_json=results_dir / "summary.json",
+        summary_md=results_dir / "summary.md",
+        signal_formulas_json=formulas_path,
+        checkpoint_pt=checkpoint_path,
+        results_pt=results_path,
+    )
