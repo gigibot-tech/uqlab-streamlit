@@ -26,7 +26,7 @@ src/uqlab/models/classification_models.py:14:class EmbeddingDataset(Dataset):
 src/uqlab/evaluation/classification/models.py:7:EmbeddingDataset = _models.EmbeddingDataset
 src/uqlab/evaluation/classification/models.py:10:__all__ = ["EmbeddingDataset", "EmbeddingDropoutMLP"]
 src/uqlab/evaluation/classification/data_loader.py:387:        train_dataset: EmbeddingDataset with pre-extracted DINOv2 embeddings
-src/uqlab/evaluation/classification/__init__.py:39:from uqlab.models.classification_models import EmbeddingDataset, EmbeddingDropoutMLP
+src/uqlab/evaluation/classification/__init__.py:39:from uqlab.models.factory.classification_models import EmbeddingDataset, EmbeddingDropoutMLP
 src/uqlab/evaluation/classification/__init__.py:52:from uqlab.evaluation.classification.models import EmbeddingDataset
 ```
 

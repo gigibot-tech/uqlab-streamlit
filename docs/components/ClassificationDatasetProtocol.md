@@ -18,7 +18,7 @@ src/uqlab/data/classification_dataset.py:11:class ClassificationDatasetProtocol(
 ## Usage Locations
 
 ```
-src/uqlab/data/dataset_registry.py:11:from uqlab.data.classification_dataset import ClassificationDatasetProtocol, dataset_clean_labels
+src/uqlab/data/dataset_registry.py:11:from uqlab.data.datasets.protocol import ClassificationDatasetProtocol, dataset_clean_labels
 src/uqlab/data/dataset_registry.py:127:) -> ClassificationDatasetProtocol:
 src/uqlab/data/classification_dataset.py:11:class ClassificationDatasetProtocol(Protocol):
 ```
@@ -26,7 +26,7 @@ src/uqlab/data/classification_dataset.py:11:class ClassificationDatasetProtocol(
 ## Related Components (Base Term: ClassificationDatasetProtocol)
 
 ```
-src/uqlab/data/dataset_registry.py:11:from uqlab.data.classification_dataset import ClassificationDatasetProtocol, dataset_clean_labels
+src/uqlab/data/dataset_registry.py:11:from uqlab.data.datasets.protocol import ClassificationDatasetProtocol, dataset_clean_labels
 src/uqlab/data/dataset_registry.py:127:) -> ClassificationDatasetProtocol:
 src/uqlab/data/classification_dataset.py:11:class ClassificationDatasetProtocol(Protocol):
 ```

@@ -2,15 +2,15 @@
 
 Maps the Keras `InformationTheoreticModel` / `calculate_disentanglement_error` demo to UQLab modules and on-disk artifacts.
 
-**If you only read one function:** [`run_experiment_core`](../../src/uqlab/runner/experiment_core.py) (or [`run_train_and_eval_phases`](../../src/uqlab/runner/train_eval.py) in notebooks).
+**If you only read one function:** [`run_experiment_core`](../../src/uqlab/runner/experiment_core.py) (CLI) or [`run_notebook_experiment`](../../src/uqlab/runner/notebook_run.py) (notebooks).
 
-## Single run (`run_experiment_core` or `run_train_and_eval_phases`)
+## Single run (`run_experiment_core` or `run_paper_experiment`)
 
 | Paper (Keras) | UQLab | Module | Artifact |
 |---|---|---|---|
-| `model.fit(x, y)` | load + train | [`data/setup.py`](../../src/uqlab/data/setup.py) → [`data/packs.py`](../../src/uqlab/data/packs.py) + [`models/training.py`](../../src/uqlab/models/training.py) | `checkpoint.pt`, `training_data.csv` |
-| MC → `expected_entropy`, `mutual_information` | MC dropout signals | [`runner/phases/eval.py`](../../src/uqlab/runner/phases/eval.py) `collect_uncertainty_signals` | `zwischen/01..05_*.pt`, `signal_table` in `results.pt` |
-| `predict_disentangling(x)` | per-sample vectors | `score_uncertainty_signals` + bridge read | `per_sample_signals.csv`, `results.pt` |
+| `model.fit(x, y)` | load + train | [`build_run_data`](../../src/uqlab/data/pipeline.py) → [`run_paper_experiment`](../../src/uqlab/runner/train_eval.py) → [`models/training.py`](../../src/uqlab/models/training.py) | `checkpoint.pt`, `training_data.csv` |
+| MC → `expected_entropy`, `mutual_information` | MC dropout signals | [`run_uncertainty_eval`](../../src/uqlab/evaluation/pipeline.py) step 1 | `zwischen/01..05_*.pt`, `signal_table` in `results.pt` |
+| `predict_disentangling(x)` | per-sample vectors | `run_uncertainty_eval` step 2 | `per_sample_signals.csv`, `results.pt` |
 | run record | summary dict | [`evaluation/reporting/run_summary.py`](../../src/uqlab/evaluation/reporting/run_summary.py) | `summary.json`, `summary.md`, `signal_formulas.json` |
 
 ### SAVE vs LOG (one run)
@@ -19,7 +19,7 @@ Maps the Keras `InformationTheoreticModel` / `calculate_disentanglement_error` d
 |---|---|---|
 | `print_experiment_configuration`, `log_run_data_context`, `log_run_complete` | yes | no |
 | `save_zwischen_result` | no | `zwischen/*.pt` |
-| `score_uncertainty_signals` | no | `per_sample_signals.csv` |
+| `score_uncertainty_signals` | no | `per_sample_signals.csv` (via `run_uncertainty_eval`) |
 | `persist_run_outputs` | no | `summary.json`, `results.pt`, `checkpoint.pt`, … |
 
 ## Many runs (campaign — NOT in single run)
@@ -36,20 +36,30 @@ Maps the Keras `InformationTheoreticModel` / `calculate_disentanglement_error` d
 
 ## Notebook minimal flow
 
-Same 3 cells as [`disentanglement_error/examples/CIFAR10_it_demo.ipynb`](../../disentanglement_error/examples/CIFAR10_it_demo.ipynb) — see [`notebooks/cifar10_paper_flow.ipynb`](../../notebooks/cifar10_paper_flow.ipynb).
-
-After you have `config`, `run_cfg`, `data_pack`, `split_spec`, `device`:
+See [`notebooks/cifar10_paper_flow.ipynb`](../../notebooks/cifar10_paper_flow.ipynb) or the four-region notebook guide [`four-region-notebook.md`](four-region-notebook.md).
 
 ```python
-from uqlab.runner.train_eval import run_train_and_eval_phases
+from uqlab.data import build_run_data
+from uqlab.runner.notebook_run import setup_notebook, run_notebook_experiment
 
-result = run_train_and_eval_phases(
+ctx = setup_notebook(seed=42)
+bundle = build_run_data(config, ctx.root, seed=ctx.seed, device=ctx.device)
+# … or one call:
+run_notebook_experiment(config, results_dir, project_root=ctx.root, device=ctx.device)
+```
+
+For manual control after data:
+
+```python
+from uqlab.runner.train_eval import run_paper_experiment
+
+result = run_paper_experiment(
     config=config,
     run_cfg=run_cfg,
     results_dir=results_dir,
     run_cache_dir=results_dir / "cache",
-    data_pack=data_pack,
-    split_spec=split_spec,
+    data_pack=bundle.data_pack,
+    split_spec=bundle.split_spec,
     device=device,
     seed=seed,
     training_config=config.training,
@@ -57,11 +67,9 @@ result = run_train_and_eval_phases(
     model_config=config.model,
     eval_config=config.evaluation,
     ds_spec=run_cfg.dataset_spec,
-    persist=True,   # False → no summary.json / results.pt
+    persist=True,
     log=True,
 )
-signal_table = result["signal_table"]
-summary = result.get("summary")  # when persist=True
 ```
 
-You still need **`prepare_experiment_data`** + **`prepare_run_data_context`** before this block (data loading is not duplicated inside `run_train_and_eval_phases`).
+Call **`build_run_data`** once before `run_paper_experiment` (data is not duplicated inside the train/eval block).

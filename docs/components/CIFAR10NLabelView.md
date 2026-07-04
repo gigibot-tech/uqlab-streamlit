@@ -18,7 +18,7 @@ src/uqlab/data/loaders.py:221:class CIFAR10NLabelView(Dataset):
 ## Usage Locations
 
 ```
-src/uqlab/evaluation/legacy/metrics/acquisition_functions.py:16:from uqlab.data.loaders.cifar10n_loader import CIFAR10NDataset, CIFAR10NLabelView
+src/uqlab/evaluation/legacy/metrics/acquisition_functions.py:16:from uqlab.data.datasets.loaders.cifar10n_loader import CIFAR10NDataset, CIFAR10NLabelView
 src/uqlab/evaluation/legacy/metrics/acquisition_functions.py:297:                train_dataset_wrapped = CIFAR10NLabelView(sample_dataset, label_mode='noisy')
 src/uqlab/evaluation/legacy/triage/dualxda_axioms.py:89:      - CIFAR10NLabelView delegating to base_dataset
 src/uqlab/evaluation/legacy/triage/dualxda_axioms.py:103:    # CIFAR10NLabelView delegates via __getattr__ to base_dataset
@@ -33,7 +33,7 @@ src/uqlab/data/loaders/__init__.py:13:    "CIFAR10NLabelView",
 ## Related Components (Base Term: CIFAR10NLabelView)
 
 ```
-src/uqlab/evaluation/legacy/metrics/acquisition_functions.py:16:from uqlab.data.loaders.cifar10n_loader import CIFAR10NDataset, CIFAR10NLabelView
+src/uqlab/evaluation/legacy/metrics/acquisition_functions.py:16:from uqlab.data.datasets.loaders.cifar10n_loader import CIFAR10NDataset, CIFAR10NLabelView
 src/uqlab/evaluation/legacy/metrics/acquisition_functions.py:297:                train_dataset_wrapped = CIFAR10NLabelView(sample_dataset, label_mode='noisy')
 src/uqlab/evaluation/legacy/triage/dualxda_axioms.py:89:      - CIFAR10NLabelView delegating to base_dataset
 src/uqlab/data/loaders.py:221:class CIFAR10NLabelView(Dataset):

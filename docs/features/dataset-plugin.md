@@ -38,7 +38,7 @@ Implementations: `CIFAR10NDataset`, `MNISTDataset`.
 
 ## DatasetSpec registry
 
-Registered in `uqlab.data.dataset_registry`:
+Registered in `uqlab.data.datasets.registry`:
 
 - `name`, `label`, `num_classes`, `default_root`
 - `supports_human_noise` (CIFAR-10N only)
@@ -59,8 +59,9 @@ paths:
 
 ## Adding a dataset
 
-1. Add loader implementing the protocol under `src/uqlab/data/loaders/`.
-2. Register `DatasetSpec` in `dataset_registry.py`.
+1. Add loader implementing the protocol under `src/uqlab/data/datasets/loaders/` (private).
+2. Register `DatasetSpec` in `datasets/registry.py`.
+3. **Do not** export the loader from `loaders/__init__.py` — callers use `load_classification_dataset(name, ...)`.
 3. Extend `DATASET_CATALOG` via registry (orchestrator `dataset_config.py`).
 4. Add `fallback_dataset_stats()` entry for offline UI.
 5. No backend change required until stats API is extended separately.

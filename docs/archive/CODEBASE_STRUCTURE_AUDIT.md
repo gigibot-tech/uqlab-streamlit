@@ -95,7 +95,7 @@ src/uqlab/evaluation/classification/
 ├── feature_extractor.py           # Real implementation
 ├── hydra_wrapper.py               # Real implementation
 ├── model_factory.py               # Real implementation
-├── models.py                      # SHIM → uqlab.models.classification_models
+├── models.py                      # SHIM → uqlab.models.factory.classification_models
 ├── signal_formula_specs.py        # Real implementation
 ├── utils.py                       # Real implementation
 ├── watsonx_streamlit.py           # Real implementation
@@ -119,7 +119,7 @@ src/uqlab/evaluation/classification/
    - **Status:** COMPATIBILITY LAYER - Actual code is in `src/uqlab/shared/config/`
 
 3. **models.py** - 4 imports (but it's a SHIM)
-   - Redirects to: `uqlab.models.classification_models`
+   - Redirects to: `uqlab.models.factory.classification_models`
    - **Status:** COMPATIBILITY LAYER - Actual code is in `src/uqlab/models/`
 
 4. **evaluation.py** - 3 imports
@@ -154,7 +154,7 @@ from uqlab.shared.config.classification import (
 )
 
 # models.py - SHIM  
-from uqlab.models.classification_models import (
+from uqlab.models.factory.classification_models import (
     EmbeddingDataset, EmbeddingDropoutMLP
 )
 ```

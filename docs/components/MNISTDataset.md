@@ -18,7 +18,7 @@ src/uqlab/data/loaders/mnist_loader.py:15:class MNISTDataset(Dataset):
 ## Usage Locations
 
 ```
-src/uqlab/data/dataset_registry.py:180:        from uqlab.data.loaders.mnist_loader import MNISTDataset
+src/uqlab/data/dataset_registry.py:180:        from uqlab.data.datasets.loaders.mnist_loader import MNISTDataset
 src/uqlab/data/dataset_registry.py:182:        dataset = MNISTDataset(
 src/uqlab/data/loaders/mnist_loader.py:15:class MNISTDataset(Dataset):
 ```
@@ -26,7 +26,7 @@ src/uqlab/data/loaders/mnist_loader.py:15:class MNISTDataset(Dataset):
 ## Related Components (Base Term: MNISTDataset)
 
 ```
-src/uqlab/data/dataset_registry.py:180:        from uqlab.data.loaders.mnist_loader import MNISTDataset
+src/uqlab/data/dataset_registry.py:180:        from uqlab.data.datasets.loaders.mnist_loader import MNISTDataset
 src/uqlab/data/dataset_registry.py:182:        dataset = MNISTDataset(
 src/uqlab/data/loaders/mnist_loader.py:15:class MNISTDataset(Dataset):
 ```

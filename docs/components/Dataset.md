@@ -20,7 +20,7 @@ src/uqlab/evaluation/benchmarks/datatypes.py:13:class Dataset:
 ```
 src/uqlab_classification_backup/models.py:7:EmbeddingDataset = _models.EmbeddingDataset
 src/uqlab_classification_backup/models.py:10:__all__ = ["EmbeddingDataset", "EmbeddingDropoutMLP"]
-src/uqlab_classification_backup/data_loader.py:22:from uqlab.data.loaders.cifar10n_loader import CIFAR10NDataset
+src/uqlab_classification_backup/data_loader.py:22:from uqlab.data.datasets.loaders.cifar10n_loader import CIFAR10NDataset
 src/uqlab_classification_backup/data_loader.py:45:    dataset: Union[datasets.CIFAR10, CIFAR10NDataset],
 src/uqlab_classification_backup/data_loader.py:82:    # Get clean labels - handle both CIFAR10 and CIFAR10NDataset
 src/uqlab_classification_backup/data_loader.py:83:    if isinstance(dataset, CIFAR10NDataset):
@@ -35,7 +35,7 @@ src/uqlab_classification_backup/data_loader.py:128:    # - `CIFAR10NDataset.inje
 ```
 src/uqlab_classification_backup/models.py:7:EmbeddingDataset = _models.EmbeddingDataset
 src/uqlab_classification_backup/models.py:10:__all__ = ["EmbeddingDataset", "EmbeddingDropoutMLP"]
-src/uqlab_classification_backup/data_loader.py:22:from uqlab.data.loaders.cifar10n_loader import CIFAR10NDataset
+src/uqlab_classification_backup/data_loader.py:22:from uqlab.data.datasets.loaders.cifar10n_loader import CIFAR10NDataset
 src/uqlab_classification_backup/data_loader.py:45:    dataset: Union[datasets.CIFAR10, CIFAR10NDataset],
 src/uqlab_classification_backup/data_loader.py:83:    if isinstance(dataset, CIFAR10NDataset):
 ```

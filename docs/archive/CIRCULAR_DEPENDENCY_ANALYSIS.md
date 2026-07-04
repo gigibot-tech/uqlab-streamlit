@@ -76,7 +76,7 @@ The sections below describe the *original* concern (UI reaching into `uqlab.*` i
 #### UI Components → Core Library
 ```python
 # ui_components/workflow/step1_dataset.py
-from uqlab.data.dataset_registry import get_dataset_spec
+from uqlab.data.datasets.registry import get_dataset_spec
 
 # ui_components/workflow/step3_uncertainty.py
 from uqlab_orchestrator.per_class_sweep import generate_per_class_experiments
@@ -89,13 +89,13 @@ from uqlab.shared.config.signals import DEFAULT_SELECTED_SIGNALS
 #### Core Library → Same Modules
 ```python
 # runner/fast_pilot_core.py
-from uqlab.data.dataset_registry import get_dataset_spec  # ← Same import!
+from uqlab.data.datasets.registry import get_dataset_spec  # ← Same import!
 from uqlab.evaluation.signals.formulas import build_signal_formula_manifest
 from uqlab.models.factory import build_model
 
 # runner/pipeline.py
 from uqlab.shared.config.classification import ExperimentConfig
-from uqlab.models.architecture import normalize_architecture
+from uqlab.models.scope.architecture import normalize_architecture
 ```
 
 ---
@@ -194,7 +194,7 @@ Facade for dataset operations.
 Provides stable API for UI components.
 """
 from typing import Dict, Any
-from uqlab.data.dataset_registry import get_dataset_spec as _get_dataset_spec
+from uqlab.data.datasets.registry import get_dataset_spec as _get_dataset_spec
 
 def get_dataset_info(dataset_name: str) -> Dict[str, Any]:
     """
@@ -216,7 +216,7 @@ def get_dataset_info(dataset_name: str) -> Dict[str, Any]:
 
 def list_available_datasets() -> list[str]:
     """Get list of available dataset names."""
-    from uqlab.data.dataset_registry import DATASET_REGISTRY
+    from uqlab.data.datasets.registry import DATASET_REGISTRY
     return list(DATASET_REGISTRY.keys())
 ```
 
@@ -288,7 +288,7 @@ class PerClassConfigFacade:
 #### Before (Bad):
 ```python
 # ui_components/workflow/step1_dataset.py
-from uqlab.data.dataset_registry import get_dataset_spec  # ❌ Direct import
+from uqlab.data.datasets.registry import get_dataset_spec  # ❌ Direct import
 
 def render_step1_dataset():
     spec = get_dataset_spec("cifar10n")
@@ -313,7 +313,7 @@ grep -r "from uqlab\." src/uqlab/ui_components/workflow/
 
 # Replace with facade imports
 # Example:
-# from uqlab.data.dataset_registry import get_dataset_spec
+# from uqlab.data.datasets.registry import get_dataset_spec
 # →
 # from uqlab_orchestrator.dataset_facade import get_dataset_info
 ```

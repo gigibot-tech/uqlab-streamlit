@@ -16,26 +16,26 @@
 from uqlab.shared.config.classification import ExperimentConfig, ModelConfig, DataConfig
 
 # Models
-from uqlab.models.classification_models import EmbeddingDataset, EmbeddingDropoutMLP
+from uqlab.models.factory.classification_models import EmbeddingDataset, EmbeddingDropoutMLP
 from uqlab.models.factory import build_model
-from uqlab.models.feature_extractors import create_feature_extractor, DINOv2FeatureExtractor
+from uqlab.models.features.feature_extractors import create_feature_extractor, DINOv2FeatureExtractor
 
-# Data loading
-from uqlab.data.loaders.cifar10n_loader import CIFAR10NDataset
-from uqlab.data import SplitSpec, EmbeddingOrganizer, sample_indices_for_fast_pilot
-from uqlab.data.fast_pilot_loader import train_feature_model
-from uqlab.data.image_dataset import ClassificationImageDataset, load_image_datasets
+# Data loading — one entrypoint
+from uqlab.data import build_run_data, RunDataBundle, SplitSpec
+from uqlab.data.datasets import load_classification_dataset, get_dataset_spec
 
-# Fast-pilot pipeline
-from uqlab.evaluation.pipeline.data_setup import prepare_fast_pilot_data
-from uqlab.evaluation.pipeline.fast_pilot_eval import collect_uncertainty_signals
+# Four-region (read splits/four_region.py)
+from uqlab.data.splits.four_region import DEFAULT_FOUR_REGION_PRESET
 
-# Evaluation
-from uqlab.evaluation.metrics import binary_auroc, evaluate_three_way_classification
+# Evaluation — one entrypoint for signals
+from uqlab.evaluation import run_uncertainty_eval, UncertaintyEvalResult, EvalSignalConfig
+from uqlab.evaluation.metrics.scoring import binary_auroc, evaluate_three_way_classification
 
-# Training
-from uqlab.training.trainer import Trainer
-from uqlab.training.callbacks import CheckpointCallback
+# Full paper run (train + eval + persist)
+from uqlab.runner.train_eval import run_paper_experiment
+
+# Notebooks
+from uqlab.runner.notebook_run import setup_notebook, run_notebook_experiment, run_four_region_benchmark
 ```
 
 ### Removed legacy package
@@ -108,7 +108,7 @@ from uqlab.shared.config.classification import ExperimentConfig
 
 | Legacy Import | Actual Location | Status |
 |--------------|-----------------|--------|
-| `uqlab.evaluation.classification.models` | `uqlab.models.classification_models` | SHIM |
+| `uqlab.evaluation.classification.models` | `uqlab.models.factory.classification_models` | SHIM |
 
 **Actual Implementation:**
 ```python
@@ -124,7 +124,7 @@ class EmbeddingDropoutMLP(nn.Module):
 
 **Recommended Import:**
 ```python
-from uqlab.models.classification_models import EmbeddingDataset, EmbeddingDropoutMLP
+from uqlab.models.factory.classification_models import EmbeddingDataset, EmbeddingDropoutMLP
 ```
 
 ### Data Loading
@@ -197,7 +197,7 @@ src/uqlab/
 ├── evaluation/
 │   ├── classification/          # Mix of SHIMS and REAL implementations
 │   │   ├── config.py           # SHIM → uqlab.shared.config.classification
-│   │   ├── models.py           # SHIM → uqlab.models.classification_models
+│   │   ├── models.py           # SHIM → uqlab.models.factory.classification_models
 │   │   ├── data_loader.py      # REAL - Data loading utilities
 │   │   ├── evaluation.py       # REAL - Evaluation metrics
 │   │   ├── feature_extractor.py # REAL - Feature extraction
@@ -237,7 +237,7 @@ src/uqlab/
 Are you writing new code?
 ├─ YES → Use direct imports from actual locations
 │         from uqlab.shared.config.classification import ExperimentConfig
-│         from uqlab.models.classification_models import EmbeddingDataset
+│         from uqlab.models.factory.classification_models import EmbeddingDataset
 │
 └─ NO → Maintaining existing code?
           ├─ Keep existing imports (they work via shims)
@@ -256,7 +256,7 @@ Need configuration classes?
 
 ```
 Need model classes?
-└─ Use: from uqlab.models.classification_models import EmbeddingDataset
+└─ Use: from uqlab.models.factory.classification_models import EmbeddingDataset
    (Not: from uqlab.evaluation.classification.models import EmbeddingDataset)
 ```
 
@@ -269,7 +269,7 @@ Need data loading utilities?
 │     (This is the actual implementation, not a shim)
 │
 └─ Dataset classes:
-   └─ Use: from uqlab.data.loaders.cifar10n_loader import CIFAR10NDataset
+   └─ Use: from uqlab.data.datasets.loaders.cifar10n_loader import CIFAR10NDataset
 ```
 
 ### For Evaluation
@@ -325,11 +325,11 @@ from backend.app.crud import get_experiment  # Use repositories instead
 from uqlab.shared.config.classification import ExperimentConfig
 
 # Models
-from uqlab.models.classification_models import EmbeddingDropoutMLP
-from uqlab.models.feature_extractors import create_feature_extractor
+from uqlab.models.factory.classification_models import EmbeddingDropoutMLP
+from uqlab.models.features.feature_extractors import create_feature_extractor
 
 # Data
-from uqlab.data.loaders.cifar10n_loader import CIFAR10NDataset
+from uqlab.data.datasets.loaders.cifar10n_loader import CIFAR10NDataset
 from uqlab.evaluation.classification.data_loader import SplitSpec
 
 # Training
@@ -388,7 +388,7 @@ from uqlab.evaluation.classification.models import EmbeddingDataset
 #### After (Direct)
 ```python
 from uqlab.shared.config.classification import ExperimentConfig, ModelConfig
-from uqlab.models.classification_models import EmbeddingDataset
+from uqlab.models.factory.classification_models import EmbeddingDataset
 ```
 
 ### Why Update?
