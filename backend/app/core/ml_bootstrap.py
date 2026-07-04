@@ -54,8 +54,8 @@ def verify_ml_stack() -> None:
 
     try:
         from uqlab_orchestrator.run_spec import validate_run_yaml  # noqa: F401
-        from uqlab.data.dataset_registry import compute_dataset_stats  # noqa: F401
-        from uqlab.data.experiment_loader import sample_indices_for_experiment  # noqa: F401
+        from uqlab.data.datasets.registry import compute_dataset_stats  # noqa: F401
+        from uqlab.data.splits.experiment_loader import sample_indices_for_experiment  # noqa: F401
         from uqlab.runner.experiment_core import run_experiment_core
         from uqlab.evaluation.reporting.result_writers import build_results_markdown
         from uqlab.evaluation.signals.registry import (
@@ -133,11 +133,11 @@ def reload_training_modules() -> None:
         "uqlab.evaluation.signals.primitives",
         "uqlab.evaluation.signals.sources",
         "uqlab.shared.config.signals",
-        "uqlab.data.loaders.cifar10_loader",
-        "uqlab.data.dataset_registry",
+        "uqlab.data.datasets.loaders.cifar10_loader",
+        "uqlab.data.datasets.registry",
         "uqlab.evaluation.metrics",
         "uqlab.evaluation.reporting.result_writers",
-        "uqlab.data.experiment_loader",
+        "uqlab.data.splits.experiment_loader",
         "uqlab.data.setup",
         "uqlab.runner.phases.config_view",
         "uqlab.runner.phases.eval",

@@ -46,10 +46,10 @@ class DirectExecutor(TrainingExecutor):
     def _verify_imports(self) -> None:
         """Verify that the ML stack and runner entry import cleanly."""
         try:
-            from uqlab.data.preprocessing import get_dataset_image_transform
+            from uqlab.data.datasets.preprocessing import get_dataset_image_transform
             from uqlab.runner.experiment_core import run_experiment_core
             from uqlab.shared.config.classification import ExperimentConfig
-            from uqlab.models.classification_models import EmbeddingDataset
+            from uqlab.models.factory.classification_models import EmbeddingDataset
 
             assert get_dataset_image_transform("cifar10") is not None
             assert EmbeddingDataset is not None and ExperimentConfig is not None

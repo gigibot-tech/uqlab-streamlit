@@ -22,7 +22,7 @@ for _path in (_SRC, _PROJECT_ROOT):
 import requests
 import streamlit as st
 
-from uqlab.data.dataset_registry import get_dataset_spec
+from uqlab.data.datasets.registry import get_dataset_spec
 from uqlab_orchestrator import (
     launch_benchmark_both,
     launch_benchmark_primary,

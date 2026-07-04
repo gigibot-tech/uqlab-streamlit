@@ -23,7 +23,7 @@ router = APIRouter()
 
 def _resolve_dataset_root(dataset_name: str) -> Path:
     """Resolve on-disk root via the shared registry (not CIFAR-10N-only)."""
-    from uqlab.data.dataset_registry import resolve_data_root
+    from uqlab.data.datasets.registry import resolve_data_root
 
     if DATA_ROOT_OVERRIDE:
         return Path(DATA_ROOT_OVERRIDE)
@@ -42,7 +42,7 @@ def _should_download(dataset_name: str, root: Path) -> bool:
 @router.get("")
 async def list_datasets() -> dict[str, Any]:
     """List datasets registered in the plugin registry."""
-    from uqlab.data.dataset_registry import DATASET_SPECS
+    from uqlab.data.datasets.registry import DATASET_SPECS
 
     return {
         "datasets": [
@@ -73,7 +73,7 @@ async def get_dataset_stats_by_name(
 
     Supports: ``cifar10``, ``cifar10n``, ``mnist``.
     """
-    from uqlab.data.dataset_registry import compute_dataset_stats, get_dataset_spec, list_dataset_names
+    from uqlab.data.datasets.registry import compute_dataset_stats, get_dataset_spec, list_dataset_names
 
     key = dataset_name.lower()
     if key not in list_dataset_names():
@@ -121,8 +121,8 @@ async def get_confusion_matrix(
     """Confusion matrix for CIFAR-10N human noise splits."""
     import numpy as np
 
-    from uqlab.data.classification_dataset import dataset_clean_labels
-    from uqlab.data.dataset_registry import load_classification_dataset
+    from uqlab.data.datasets.protocol import dataset_clean_labels
+    from uqlab.data.datasets.registry import load_classification_dataset
 
     root = _resolve_dataset_root("cifar10n")
     try:
