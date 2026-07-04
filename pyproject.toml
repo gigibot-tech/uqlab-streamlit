@@ -28,11 +28,13 @@ dev = [
 [tool.uv.workspace]
 members = [
     "src/uqlab",
+    "src/uqlab_core",
     "backend",
 ]
 
 [tool.uv.sources]
 uqlab = { workspace = true }
+uqlab-core = { workspace = true }
 
 [dependency-groups]
 dev = [
