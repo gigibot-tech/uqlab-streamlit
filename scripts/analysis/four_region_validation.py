@@ -25,7 +25,7 @@ SRC = PROJECT_ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from uqlab.evaluation.four_region_validation import (  # noqa: E402
+from uqlab.evaluation.validation.four_region_validation import (  # noqa: E402
     NOISE_SWEEP_PCTS,
     SPARSITY_SWEEP_PCTS,
     build_correlation_report,

@@ -20,13 +20,13 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 import torch
-from uqlab.data.loaders.cifar10n_loader import CIFAR10NDataset
-from uqlab.data.experiment_loader import (
+from uqlab.data.datasets.registry import load_classification_dataset
+from uqlab.data.splits.experiment_loader import (
     EmbeddingOrganizer,
     sample_indices_for_experiment,
     build_and_train_feature_model,
 )
-from uqlab.models.classification_models import EmbeddingDataset
+from uqlab.models.factory.classification_models import EmbeddingDataset
 from uqlab.evaluation.metrics.scoring import binary_auroc
 from uqlab.shared.utils.classification import auto_device, dino_transform, set_seed
 from uqlab.evaluation.signals.mc_dropout import calculate_mc_dropout_uncertainty
@@ -43,12 +43,13 @@ def run_minimal_experiment():
     device = auto_device("auto")
     
     # ========== 2. LOAD DATA (5 lines) ==========
-    dataset = CIFAR10NDataset(
+    dataset = load_classification_dataset(
+        "cifar10n",
         root="./data/cifar10n",
         noise_type="worse_label",
         train=True,
-        transform=dino_transform(),
         download=True,
+        transform=dino_transform(),
     )
     
     # ========== 3. SAMPLE SPLITS (5 lines) ==========
