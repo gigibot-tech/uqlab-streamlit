@@ -31,7 +31,7 @@ def test_mirror_perspectives_single_includes_all():
 def test_resolve_launch_actions_four_region_single_button():
     import copy
 
-    from uqlab.data.class_regions import DEFAULT_FOUR_REGION_PRESET
+    from uqlab.data.splits.four_region import DEFAULT_FOUR_REGION_PRESET
     from uqlab_orchestrator.config.workflow_defaults import default_workflow
     from uqlab_orchestrator.uncertainty import resolve_launch_actions, resolve_launch_plan
 

@@ -7,7 +7,7 @@ import copy
 import numpy as np
 import pytest
 
-from uqlab.data.class_regions import (
+from uqlab.data.splits.four_region import (
     DEFAULT_FOUR_REGION_PRESET,
     apply_region_noise,
     inject_class_label_noise,
@@ -88,7 +88,7 @@ def test_four_region_split_populates_all_pools():
 
 
 def test_build_four_region_experiment_config_uses_dataset_name_and_pixel_mlp():
-    from uqlab.evaluation.four_region_validation import (
+    from uqlab.evaluation.validation.four_region_validation import (
         FOUR_REGION_ARCHITECTURES,
         build_four_region_experiment_config,
     )

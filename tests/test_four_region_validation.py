@@ -8,8 +8,8 @@ import pytest
 import torch
 import torch.nn as nn
 
-from uqlab.data.class_regions import DEFAULT_FOUR_REGION_PRESET
-from uqlab.evaluation.four_region_validation import (
+from uqlab.data.splits.four_region import DEFAULT_FOUR_REGION_PRESET
+from uqlab.evaluation.validation.four_region_validation import (
     NOISE_SWEEP_PCTS,
     SPARSITY_SWEEP_PCTS,
     build_correlation_report,
