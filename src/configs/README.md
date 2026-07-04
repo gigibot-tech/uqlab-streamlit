@@ -2,8 +2,10 @@
 
 Runnable experiment configs for CLI, notebooks, and validation scripts.
 
+**Canonical location:** `src/configs/` (a `configs/` symlink at the repo root remains for backward compatibility).
+
 ```
-configs/
+src/configs/
 ├── experiment/          # Primary experiment presets
 │   ├── default.yaml
 │   ├── fast_pilot.yaml
