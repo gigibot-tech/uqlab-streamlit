@@ -9,7 +9,7 @@ Examples
 --------
   cd uqlab-streamlit
   PYTHONPATH=src python3 scripts/generate_thesis_diagram.py \\
-    --config configs/experiment/default.yaml \\
+    --config src/configs/experiment/default.yaml \\
     --symbolic \\
     -o /tmp/thesis_schematic.pdf
 

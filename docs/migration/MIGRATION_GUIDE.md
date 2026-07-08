@@ -232,10 +232,10 @@ class ModelConfig(BaseModel):
 
 ### Step 5: Create Test Configuration
 
-Create a test config in `configs/test/`:
+Create a test config in `src/configs/test/`:
 
 ```yaml
-# configs/test/test_my_custom_model.yaml
+# src/configs/test/test_my_custom_model.yaml
 dataset:
   name: cifar10n
   noise_type: worse_label
@@ -269,7 +269,7 @@ Run the validation script:
 ```bash
 cd uqlab-streamlit
 python scripts/run_fast_uncertainty_classification.py \
-    configs/test/test_my_custom_model.yaml \
+    src/configs/test/test_my_custom_model.yaml \
     /tmp/test_my_custom_model
 ```
 

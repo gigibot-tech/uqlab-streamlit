@@ -47,7 +47,7 @@ Wizard → YAML field mapping: [`docs/features/workflow-config.md`](docs/feature
 
 ```bash
 PYTHONPATH=src python scripts/runners/run_fast_uncertainty_classification.py \
-  --config configs/experiment/four_region.yaml \
+  --config src/configs/experiment/four_region.yaml \
   --output_dir data/experiments/<run_id>/results
 ```
 
