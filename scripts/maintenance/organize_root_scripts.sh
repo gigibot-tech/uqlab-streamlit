@@ -3,6 +3,8 @@
 
 set -e
 
+cd "$(dirname "$0")/../.."
+
 echo "🗂️  Organizing root-level scripts..."
 
 # Create scripts directory if it doesn't exist
