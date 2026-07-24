@@ -7,9 +7,8 @@ and Results iterate this list (mirror = all other N−1 profiles).
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Iterator
-
 
 # Constants for sweep targets - must be defined before UncertaintyPerspective
 SINGLE_SWEEP_TARGET = "single"
