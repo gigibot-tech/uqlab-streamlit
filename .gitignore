@@ -75,6 +75,11 @@ checkpoints/
 data/*
 !data/.gitkeep
 datasets/
+
+# Data moved to src/data (keep structure, ignore runtime content)
+src/data/*
+!src/data/
+!src/data/.gitkeep
 *.csv
 *.json
 
@@ -134,10 +139,11 @@ Thumbs.db
 .AppleDouble
 .LSOverride
 
-# Ignore everything in src/ except uqlab submodule and uqlab_core package
+# Ignore everything in src/ except uqlab submodule, uqlab_core package, and data
 src/*
 !src/uqlab/
 !src/uqlab_core/
+!src/data/
 
 # Keep important config files
 !.gitignore
