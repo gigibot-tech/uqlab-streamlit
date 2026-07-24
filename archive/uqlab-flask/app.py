@@ -5,9 +5,19 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-SRC = ROOT / "src"
 FLASK_PKG = Path(__file__).resolve().parent
+
+
+def _find_project_root(start: Path) -> Path:
+    """Locate the workspace root by searching for project markers."""
+    for parent in [start, *start.parents]:
+        if (parent / "pyproject.toml").is_file() or (parent / ".git").is_dir():
+            return parent
+    return start.parent.parent
+
+
+ROOT = _find_project_root(FLASK_PKG)
+SRC = ROOT / "src"
 for p in (str(SRC), str(ROOT), str(FLASK_PKG)):
     if p not in sys.path:
         sys.path.insert(0, p)
