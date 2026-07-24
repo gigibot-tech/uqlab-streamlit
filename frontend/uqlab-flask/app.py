@@ -5,7 +5,15 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+def _repository_root() -> Path:
+    start = Path(__file__).resolve().parent
+    for parent in [start, *start.parents]:
+        if (parent / "pyproject.toml").is_file():
+            return parent
+    raise RuntimeError("Could not locate repository root (no pyproject.toml found)")
+
+
+ROOT = _repository_root()
 SRC = ROOT / "src"
 FLASK_PKG = Path(__file__).resolve().parent
 for p in (str(SRC), str(ROOT), str(FLASK_PKG)):
