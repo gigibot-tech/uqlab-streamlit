@@ -5,12 +5,11 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+# /workspace/src/uqlab_flask/app.py -> /workspace
+ROOT = Path(__file__).resolve().parent.parent.parent
 SRC = ROOT / "src"
-FLASK_PKG = Path(__file__).resolve().parent
-for p in (str(SRC), str(ROOT), str(FLASK_PKG)):
-    if p not in sys.path:
-        sys.path.insert(0, p)
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
 
 from flask import Flask
 
@@ -19,10 +18,11 @@ from uqlab_flask.routes.wizard import bp as wizard_bp
 
 
 def create_app() -> Flask:
+    pkg_dir = Path(__file__).resolve().parent
     app = Flask(
         __name__,
-        template_folder=str(FLASK_PKG / "uqlab_flask" / "templates"),
-        static_folder=str(FLASK_PKG / "uqlab_flask" / "static"),
+        template_folder=str(pkg_dir / "templates"),
+        static_folder=str(pkg_dir / "static"),
     )
     app.secret_key = "uqlab-dev-change-in-production"
     app.config["PROJECT_ROOT"] = ROOT
