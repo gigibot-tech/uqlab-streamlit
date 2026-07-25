@@ -7,8 +7,8 @@ import argparse
 from datetime import datetime
 from pathlib import Path
 
-from uqlab.runtime_paths import configs_dir, repository_root
-from uqlab.shared.config.classification import ExperimentConfig
+from uqlab_core.runtime_paths import configs_dir, repository_root
+from uqlab_core.shared.config.classification import ExperimentConfig
 
 _DEFAULT_CONFIG = configs_dir() / "experiment" / "four_region.yaml"
 
