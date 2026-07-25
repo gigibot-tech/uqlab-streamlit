@@ -1,21 +1,27 @@
+"""Categorize top-level markdown files in the repository root."""
+
 import os
 from collections import defaultdict
+from pathlib import Path
 
-# Get all .md files
-md_files = [f for f in os.listdir('.') if f.endswith('.md')]
+# Scan the repository root regardless of where the script is run from.
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+# Get all .md files in the repository root
+md_files = [f for f in os.listdir(REPO_ROOT) if f.endswith(".md")]
 
 # Define categories based on keywords
 categories = {
-    'Architecture & Design': ['ARCHITECTURE', 'DESIGN', 'SCHEMA', 'FLOW', 'STRUCTURE'],
-    'Fixes & Debugging': ['FIX', 'DEBUG', 'ERROR', 'ISSUE', 'TROUBLESHOOT'],
-    'UI & Frontend': ['UI', 'STREAMLIT', 'PROGRESSIVE', 'VISUALIZATION', 'CHART'],
-    'Backend & API': ['BACKEND', 'API', 'STARTUP'],
-    'Refactoring & Cleanup': ['REFACTOR', 'CLEANUP', 'REORGANIZATION', 'CONSOLIDATION'],
-    'Configuration': ['CONFIG', 'SETUP'],
-    'Documentation & Guides': ['README', 'GUIDE', 'QUICKSTART', 'DOCUMENTATION'],
-    'Testing & Validation': ['TEST', 'VALIDATION', 'VERIFICATION'],
-    'Features & Implementation': ['IMPLEMENTATION', 'FEATURE', 'ENHANCEMENT'],
-    'Analysis & Planning': ['ANALYSIS', 'PLAN', 'INVENTORY', 'MAP'],
+    "Architecture & Design": ["ARCHITECTURE", "DESIGN", "SCHEMA", "FLOW", "STRUCTURE"],
+    "Fixes & Debugging": ["FIX", "DEBUG", "ERROR", "ISSUE", "TROUBLESHOOT"],
+    "UI & Frontend": ["UI", "STREAMLIT", "PROGRESSIVE", "VISUALIZATION", "CHART"],
+    "Backend & API": ["BACKEND", "API", "STARTUP"],
+    "Refactoring & Cleanup": ["REFACTOR", "CLEANUP", "REORGANIZATION", "CONSOLIDATION"],
+    "Configuration": ["CONFIG", "SETUP"],
+    "Documentation & Guides": ["README", "GUIDE", "QUICKSTART", "DOCUMENTATION"],
+    "Testing & Validation": ["TEST", "VALIDATION", "VERIFICATION"],
+    "Features & Implementation": ["IMPLEMENTATION", "FEATURE", "ENHANCEMENT"],
+    "Analysis & Planning": ["ANALYSIS", "PLAN", "INVENTORY", "MAP"],
 }
 
 # Categorize files
@@ -25,17 +31,18 @@ uncategorized = []
 for file in sorted(md_files):
     file_upper = file.upper()
     matched = False
-    
+
     for category, keywords in categories.items():
         if any(keyword in file_upper for keyword in keywords):
             categorized[category].append(file)
             matched = True
             break
-    
+
     if not matched:
         uncategorized.append(file)
 
 # Print results
+print(f"Scanning: {REPO_ROOT}")
 print(f"Total .md files: {len(md_files)}\n")
 print("=" * 80)
 
@@ -54,7 +61,7 @@ if uncategorized:
         print(f"  • {f}")
 
 print("\n" + "=" * 80)
-print(f"\nSummary:")
+print("\nSummary:")
 for category in sorted(categories.keys()):
     count = len(categorized[category])
     if count > 0:
