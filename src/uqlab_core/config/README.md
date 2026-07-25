@@ -2,8 +2,11 @@
 
 Runnable experiment configs for CLI, notebooks, and validation scripts.
 
+Canonical location: `src/uqlab_core/config/`. A `configs/` symlink at the repo root
+keeps existing paths backward-compatible.
+
 ```
-configs/
+src/uqlab_core/config/
 ├── experiment/          # Primary experiment presets
 │   ├── default.yaml
 │   ├── fast_pilot.yaml
@@ -16,7 +19,6 @@ configs/
 Load in Python:
 
 ```python
-from pathlib import Path
 from uqlab.runtime_paths import configs_dir
 from uqlab.shared.config.classification import ExperimentConfig
 
