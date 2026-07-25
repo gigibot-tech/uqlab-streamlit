@@ -31,7 +31,7 @@ def normalize_architecture(name: str) -> CanonicalArchitecture:
 
 def normalize_dinov2_model(model_name: str) -> str:
     """Map torch.hub / legacy names to DINOv2 backbone keys (``small``, ``base``, …)."""
-    from uqlab_core.models.backbones.dinov2_names import normalize_dinov2_model_name
+    from uqlab_core.models.backbones.dinov2_backbone import normalize_dinov2_model_name
 
     return normalize_dinov2_model_name(model_name)
 
