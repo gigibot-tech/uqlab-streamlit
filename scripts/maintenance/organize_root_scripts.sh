@@ -3,6 +3,10 @@
 
 set -e
 
+# Run from the repository root so all relative paths are correct regardless of
+# where this script is invoked from.
+cd "$(cd "$(dirname "$0")/../.." && pwd)"
+
 echo "🗂️  Organizing root-level scripts..."
 
 # Create scripts directory if it doesn't exist
