@@ -3,9 +3,9 @@ from __future__ import annotations
 import logging
 
 from app.core.config import settings
-from app.storage.base import StorageBackend
-from app.storage.filesystem import FilesystemStorageBackend
-from app.storage.s3 import S3StorageBackend
+from app.core.storage.base import StorageBackend
+from app.core.storage.filesystem import FilesystemStorageBackend
+from app.core.storage.s3 import S3StorageBackend
 
 logger = logging.getLogger(__name__)
 

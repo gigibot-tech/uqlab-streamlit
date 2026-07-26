@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Union
 from uuid import UUID
 
-from app.storage.factory import get_storage_backend
+from app.core.storage.factory import get_storage_backend
 
 # backend/app/core/runtime_paths.py -> uqlab-streamlit/
 _REPO_ROOT = Path(__file__).resolve().parents[3]
