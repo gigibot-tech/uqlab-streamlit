@@ -24,8 +24,8 @@ def repository_root() -> Path:
 
 
 def configs_dir() -> Path:
-    """Experiment YAML configs (``configs/experiment``, ``configs/test``, …)."""
-    return repository_root() / "configs"
+    """Experiment YAML configs (``uqlab_core/configs/experiment``, ``…/test``, …)."""
+    return repository_root() / "src" / "uqlab_core" / "configs"
 
 
 def data_root() -> Path:
