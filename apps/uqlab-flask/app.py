@@ -5,7 +5,18 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+
+def _repo_root() -> Path:
+    """Locate the checkout root by looking for project markers upward from this file."""
+    path = Path(__file__).resolve().parent
+    while path.parent != path:
+        if (path / "pyproject.toml").is_file() or (path / ".git").is_dir():
+            return path
+        path = path.parent
+    return Path(__file__).resolve().parent.parent.parent
+
+
+ROOT = _repo_root()
 SRC = ROOT / "src"
 FLASK_PKG = Path(__file__).resolve().parent
 for p in (str(SRC), str(ROOT), str(FLASK_PKG)):
