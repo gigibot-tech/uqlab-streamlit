@@ -3,6 +3,9 @@
 
 set -e
 
+# Run from project root regardless of where the script is invoked
+cd "$(dirname "$0")/../.." || exit
+
 echo "🗂️  Organizing root-level scripts..."
 
 # Create scripts directory if it doesn't exist
