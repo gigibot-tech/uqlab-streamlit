@@ -6,9 +6,13 @@ import subprocess
 import sys
 from pathlib import Path
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+CONFIGS_DIR = PROJECT_ROOT / "src" / "uqlab_core" / "configs"
+
+
 def run_test(config_name: str) -> bool:
     """Run single architecture test"""
-    config_path = f"configs/test/{config_name}.yaml"
+    config_path = CONFIGS_DIR / "test" / f"{config_name}.yaml"
     output_dir = f"/tmp/test_{config_name}"
     
     print(f"\n{'='*60}")
@@ -16,8 +20,8 @@ def run_test(config_name: str) -> bool:
     print(f"{'='*60}\n")
     
     cmd = [
-        "python", "scripts/run_fast_uncertainty_classification.py",
-        config_path, output_dir
+        "python", "scripts/runners/run_fast_uncertainty_classification.py",
+        str(config_path), output_dir
     ]
     
     try:
