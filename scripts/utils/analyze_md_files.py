@@ -1,8 +1,14 @@
 import os
+import sys
 from collections import defaultdict
+from pathlib import Path
 
-# Get all .md files
-md_files = [f for f in os.listdir('.') if f.endswith('.md')]
+# Resolve the directory to scan: optional CLI argument, otherwise project root
+# (two levels up from scripts/utils/ where this file lives).
+scan_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parent.parent.parent
+
+# Get all .md files at the scanned directory's root level
+md_files = [f for f in os.listdir(scan_dir) if f.endswith('.md')]
 
 # Define categories based on keywords
 categories = {
