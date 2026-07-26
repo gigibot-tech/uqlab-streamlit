@@ -14,6 +14,7 @@ from typing import Union
 from uuid import UUID
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
+_PACKAGE_ROOT = Path(__file__).resolve().parent
 
 
 def repository_root() -> Path:
@@ -24,8 +25,8 @@ def repository_root() -> Path:
 
 
 def configs_dir() -> Path:
-    """Experiment YAML configs (``configs/experiment``, ``configs/test``, …)."""
-    return repository_root() / "configs"
+    """Experiment YAML configs (``src/uqlab_core/configs/experiment``, ``src/uqlab_core/configs/test``, …)."""
+    return _PACKAGE_ROOT / "configs"
 
 
 def data_root() -> Path:
