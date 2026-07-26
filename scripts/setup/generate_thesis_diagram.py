@@ -8,12 +8,12 @@ Panel B: uncertainty signal pipeline (primitives → signals → metrics).
 Examples
 --------
   cd uqlab-streamlit
-  PYTHONPATH=src python3 scripts/generate_thesis_diagram.py \\
-    --config configs/experiment/default.yaml \\
+  PYTHONPATH=src python3 scripts/setup/generate_thesis_diagram.py \\
+    --config src/uqlab_core/configs/experiment/default.yaml \\
     --symbolic \\
     -o /tmp/thesis_schematic.pdf
 
-  PYTHONPATH=src python3 scripts/generate_thesis_diagram.py \\
+  PYTHONPATH=src python3 scripts/setup/generate_thesis_diagram.py \\
     --config experiments/<run_id>/config.yaml \\
     -o thesis_schematic.pdf
 """
