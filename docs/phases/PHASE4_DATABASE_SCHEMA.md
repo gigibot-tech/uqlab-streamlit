@@ -113,7 +113,7 @@ class User(SQLModel, table=True):
 - SQLite compatible
 - Includes comprehensive documentation
 
-#### Python Migration Runner (`backend/run_benchmark_migration.py`)
+#### Python Migration Runner (`backend/migrations/run_benchmark_migration.py`)
 - Automated migration execution
 - Verification of table creation
 - Error handling and rollback
@@ -241,7 +241,7 @@ uvicorn app.main:app --reload
 ### Option 2: Manual Python Script
 ```bash
 cd uqlab-streamlit
-python3 backend/run_benchmark_migration.py
+python3 backend/migrations/run_benchmark_migration.py
 ```
 
 Output:
@@ -412,7 +412,7 @@ user_results = session.exec(
    - Creates tables and indexes
    - SQLite compatible
 
-2. **`backend/run_benchmark_migration.py`** (67 lines)
+2. **`backend/migrations/run_benchmark_migration.py`** (102 lines)
    - Python migration runner
    - Verification and error handling
 
