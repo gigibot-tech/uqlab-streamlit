@@ -842,9 +842,9 @@
       "module_name": "tests.test_inverse_coherence",
       "category": "tests"
     },
-    "backend/run_benchmark_migration.py": {
-      "path": "/Users/andrearachetta/Documents/old_pilots/walaris-cen/backend/run_benchmark_migration.py",
-      "relative_path": "backend/run_benchmark_migration.py",
+    "backend/migrations/run_benchmark_migration.py": {
+      "path": "/Users/andrearachetta/Documents/old_pilots/walaris-cen/backend/migrations/run_benchmark_migration.py",
+      "relative_path": "backend/migrations/run_benchmark_migration.py",
       "imports": [
         {
           "module": "sqlite3",
@@ -871,9 +871,9 @@
       "module_name": "backend.run_benchmark_migration",
       "category": "backend"
     },
-    "backend/backfill_signals.py": {
-      "path": "/Users/andrearachetta/Documents/old_pilots/walaris-cen/backend/backfill_signals.py",
-      "relative_path": "backend/backfill_signals.py",
+    "backend/migrations/backfill_signals.py": {
+      "path": "/Users/andrearachetta/Documents/old_pilots/walaris-cen/backend/migrations/backfill_signals.py",
+      "relative_path": "backend/migrations/backfill_signals.py",
       "imports": [
         {
           "module": "sys",
@@ -943,9 +943,9 @@
       "module_name": "backend.backfill_signals",
       "category": "backend"
     },
-    "backend/run_method_type_migration.py": {
-      "path": "/Users/andrearachetta/Documents/old_pilots/walaris-cen/backend/run_method_type_migration.py",
-      "relative_path": "backend/run_method_type_migration.py",
+    "backend/migrations/run_method_type_migration.py": {
+      "path": "/Users/andrearachetta/Documents/old_pilots/walaris-cen/backend/migrations/run_method_type_migration.py",
+      "relative_path": "backend/migrations/run_method_type_migration.py",
       "imports": [
         {
           "module": "sqlite3",
@@ -972,9 +972,9 @@
       "module_name": "backend.run_method_type_migration",
       "category": "backend"
     },
-    "backend/run_migration.py": {
-      "path": "/Users/andrearachetta/Documents/old_pilots/walaris-cen/backend/run_migration.py",
-      "relative_path": "backend/run_migration.py",
+    "backend/migrations/run_migration.py": {
+      "path": "/Users/andrearachetta/Documents/old_pilots/walaris-cen/backend/migrations/run_migration.py",
+      "relative_path": "backend/migrations/run_migration.py",
       "imports": [
         {
           "module": "sys",
@@ -18394,7 +18394,7 @@
       },
       {
         "id": "node_12",
-        "label": "backend/run_benchmark_migration.py",
+        "label": "backend/migrations/run_benchmark_migration.py",
         "module": "backend.run_benchmark_migration",
         "category": "backend",
         "local_imports": 0,
@@ -18403,7 +18403,7 @@
       },
       {
         "id": "node_13",
-        "label": "backend/backfill_signals.py",
+        "label": "backend/migrations/backfill_signals.py",
         "module": "backend.backfill_signals",
         "category": "backend",
         "local_imports": 0,
@@ -18412,7 +18412,7 @@
       },
       {
         "id": "node_14",
-        "label": "backend/run_method_type_migration.py",
+        "label": "backend/migrations/run_method_type_migration.py",
         "module": "backend.run_method_type_migration",
         "category": "backend",
         "local_imports": 0,
@@ -18421,7 +18421,7 @@
       },
       {
         "id": "node_15",
-        "label": "backend/run_migration.py",
+        "label": "backend/migrations/run_migration.py",
         "module": "backend.run_migration",
         "category": "backend",
         "local_imports": 0,
