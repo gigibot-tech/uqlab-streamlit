@@ -46,8 +46,8 @@ uqlab-streamlit/
 
 **Dependency direction:** `ui_components` → `uqlab_orchestrator` → `uqlab` (ML core).
 
-Full flow diagram and FAQ: [`EXECUTION_FLOW_AND_CONFIG_GUIDE.md`](EXECUTION_FLOW_AND_CONFIG_GUIDE.md).  
-Package boundaries: [`ARCHITECTURE_CLARIFICATION.md`](ARCHITECTURE_CLARIFICATION.md).
+Full flow diagram and FAQ: [`EXECUTION_FLOW_AND_CONFIG_GUIDE.md`](docs/EXECUTION_FLOW_AND_CONFIG_GUIDE.md).  
+Package boundaries: [`ARCHITECTURE_CLARIFICATION.md`](docs/architecture/ARCHITECTURE_CLARIFICATION.md).
 
 **Scripts:** `scripts/runners/` trains via `ExperimentConfig` → `run_from_yaml`; `scripts/analysis/` scores finished runs (disentanglement, four-region validation, paper CSVs).
 
