@@ -25,13 +25,13 @@ uncategorized = []
 for file in sorted(md_files):
     file_upper = file.upper()
     matched = False
-    
+
     for category, keywords in categories.items():
         if any(keyword in file_upper for keyword in keywords):
             categorized[category].append(file)
             matched = True
             break
-    
+
     if not matched:
         uncategorized.append(file)
 
@@ -54,7 +54,7 @@ if uncategorized:
         print(f"  • {f}")
 
 print("\n" + "=" * 80)
-print(f"\nSummary:")
+print("\nSummary:")
 for category in sorted(categories.keys()):
     count = len(categorized[category])
     if count > 0:
