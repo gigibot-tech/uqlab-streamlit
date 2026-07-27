@@ -1,10 +1,14 @@
 # Small-File Relocation Audit: `configs/`
 
+## Status
+
+✅ **Completed** — `configs/` has been relocated to `src/uqlab_core/configs/` on branch `cursor/small-file-relocation-candidates-6fd7`. The runtime path helper, package metadata, code references, notebooks, scripts, and documentation have been updated to use the new location.
+
 ## Summary
 
-`configs/` is a small, root-level folder whose files are all under 200 lines of code. It is a good candidate for relocation into the `uqlab_core` package so that experiment presets ship with the library instead of living as a separate top-level directory.
+`configs/` was a small, root-level folder whose files were all under 200 lines of code. It was a good candidate for relocation into the `uqlab_core` package so that experiment presets ship with the library instead of living as a separate top-level directory.
 
-## Size Check
+## Size Check (original location)
 
 Recursive line count for the `configs/` tree:
 
@@ -52,15 +56,17 @@ src/uqlab_core/configs/
 └── README.md
 ```
 
-## Files to Update
+## Files Updated
 
-1. `src/uqlab_core/runtime_paths.py` — change `configs_dir()` to return `src/uqlab_core/configs/`.
-2. `src/uqlab_core/shared/config/classification.py` — update the default `--config` path and comments.
-3. `src/uqlab_core/runner/notebook_run.py` — update default four-region config paths.
-4. `scripts/setup/validate_architectures.py` and `scripts/setup/generate_thesis_diagram.py` — update hard-coded paths.
-5. Notebooks under `notebooks/` — update any `configs/...` references.
-6. Documentation under `docs/` and root-level markdown files — update links and examples.
-7. `configs/README.md` — move and rewrite the path examples inside it.
+1. ✅ `src/uqlab_core/runtime_paths.py` — `configs_dir()` now returns the package-local `configs/` directory.
+2. ✅ `src/uqlab_core/pyproject.toml` — added `package-data` so YAML and README files are included when the package is installed.
+3. ✅ `src/uqlab_core/shared/config/classification.py` — updated the default `--config` path and docstring references.
+4. ✅ `src/uqlab_core/runner/notebook_run.py` — updated default four-region config paths.
+5. ✅ `scripts/setup/validate_architectures.py` and `scripts/setup/generate_thesis_diagram.py` — updated hard-coded paths.
+6. ✅ Notebooks under `notebooks/` — updated `configs/...` references.
+7. ✅ Documentation under `docs/` and root-level markdown files — updated links and examples.
+8. ✅ `configs/README.md` — moved to `src/uqlab_core/configs/README.md` and updated import examples.
+9. ✅ Removed broken symlinks at the root (`uq_benchmarks`, `uq_classification`, `notebooks/validation/notebook_support`) that were pointing to obsolete `uqlab`/`walaris` paths and causing tooling errors.
 
 ## Risk Assessment
 
@@ -71,3 +77,5 @@ src/uqlab_core/configs/
 ## Recommendation
 
 Relocate `configs/` to `src/uqlab_core/configs/` and update the internal references listed above. This keeps small, library-owned config presets next to the code that consumes them and removes a root-level folder whose contents are all under the 200–300 LoC threshold.
+
+**Result:** Completed as recommended above.
