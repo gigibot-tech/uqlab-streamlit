@@ -134,10 +134,12 @@ Thumbs.db
 .AppleDouble
 .LSOverride
 
-# Ignore everything in src/ except uqlab submodule and uqlab_core package
+# Ignore everything in src/ except tracked packages and config tree
 src/*
 !src/uqlab/
 !src/uqlab_core/
+!src/uqlab_orchestrator/
+!src/configs/
 
 # Keep important config files
 !.gitignore
