@@ -141,5 +141,19 @@ FileNotFoundError: results/my_run/summary.json
 ```
 → Check that the run directory exists and contains the required JSON files
 
+### `analyze_md_files.py`
+
+Categorizes markdown documentation files in the repository root by keyword.
+
+**Usage:**
+```bash
+python scripts/analysis/analyze_md_files.py
+```
+
+**What it does:**
+1. Scans the repository root for `.md` files
+2. Assigns each file to a category based on keywords in its filename
+3. Prints a summary of categorized and uncategorized files
+
 **Type warnings:**
 The linter may show type warnings for pandas operations - these are safe to ignore as the code works correctly at runtime.
