@@ -25,7 +25,7 @@ uqlab-streamlit/
 ├── streamlit_app_progressive.py  # Primary Streamlit UI (experiment builder + signal validation)
 ├── streamlit_app.py              # Deprecated legacy UI (archived)
 ├── scripts/                      # Utility scripts
-├── configs/                      # Experiment configurations
+├── configs/ → src/configs/       # Experiment configurations (canonical: src/configs/)
 ├── notebooks/                    # Jupyter notebooks
 ├── docker-compose.yml            # Docker orchestration
 └── README.md                     # This file
@@ -179,7 +179,7 @@ cp .env.example .env
 
 - `.env`: Main environment variables
 - `backend/.env`: Backend-specific settings
-- `configs/`: Experiment YAML configurations
+- `src/configs/`: Experiment YAML configurations (root `configs/` is a backward-compatible symlink)
 - `docker-compose.yml`: Docker services
 
 ## 🧪 Running Experiments

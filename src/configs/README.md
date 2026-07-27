@@ -2,8 +2,11 @@
 
 Runnable experiment configs for CLI, notebooks, and validation scripts.
 
+**Canonical location:** `src/configs/`.  
+A backward-compatible `configs` symlink at the repository root resolves to the same tree, so existing paths like `configs/experiment/four_region.yaml` continue to work.
+
 ```
-configs/
+src/configs/
 ├── experiment/          # Primary experiment presets
 │   ├── default.yaml
 │   ├── fast_pilot.yaml
