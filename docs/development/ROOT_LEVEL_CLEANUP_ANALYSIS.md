@@ -167,3 +167,45 @@ uqlab-streamlit/
 ✅ **Better organization** - Files in appropriate folders  
 ✅ **Easier navigation** - Less clutter  
 ✅ **Preserved history** - Old files archived, not deleted  
+
+---
+
+## Small-File Relocation Candidate: `configs/`
+
+### Size Check
+
+- **Root folder:** `configs/`
+- **Files:** 11 (10 YAML + 1 README)
+- **Largest file:** 64 lines (`configs/experiment/four_region_cifar_resnet.yaml`, `configs/experiment/four_region_fashion_mlp.yaml`)
+- **Total lines:** 426
+- **All files are well under the 200/300 LoC threshold.**
+
+### Contents
+
+```
+configs/
+├── experiment/          # Primary experiment presets (default, fast_pilot, four_region, ...)
+├── test/                # Architecture smoke-test configs
+├── example_*.yaml       # Standalone example configs
+└── README.md            # Config usage guide
+```
+
+### Why it could be a relocation candidate
+
+- Every YAML file is tiny (max 64 lines), so the directory feels like a small sibling to the much larger `src/`, `backend/`, and `scripts/` folders.
+- The configs are loaded via `uqlab_core.runtime_paths.configs_dir()` and parsed into `ExperimentConfig` from `src/uqlab_core/shared/config/classification.py`, so they live conceptually next to the core config code.
+- Several other candidate locations exist:
+  - `src/uqlab_core/configs/` — next to `ExperimentConfig` and the config loader.
+  - `src/uqlab_orchestrator/configs/` — next to the orchestrator that transforms configs into run specs.
+  - `tests/configs/` or `tests/data/` — only the `test/` subset is consumed by validation tooling.
+
+### Why it should stay at the repository root
+
+- **Cross-cutting usage.** `configs/` is referenced by `src/uqlab_core/`, `scripts/runners/`, `scripts/setup/validate_architectures.py`, multiple test files, and many user-guide docs. Moving it into any single package would couple that package to the project's runnable presets and examples.
+- **Discoverability.** Users and CLI callers edit these YAML files directly. A top-level `configs/` path is easier to find than a nested package path such as `src/uqlab_core/configs/experiment/four_region.yaml`.
+- **Runtime path assumption.** `src/uqlab_core/runtime_paths.py` resolves the config directory from the repository root. Relocating it would require touching `runtime_paths.py`, package-data metadata, and every hard-coded reference in docs and scripts.
+- **Existing cleanup plan.** The final root-level structure above intentionally keeps `configs/` as a first-class directory alongside `backend/`, `docs/`, `scripts/`, `src/`, and `tests/`.
+
+### Verdict
+
+Keep `configs/` at the repository root. It is the only root-level directory whose contents are all under 200/300 LoC, but its small size does not outweigh the cross-cutting, project-level role it plays.
