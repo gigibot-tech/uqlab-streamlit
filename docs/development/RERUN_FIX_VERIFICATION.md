@@ -43,11 +43,11 @@ Previously fixed 14 locations across:
 
 ### Diagnostic Scan Results
 ```bash
-$ python3 diagnose_rerun.py
+$ python3 scripts/diagnostics/diagnose_rerun.py
 🔍 Checking 90 Streamlit files for rerun issues...
 
-⚠️  diagnose_startup.py: Line 53 (false positive - test file)
-⚠️  diagnose_rerun.py: Line 19 (false positive - diagnostic itself)
+⚠️  scripts/diagnostics/diagnose_startup.py: Line 53 (false positive - test file)
+⚠️  scripts/diagnostics/diagnose_rerun.py: Line 19 (false positive - diagnostic itself)
 
 ❌ Found 2 potential issues (both false positives)
 ```
@@ -89,7 +89,7 @@ streamlit run test_minimal.py
 
 ### Test 2: Diagnostic (Shows Execution Count)
 ```bash
-streamlit run diagnose_startup.py
+streamlit run scripts/diagnostics/diagnose_startup.py
 ```
 **Expected**: Execution count 1-2, then stable  
 **If infinite loop**: Count would rapidly increase (5, 10, 20, 50...)
@@ -137,8 +137,8 @@ The infinite rerun loop bug that existed before has been **completely eliminated
 1. `STARTUP_RERUN_FIX.md` - Original fix documentation
 2. `INFINITE_RERUN_TROUBLESHOOTING.md` - Comprehensive troubleshooting guide
 3. `test_minimal.py` - Minimal test app
-4. `diagnose_startup.py` - Execution counter diagnostic
-5. `diagnose_rerun.py` - Code scanner for rerun issues
+4. `scripts/diagnostics/diagnose_startup.py` - Execution counter diagnostic
+5. `scripts/diagnostics/diagnose_rerun.py` - Code scanner for rerun issues
 6. `quick_test.sh` - Automated test suite
 7. `RERUN_FIX_VERIFICATION.md` - This verification report
 

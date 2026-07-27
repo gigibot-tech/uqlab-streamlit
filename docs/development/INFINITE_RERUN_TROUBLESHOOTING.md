@@ -37,7 +37,7 @@ Some session state might be triggering reruns during initialization.
 **Test**: Run the minimal diagnostic:
 ```bash
 cd uqlab-streamlit
-streamlit run diagnose_startup.py
+streamlit run scripts/diagnostics/diagnose_startup.py
 ```
 
 This will show:
@@ -81,7 +81,7 @@ streamlit run test_minimal.py
 
 ### Step 2: Run Startup Diagnostic
 ```bash
-streamlit run diagnose_startup.py
+streamlit run scripts/diagnostics/diagnose_startup.py
 ```
 
 **Expected**: Execution count 1-2, then stable  
@@ -142,7 +142,7 @@ The "running man" icon appears when:
 streamlit run test_minimal.py
 
 # Test 2: Diagnostic (shows execution count)
-streamlit run diagnose_startup.py
+streamlit run scripts/diagnostics/diagnose_startup.py
 
 # Test 3: Main app (may take 10-30s to load)
 streamlit run streamlit_app_progressive.py
@@ -154,7 +154,7 @@ curl http://localhost:8000/health
 ## If Problem Persists
 
 1. **Share terminal output**: Copy the full terminal output when running the app
-2. **Share diagnostic results**: Run `diagnose_startup.py` and share the execution count
+2. **Share diagnostic results**: Run `scripts/diagnostics/diagnose_startup.py` and share the execution count
 3. **Check browser console**: Open browser DevTools (F12) and check for JavaScript errors
 4. **Try different browser**: Test in Chrome, Firefox, Safari
 

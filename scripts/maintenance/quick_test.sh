@@ -30,7 +30,7 @@ echo "If it keeps increasing, there's an infinite loop"
 echo "Press Ctrl+C after 10 seconds"
 echo ""
 read -p "Press Enter to start test 2..."
-streamlit run diagnose_startup.py &
+streamlit run scripts/diagnostics/diagnose_startup.py &
 DIAG_PID=$!
 sleep 15
 kill $DIAG_PID 2>/dev/null
