@@ -110,4 +110,4 @@ Set `_CEN_FLAVOR` in `.env.production`:
 
 ## More Information
 
-For detailed configuration, architecture, extending the script, and advanced troubleshooting, see the [Script README](../scripts/README.md).
+For detailed configuration, architecture, extending the script, and advanced troubleshooting, see the [Script README](../../scripts/README.md).
