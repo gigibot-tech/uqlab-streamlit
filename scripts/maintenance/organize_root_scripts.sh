@@ -3,6 +3,9 @@
 
 set -e
 
+# Run from project root regardless of where the script is invoked.
+cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../.." || exit 1
+
 echo "🗂️  Organizing root-level scripts..."
 
 # Create scripts directory if it doesn't exist
