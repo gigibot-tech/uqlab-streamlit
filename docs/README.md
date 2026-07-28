@@ -19,11 +19,11 @@ System design, patterns, and technical decisions:
 Feature documentation and user guides:
 - [Sweep Grouping](./features/sweep-grouping.md) - Experiment sweep grouping functionality
 
-### 🔍 [Troubleshooting](./troubleshooting/)
+### 🔍 [Troubleshooting](./archive/troubleshooting/)
 Bug fixes, issues, and debugging guides:
-- [ResNet Feature Extractor Fix](./troubleshooting/resnet-feature-extractor.md) - ResNet training mode issues
-- [Progressive UI Fixes](./troubleshooting/progressive-ui.md) - UI component improvements
-- [Startup Issues](./troubleshooting/startup-issues.md) - Application startup problems
+- [ResNet Feature Extractor Fix](./archive/troubleshooting/resnet-feature-extractor.md) - ResNet training mode issues
+- [Progressive UI Fixes](./archive/troubleshooting/progressive-ui.md) - UI component improvements
+- [Startup Issues](./archive/troubleshooting/startup-issues.md) - Application startup problems
 
 ### 🔌 [API](./api/)
 API documentation, endpoints, and schemas:
@@ -46,22 +46,22 @@ Development workflows and contributing guides:
 - [MinIO Implementation](./architecture/minio-storage.md)
 
 **Machine Learning**
-- [ResNet Feature Extractor Fix](./troubleshooting/resnet-feature-extractor.md)
+- [ResNet Feature Extractor Fix](./archive/troubleshooting/resnet-feature-extractor.md)
 - [Sweep Grouping](./features/sweep-grouping.md)
 
 **UI & Frontend**
-- [Progressive UI Fixes](./troubleshooting/progressive-ui.md)
-- [Startup Issues](./troubleshooting/startup-issues.md)
+- [Progressive UI Fixes](./archive/troubleshooting/progressive-ui.md)
+- [Startup Issues](./archive/troubleshooting/startup-issues.md)
 
 **Development Tools**
 - [UV & Ruff Setup](./setup/uv-ruff.md)
 
 ### By Date (Most Recent First)
 
-1. [Startup Issues](./troubleshooting/startup-issues.md)
-2. [Progressive UI Fixes](./troubleshooting/progressive-ui.md)
+1. [Startup Issues](./archive/troubleshooting/startup-issues.md)
+2. [Progressive UI Fixes](./archive/troubleshooting/progressive-ui.md)
 3. [Sweep Grouping](./features/sweep-grouping.md)
-4. [ResNet Feature Extractor Fix](./troubleshooting/resnet-feature-extractor.md)
+4. [ResNet Feature Extractor Fix](./archive/troubleshooting/resnet-feature-extractor.md)
 5. [MinIO Implementation](./architecture/minio-storage.md)
 6. [MinIO Setup](./setup/minio.md)
 7. [UV & Ruff Setup](./setup/uv-ruff.md)
@@ -76,7 +76,7 @@ When adding new documentation:
    - `setup/` - Installation and configuration
    - `architecture/` - Design and technical decisions
    - `features/` - User-facing functionality
-   - `troubleshooting/` - Bug fixes and issues
+   - `archive/troubleshooting/` - Bug fixes and issues
    - `api/` - API reference
    - `deployment/` - Deployment and infrastructure
    - `development/` - Development workflows
@@ -115,7 +115,7 @@ When adding new documentation:
 ## 📧 Need Help?
 
 If you can't find what you're looking for:
-1. Check the [Troubleshooting](./troubleshooting/) section
+1. Check the [Troubleshooting](./archive/troubleshooting/) section
 2. Search the documentation using your editor's search
 3. Check the main [README](../README.md)
 4. Open an issue on GitHub
