@@ -138,7 +138,7 @@ echo ""
 find_class_file() {
     local class_name="$1"
     # Search in component docs for the definition location
-    local doc_file="docs/components/${class_name}.md"
+    local doc_file="docs/archive/components/${class_name}.md"
     if [ -f "$doc_file" ]; then
         grep "^src/" "$doc_file" | head -1 | cut -d':' -f1
     fi

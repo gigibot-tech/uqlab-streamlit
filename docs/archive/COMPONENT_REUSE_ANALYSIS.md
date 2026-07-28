@@ -273,8 +273,8 @@ class ResultCoordinator:
 ## Documentation Generated
 
 The component reuse checker generated:
-- **1 master index**: `docs/components/COMPONENT_INDEX.md`
-- **147 component docs**: `docs/components/<ComponentName>.md`
+- **1 master index**: `docs/archive/components/COMPONENT_INDEX.md`
+- **147 component docs**: `docs/archive/components/<ComponentName>.md`
 
 Each component doc includes:
 - Definition location
@@ -299,5 +299,5 @@ The component reuse analysis reveals:
 
 **Related Documents**:
 - [Dual Facade Architecture](./DUAL_FACADE_ARCHITECTURE.md)
-- [Component Index](./docs/components/COMPONENT_INDEX.md)
+- [Component Index](./docs/archive/components/COMPONENT_INDEX.md)
 - [Component Reuse Checker Skill](./.bob/skills/component-reuse-checker.md)
