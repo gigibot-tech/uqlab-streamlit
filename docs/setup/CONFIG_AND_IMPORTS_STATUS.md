@@ -15,10 +15,15 @@ configs/
 ├── experiment/
 │   ├── default.yaml
 │   └── fast_pilot.yaml
-└── test/
-    ├── test_cnn_mcdropout.yaml
-    ├── test_dinov2_mlp.yaml
-    └── test_resnet18_mcdropout.yaml
+
+Test configs (used by ``validate_architectures.py``):
+
+```
+tests/configs/
+├── test_cnn_mcdropout.yaml
+├── test_dinov2_mlp.yaml
+└── test_resnet18_mcdropout.yaml
+```
 ```
 
 **Status**: ✅ **Still valid and used by [`run_fast.py`](run_fast.py:1)**

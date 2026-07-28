@@ -24,7 +24,7 @@ def repository_root() -> Path:
 
 
 def configs_dir() -> Path:
-    """Experiment YAML configs (``configs/experiment``, ``configs/test``, …)."""
+    """Experiment YAML configs (``configs/experiment``, ``tests/configs``, …)."""
     return repository_root() / "configs"
 
 
