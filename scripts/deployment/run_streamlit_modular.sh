@@ -8,7 +8,7 @@ if [ ! -d ".venv" ]; then
 fi
 
 source .venv/bin/activate
-pip install -q -r streamlit_requirements.txt
+pip install -q -r scripts/deployment/streamlit_requirements.txt
 
 export API_URL="${API_URL:-http://localhost:8000}"
 

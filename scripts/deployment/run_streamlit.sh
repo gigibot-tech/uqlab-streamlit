@@ -24,7 +24,7 @@ source .venv/bin/activate
 
 # Install requirements (Streamlit UI + editable walaris package)
 echo -e "${BLUE}Installing dependencies...${NC}"
-pip install -q -r streamlit_requirements.txt
+pip install -q -r scripts/deployment/streamlit_requirements.txt
 pip install -q -e ".[streamlit]"
 
 # Set API URL (default to localhost, can be overridden)
