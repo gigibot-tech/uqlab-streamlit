@@ -6,18 +6,27 @@ import subprocess
 import sys
 from pathlib import Path
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+SRC = PROJECT_ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+from uqlab_core.runtime_paths import configs_dir
+
+
 def run_test(config_name: str) -> bool:
     """Run single architecture test"""
-    config_path = f"configs/test/{config_name}.yaml"
-    output_dir = f"/tmp/test_{config_name}"
-    
+    config_path = configs_dir() / "test" / f"{config_name}.yaml"
+    output_dir = Path(f"/tmp/test_{config_name}")
+
     print(f"\n{'='*60}")
     print(f"Testing: {config_name}")
     print(f"{'='*60}\n")
-    
+
     cmd = [
-        "python", "scripts/run_fast_uncertainty_classification.py",
-        config_path, output_dir
+        "python3", "scripts/runners/run_fast_uncertainty_classification.py",
+        "--config", str(config_path),
+        "--output_dir", str(output_dir),
     ]
     
     try:

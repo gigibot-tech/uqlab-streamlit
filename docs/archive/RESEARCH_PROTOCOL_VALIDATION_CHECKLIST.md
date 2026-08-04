@@ -246,8 +246,8 @@ auroc_results = compute_pool_filtered_auroc(
 **Verification:**
 ```bash
 # Run experiment and check results
-PYTHONPATH=src python3 scripts/run_fast_uncertainty_classification.py \
-    --config four_region.yaml
+PYTHONPATH=src python3 scripts/runners/run_fast_uncertainty_classification.py \
+    --config src/uqlab_core/configs/experiment/four_region.yaml
 
 # Check AUROC results in output
 # Look for: epistemic_auroc, aleatoric_auroc, ood_auroc
