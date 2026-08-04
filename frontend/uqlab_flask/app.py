@@ -5,9 +5,18 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-SRC = ROOT / "src"
+def _find_project_root(start: Path) -> Path:
+    """Locate the project root by looking for ``pyproject.toml``."""
+    for parent in [start, *start.parents]:
+        if (parent / "pyproject.toml").is_file():
+            return parent
+    # Fallback to the old layout where app.py was at <root>/<app>/app.py.
+    return start.parent.parent
+
+
 FLASK_PKG = Path(__file__).resolve().parent
+ROOT = _find_project_root(FLASK_PKG)
+SRC = ROOT / "src"
 for p in (str(SRC), str(ROOT), str(FLASK_PKG)):
     if p not in sys.path:
         sys.path.insert(0, p)
