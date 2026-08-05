@@ -41,7 +41,7 @@ uqlab-streamlit/
 | **Backend** | `DirectExecutor` | in-process call to `uqlab.runner.execute.run_from_yaml` |
 | **ML core** | `run_from_yaml` → `run_experiment_core` | **`ExperimentConfig`** (`from_yaml` only) |
 
-**Single execution datamodel:** `ExperimentConfig` in `src/uqlab/shared/config/classification.py`.  
+**Single execution datamodel:** `ExperimentConfig` in `src/uqlab_core/shared/config/classification.py`.  
 **Single on-disk format:** `config.yaml` per experiment under `data/experiments/<id>/`.
 
 **Dependency direction:** `ui_components` → `uqlab_orchestrator` → `uqlab` (ML core).
@@ -57,7 +57,7 @@ Package boundaries: [`ARCHITECTURE_CLARIFICATION.md`](ARCHITECTURE_CLARIFICATION
 
 ```bash
 # 1. Install dependencies with uv (fast) or pip
-uv pip install -e src/uqlab && uv pip install -r requirements.txt
+uv pip install -e src/uqlab_core && uv pip install -r requirements.txt
 
 # 2. Start backend on port 8000 (in terminal 1)
 cd backend && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
@@ -79,15 +79,11 @@ Open browser: Frontend at `http://localhost:8501`, Backend API at `http://localh
 
 ### Installation
 
-#### 1. Clone with Submodule
+#### 1. Clone Repository
 
 ```bash
-# Clone repository with uqlab submodule
-git clone --recurse-submodules https://github.com/gigibot-tech/uqlab-streamlit.git
+git clone https://github.com/gigibot-tech/uqlab-streamlit.git
 cd uqlab-streamlit
-
-# If you already cloned without submodules:
-git submodule update --init --recursive
 ```
 
 #### 2. Install Dependencies
@@ -98,7 +94,7 @@ python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install UQLab core
-pip install -e src/uqlab
+pip install -e src/uqlab_core
 
 # Install Streamlit requirements
 pip install -r requirements.txt
@@ -226,8 +222,8 @@ batch = create_batch_experiment(
 
 ## 📚 Documentation
 
-- **UQLab Core**: `src/uqlab/README.md`
-- **Model Architectures**: `src/uqlab/2_models/README.md`
+- **UQLab Core**: `src/uqlab_core/README.md`
+- **Model Architectures**: `src/uqlab_core/models/README.md`
 - **API Documentation**: http://localhost:8000/docs (when backend running)
 - **Architecture Guide**: `docs/architecture/ARCHITECTURE_GUIDE.md`
 - **Quick Start Guide**: `QUICK_START_GUIDE.md`
@@ -252,42 +248,6 @@ docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 - **Frontend**: http://localhost:8501
 - **Database**: PostgreSQL on port 5432
 - **MLflow** (optional): http://localhost:5000
-
-## 🔄 Submodule Management
-
-### Update UQLab Core
-
-```bash
-cd src/uqlab
-git pull origin main
-cd ../..
-git add src/uqlab
-git commit -m "Update uqlab submodule"
-git push
-```
-
-### Switch UQLab Branch
-
-```bash
-cd src/uqlab
-git checkout feature-branch
-cd ../..
-git add src/uqlab
-git commit -m "Switch uqlab to feature-branch"
-git push
-```
-
-### Contribute to UQLab
-
-```bash
-cd src/uqlab
-# Make changes
-git add .
-git commit -m "Your changes"
-git push origin main
-cd ../..
-git submodule update --remote
-```
 
 ## 🤝 Contributing
 
@@ -315,21 +275,11 @@ flake8 src/
 
 ## 🐛 Troubleshooting
 
-### Submodule Issues
-
-```bash
-# If submodule is empty
-git submodule update --init --recursive
-
-# If submodule is out of sync
-git submodule update --remote --merge
-```
-
 ### Import Errors
 
 ```bash
-# Reinstall uqlab in editable mode
-pip install -e src/uqlab
+# Reinstall uqlab core in editable mode
+pip install -e src/uqlab_core
 ```
 
 ### Database Connection
