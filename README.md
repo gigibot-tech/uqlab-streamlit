@@ -6,16 +6,18 @@ Interactive Streamlit dashboard for uncertainty quantification experiments using
 
 ```
 uqlab-streamlit/
-├── src/
-│   └── uqlab/                    # Git submodule: Core ML framework
-│       ├── 1_data/               # Data loaders and preprocessing
-│       ├── 2_models/             # Model architectures (DINOv2, CNN, ResNet)
-│       ├── 3_training/           # Training utilities
-│       ├── 4_evaluation/         # Evaluation metrics and signals
-│       ├── 5_api/                # API integrations (watsonx.ai)
-│       ├── 7_orchestration/      # Experiment orchestration
-│       ├── ui_components/        # Reusable Streamlit components
-│       └── shared/               # Shared utilities and configs
+├── src/                          # Source packages
+│   ├── uqlab/                    # Git submodule: Core ML framework
+│   │   ├── 1_data/               # Data loaders and preprocessing
+│   │   ├── 2_models/             # Model architectures (DINOv2, CNN, ResNet)
+│   │   ├── 3_training/           # Training utilities
+│   │   ├── 4_evaluation/         # Evaluation metrics and signals
+│   │   ├── 5_api/                # API integrations (watsonx.ai)
+│   │   ├── 7_orchestration/      # Experiment orchestration
+│   │   ├── ui_components/        # Reusable Streamlit components
+│   │   └── shared/               # Shared utilities and configs
+│   └── uqlab_core/               # Core ML package
+│       └── configs/              # Experiment configurations
 ├── backend/                      # FastAPI backend
 │   └── app/
 │       ├── api/                  # API routes
@@ -25,7 +27,6 @@ uqlab-streamlit/
 ├── streamlit_app_progressive.py  # Primary Streamlit UI (experiment builder + signal validation)
 ├── streamlit_app.py              # Deprecated legacy UI (archived)
 ├── scripts/                      # Utility scripts
-├── configs/                      # Experiment configurations
 ├── notebooks/                    # Jupyter notebooks
 ├── docker-compose.yml            # Docker orchestration
 └── README.md                     # This file
@@ -179,7 +180,7 @@ cp .env.example .env
 
 - `.env`: Main environment variables
 - `backend/.env`: Backend-specific settings
-- `configs/`: Experiment YAML configurations
+- `src/uqlab_core/configs/`: Experiment YAML configurations
 - `docker-compose.yml`: Docker services
 
 ## 🧪 Running Experiments
