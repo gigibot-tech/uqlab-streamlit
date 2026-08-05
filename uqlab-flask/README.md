@@ -1,8 +1,8 @@
 # UQLab Flask UI
 
-Lean Flask shell over the existing uqlab runner (`uqlab.runner.execute.run_from_yaml`).
+Lean Flask shell over the existing uqlab runner (`uqlab_core.runner.execute.run_from_yaml`).
 
-## Patterns (see `src/uqlab/runner/patterns.py`)
+## Patterns (see `src/uqlab_core/runner/execute.py`)
 
 - **Pipeline** — load config → validate → execute
 - **Factory** — `build_model()` picks classifier by architecture
