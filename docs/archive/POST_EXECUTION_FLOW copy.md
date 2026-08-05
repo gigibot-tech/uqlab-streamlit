@@ -17,7 +17,7 @@ UI (Step 3) → Launcher → API → Executor → Runner Script → Pipeline →
 
 ### Phase 1: Script Execution (Inside Runner)
 
-**File**: [`scripts/runners/run_fast_uncertainty_classification.py`](uqlab-streamlit/scripts/runners/run_fast_uncertainty_classification.py:1)
+**File**: [`src/uqlab_core/cli/run_fast_uncertainty_classification.py`](uqlab-streamlit/src/uqlab_core/cli/run_fast_uncertainty_classification.py:1)
 
 ```python
 # CLI wrapper calls pipeline

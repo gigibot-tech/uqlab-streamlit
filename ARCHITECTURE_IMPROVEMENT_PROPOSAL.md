@@ -11,7 +11,7 @@
 
 **Current**:
 ```
-scripts/runners/run_fast_uncertainty_classification.py  # CLI wrapper
+src/uqlab_core/cli/run_fast_uncertainty_classification.py  # CLI wrapper
 src/uqlab/runner/pipeline.py                            # Execution engine
 ```
 
@@ -120,7 +120,7 @@ Execution (uqlab/execution/experiment.py)
 ### Current Architecture
 
 ```python
-# scripts/runners/run_fast_uncertainty_classification.py (60 lines)
+# src/uqlab_core/cli/run_fast_uncertainty_classification.py (60 lines)
 def main():
     args = parse_args()
     config = ExperimentConfig.from_yaml(args.config)
@@ -214,13 +214,13 @@ class ExperimentFacade:
 ### Current (Confusing)
 
 ```
-User runs: python scripts/runners/run_fast_uncertainty_classification.py --config exp.yaml
+User runs: python src/uqlab_core/cli/run_fast_uncertainty_classification.py --config exp.yaml
 
 Question: What does this do?
 Answer: Unclear - "runners" sounds like multiple things, "run_fast_uncertainty_classification" is verbose
 
 Flow:
-scripts/runners/run_fast_*.py → uqlab/runner/pipeline.py → uqlab/runner/fast_pilot_core.py
+src/uqlab_core/cli/run_fast_*.py → uqlab_core/runner/execute.py → uqlab_core/runner/experiment_core.py
      (wrapper)                      (orchestrator)              (monolithic core)
 ```
 
@@ -249,7 +249,7 @@ mkdir -p src/uqlab/cli
 mkdir -p src/uqlab/execution
 
 # Move and simplify CLI
-mv scripts/runners/run_fast_uncertainty_classification.py src/uqlab/cli/run.py
+mv src/uqlab_core/cli/run_fast_uncertainty_classification.py src/uqlab/cli/run.py
 # Simplify to 40 lines (remove unnecessary code)
 
 # Create new experiment.py (uses facade)
@@ -351,7 +351,7 @@ src/uqlab/runner/                       # ⚠️ DEPRECATED
 
 **Before**:
 ```
-scripts/runners/run_fast_uncertainty_classification.py
+src/uqlab_core/cli/run_fast_uncertainty_classification.py
 src/uqlab/runner/pipeline.py
 src/uqlab/runner/fast_pilot_core.py
 ```
@@ -385,7 +385,7 @@ src/uqlab/execution/facade/
 
 **Before**:
 ```bash
-python scripts/runners/run_fast_uncertainty_classification.py --config exp.yaml
+python src/uqlab_core/cli/run_fast_uncertainty_classification.py --config exp.yaml
 ```
 
 **After**:

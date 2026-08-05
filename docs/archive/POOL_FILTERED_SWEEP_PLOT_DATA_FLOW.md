@@ -16,7 +16,7 @@ This document explains **exactly** how the three-line sweep plot gets its data, 
 
 ### Step 1: Experiment Execution
 
-**File**: [`scripts/runners/run_fast_uncertainty_classification.py`](scripts/runners/run_fast_uncertainty_classification.py:534)
+**File**: [`src/uqlab_core/cli/run_fast_uncertainty_classification.py`](src/uqlab_core/cli/run_fast_uncertainty_classification.py:534)
 
 ```python
 # Line 534: Compute uncertainty signals for all eval samples
@@ -91,7 +91,7 @@ signal_table = build_signal_table_from_store(
 
 ### Step 3: Save to `results.pt`
 
-**File**: [`scripts/runners/run_fast_uncertainty_classification.py`](scripts/runners/run_fast_uncertainty_classification.py:700+)
+**File**: [`src/uqlab_core/cli/run_fast_uncertainty_classification.py`](src/uqlab_core/cli/run_fast_uncertainty_classification.py:700+)
 
 ```python
 # Save all evaluation data to disk

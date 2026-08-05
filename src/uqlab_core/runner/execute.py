@@ -8,7 +8,7 @@ MLgym mapping
 
 All callers (CLI, Flask executor, FastAPI DirectExecutor) must use
 :func:`run_from_yaml` or :func:`run_from_python_config`; do not invoke
-``run_fast_uncertainty_classification.main()`` directly.
+``uqlab_core.cli.run_fast_uncertainty_classification.main()`` directly.
 """
 
 from __future__ import annotations

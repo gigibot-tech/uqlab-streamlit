@@ -20,7 +20,7 @@
 ## 1. End-to-end flow
 
 ```
-scripts/runners/run_fast_uncertainty_classification.py  (CLI)
+src/uqlab_core/cli/run_fast_uncertainty_classification.py  (CLI)
     ↓
 runner/execute.run_from_yaml()
     ↓

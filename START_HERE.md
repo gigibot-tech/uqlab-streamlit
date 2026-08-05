@@ -46,7 +46,7 @@ Wizard → YAML field mapping: [`docs/features/workflow-config.md`](docs/feature
 ## Run one experiment (no UI)
 
 ```bash
-PYTHONPATH=src python scripts/runners/run_fast_uncertainty_classification.py \
+PYTHONPATH=src python src/uqlab_core/cli/run_fast_uncertainty_classification.py \
   --config configs/experiment/four_region.yaml \
   --output_dir data/experiments/<run_id>/results
 ```
@@ -79,7 +79,7 @@ Copy these for a new project; treat UI and backend as replaceable shell:
 ```
 src/uqlab/                    # ML core
 src/uqlab_orchestrator/       # config + launch + sweep grouping
-scripts/runners/run_fast_uncertainty_classification.py
+src/uqlab_core/cli/run_fast_uncertainty_classification.py
 scripts/analysis/disentanglement_error.py   # post-hoc paper metric
 ```
 

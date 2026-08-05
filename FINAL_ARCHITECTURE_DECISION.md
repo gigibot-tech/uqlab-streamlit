@@ -49,7 +49,7 @@ Backend (FastAPI)
 
 ```
 1. CLI Entry Point
-   scripts/runners/run_fast_uncertainty_classification.py:48
+   src/uqlab_core/cli/run_fast_uncertainty_classification.py:48
    └─ from uqlab.runner.pipeline import run as pipeline_run
 
 2. Pipeline Orchestrator (3 stages)
@@ -139,7 +139,7 @@ src/
 
 ### Current Location
 ```
-scripts/runners/run_fast_uncertainty_classification.py
+src/uqlab_core/cli/run_fast_uncertainty_classification.py
 ```
 
 ### Your Suggestion
@@ -264,7 +264,7 @@ mv src/uqlab/ui_components src/ui_components
 ### Step 2: Create CLI Package (1 hour)
 ```bash
 mkdir -p src/uqlab/cli
-mv scripts/runners/run_fast_*.py src/uqlab/cli/
+mv scripts/runners/run_fast_*.py src/uqlab_core/cli/
 # Update imports and add console_scripts to pyproject.toml
 ```
 
