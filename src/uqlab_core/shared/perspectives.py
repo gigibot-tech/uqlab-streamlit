@@ -3,6 +3,9 @@ Uncertainty perspective registry — single source of truth for N sweep types.
 
 Add a perspective to ``UNCERTAINTY_PERSPECTIVES``; Step 3, launch preview, Run both,
 and Results iterate this list (mirror = all other N−1 profiles).
+
+Previously lived in ``uqlab_orchestrator.uncertainty.registry``; moved here because
+it is a small, cross-layer data structure used by UI, orchestration, and launch code.
 """
 
 from __future__ import annotations
