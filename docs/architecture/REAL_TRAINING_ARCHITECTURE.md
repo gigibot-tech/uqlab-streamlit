@@ -210,7 +210,7 @@ Streamlit auto-poll → GET /experiments/no-auth
 
 ## Configuration
 
-Production training uses `DirectExecutor`, which calls `uqlab.runner.execute.run_from_yaml` with the experiment's `config.yaml`. CLI dev path: `scripts/runners/run_fast_uncertainty_classification.py` (same pipeline entry).
+Production training uses `DirectExecutor`, which calls `uqlab.runner.execute.run_from_yaml` with the experiment's `config.yaml`. CLI dev path: `src/uqlab_core/cli/run_fast_uncertainty_classification.py` (same pipeline entry).
 
 **Note:** `SubprocessExecutor` was removed (2026-06-24); it had been retired in favor of in-process execution.
 

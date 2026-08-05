@@ -143,7 +143,7 @@ scripts/
 ### Running Experiments
 ```bash
 # Main experiment runner
-python scripts/runners/run_fast_uncertainty_classification.py
+python src/uqlab_core/cli/run_fast_uncertainty_classification.py
 
 # Facade-based runner
 python scripts/runners/run_experiment_facade.py

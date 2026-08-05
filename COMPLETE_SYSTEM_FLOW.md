@@ -90,7 +90,7 @@ run_fast_uncertainty_classification.py (CLI script)
     ↓ Calls run_from_yaml()
 ```
 
-**File**: [`scripts/runners/run_fast_uncertainty_classification.py`](scripts/runners/run_fast_uncertainty_classification.py:16)
+**File**: [`src/uqlab_core/cli/run_fast_uncertainty_classification.py`](src/uqlab_core/cli/run_fast_uncertainty_classification.py:16)
 
 **Code**:
 ```python

@@ -2,7 +2,7 @@
 """
 Convenience launcher from repo root.
 
-Canonical implementation: ``scripts/run_fast_uncertainty_classification.py``
+Canonical implementation: ``uqlab_core.cli.run_fast_uncertainty_classification``
 (used by the FastAPI backend, validation sweeps, and examples).
 """
 

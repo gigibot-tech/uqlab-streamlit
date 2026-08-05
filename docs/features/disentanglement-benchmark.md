@@ -8,7 +8,7 @@ Upstream package: [ivopascal/disentanglement_error](https://github.com/ivopascal
 
 | Phase | Entry | Config | Output |
 |-------|-------|--------|--------|
-| **Train** | `scripts/runners/run_fast_uncertainty_classification.py` or API launch | `ExperimentConfig` YAML (`config.yaml`) | `results.pt`, `summary.json`, … |
+| **Train** | `src/uqlab_core/cli/run_fast_uncertainty_classification.py` or API launch | `ExperimentConfig` YAML (`config.yaml`) | `results.pt`, `summary.json`, … |
 | **Analyze** | `scripts/analysis/disentanglement_error.py` | Finished run dir / campaign run IDs | CSV scores, paper curves, optional PNGs |
 
 Disentanglement is **post-hoc**: it reads uncertainty vectors from `results.pt`. It does not train models or call `model.fit()`.
@@ -18,7 +18,7 @@ Disentanglement is **post-hoc**: it reads uncertainty vectors from `results.pt`.
 Run a sweep point (or four-region experiment) like any other job:
 
 ```bash
-PYTHONPATH=src python scripts/runners/run_fast_uncertainty_classification.py \
+PYTHONPATH=src python src/uqlab_core/cli/run_fast_uncertainty_classification.py \
   --config configs/experiment/four_region.yaml \
   --output_dir results/my_run
 ```

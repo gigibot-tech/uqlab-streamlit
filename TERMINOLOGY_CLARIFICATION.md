@@ -22,7 +22,7 @@
 
 ### 1. `scripts/runners/` (Plural) - CLI Scripts Directory
 
-**Location**: `scripts/runners/run_fast_uncertainty_classification.py`
+**Location**: `src/uqlab_core/cli/run_fast_uncertainty_classification.py`
 
 **Purpose**: Command-line entry points (thin wrappers)
 
@@ -50,7 +50,7 @@ def main():
 
 **Usage**:
 ```bash
-python scripts/runners/run_fast_uncertainty_classification.py \
+python src/uqlab_core/cli/run_fast_uncertainty_classification.py \
     --config exp.yaml \
     --seed 42 \
     --device cuda
@@ -156,7 +156,7 @@ def run_experiment_core(config, results_dir, ...):
 
 ```
 1. User runs CLI script
-   $ python scripts/runners/run_fast_uncertainty_classification.py --config exp.yaml
+   $ python src/uqlab_core/cli/run_fast_uncertainty_classification.py --config exp.yaml
    
 2. CLI script (scripts/runners/)
    - Parses arguments
@@ -212,7 +212,7 @@ But we keep current names for backward compatibility.
 
 **Relationship**:
 ```
-scripts/runners/run_fast_*.py  →  imports from  →  uqlab/runner/pipeline.py
+src/uqlab_core/cli/run_fast_*.py  →  imports from  →  uqlab_core/runner/execute.py
      (CLI wrapper)                                    (Execution engine)
 ```
 
@@ -226,20 +226,20 @@ scripts/
 └── runners/                    # CLI scripts (plural)
     └── run_fast_*.py
 
-src/uqlab/
+src/uqlab_core/
 └── runner/                     # Execution engine (singular)
-    ├── pipeline.py
-    └── fast_pilot_core.py
+    ├── execute.py
+    └── experiment_core.py
 ```
 
 ### Proposed Structure (Clearer)
 ```
-src/uqlab/
+src/uqlab_core/
 ├── cli/                        # CLI entry points
 │   └── run_fast_uncertainty.py
 └── runner/                     # Execution engine
-    ├── pipeline.py
-    └── fast_pilot_core.py
+    ├── execute.py
+    └── experiment_core.py
 ```
 
 **Benefits**:
@@ -256,17 +256,17 @@ src/uqlab/
 
 **Answer**: ❌ **NO!**
 
-- **`scripts/runners/`** (plural) = CLI script directory (thin wrappers)
-- **`uqlab/runner/`** (singular) = Execution engine package (heavy ML logic)
+- **`src/uqlab_core/cli/`** = CLI entry points (thin wrappers)
+- **`uqlab_core/runner/`** (singular) = Execution engine package (heavy ML logic)
 
 **They are different layers**:
 ```
-CLI Layer:     scripts/runners/run_fast_*.py
+CLI Layer:     src/uqlab_core/cli/run_fast_*.py
                       ↓ imports from
-Engine Layer:  uqlab/runner/pipeline.py → fast_pilot_core.py
+Engine Layer:  uqlab_core/runner/execute.py → experiment_core.py
 ```
 
-**Proposed fix**: Move `scripts/runners/` → `src/uqlab/cli/` (see FINAL_ARCHITECTURE_DECISION.md)
+**Proposed fix**: Move `scripts/runners/` → `src/uqlab_core/cli/` (see FINAL_ARCHITECTURE_DECISION.md)
 
 ---
 

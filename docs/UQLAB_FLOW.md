@@ -118,7 +118,7 @@ vendor: calculate_disentanglement_error
 
 - **Engine** lives in [`uqlab/runner/experiment_core.py`](../src/uqlab/runner/experiment_core.py) (`run_experiment_core`).
 - **Runner** ([`execute.py`](../src/uqlab/runner/execute.py)) loads YAML, validates, tees `experiment.log`, calls the engine.
-- **Scripts** ([`scripts/runners/run_fast_uncertainty_classification.py`](../../scripts/runners/run_fast_uncertainty_classification.py)) are thin CLIs → `run_from_yaml` only.
+- **Scripts** ([`src/uqlab_core/cli/run_fast_uncertainty_classification.py`](../../src/uqlab_core/cli/run_fast_uncertainty_classification.py)) are thin CLIs → `run_from_yaml` only.
 - **Backend** (`TrainingOrchestrator` + `DirectExecutor`) is job infrastructure (DI, DB, WebSocket) — **not** a separate ML stage. It injects and calls `run_from_yaml`.
 
 | Layer | ML logic? |
@@ -303,7 +303,7 @@ flowchart TB
 |---------|------|
 | Runner | `src/uqlab/runner/execute.py` |
 | Train + eval core | `src/uqlab/runner/experiment_core.py` |
-| CLI wrapper | `scripts/runners/run_fast_uncertainty_classification.py` |
+| CLI wrapper | `src/uqlab_core/cli/run_fast_uncertainty_classification.py` |
 | Signals / signal_table | `src/uqlab/evaluation/signals/` |
 | Disentanglement adapter | `src/uqlab/evaluation/benchmarks/disentangling/` |
 | Vendor metric | `src/uqlab/vendor/disentanglement_error/` |

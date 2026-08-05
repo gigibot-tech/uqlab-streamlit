@@ -60,7 +60,7 @@
 
 The executor does **not** replace the runner. It is a thin wrapper so the FastAPI process can invoke the ML stack in-process (no subprocess). `SubprocessExecutor` was removed (2026-06-24); only `DirectExecutor` remains.
 
-CLI dev path (no backend): `scripts/runners/run_fast_uncertainty_classification.py` → `run_from_yaml` directly.
+CLI dev path (no backend): `src/uqlab_core/cli/run_fast_uncertainty_classification.py` → `run_from_yaml` directly.
 
 Default CLI config: [`configs/experiment/four_region.yaml`](configs/experiment/four_region.yaml) (`partition_mode: four_region`).
 
