@@ -69,14 +69,14 @@ python train_with_hydra.py experiment=fast_pilot training.epochs=10
 ## Config Structure
 
 ```
-configs/
+src/uqlab_core/configs/
 ├── experiment/
 │   ├── default.yaml       # Default configuration
 │   └── fast_pilot.yaml    # Quick testing config
 └── config.yaml            # (optional) Main config
 ```
 
-### Default Config (`configs/experiment/default.yaml`)
+### Default Config (`src/uqlab_core/configs/experiment/default.yaml`)
 
 ```yaml
 seed: 42
@@ -105,7 +105,7 @@ evaluation:
   top_k: 10
 ```
 
-### Fast Pilot Config (`configs/experiment/fast_pilot.yaml`)
+### Fast Pilot Config (`src/uqlab_core/configs/experiment/fast_pilot.yaml`)
 
 ```yaml
 defaults:
@@ -350,8 +350,8 @@ python train.py training:epochs=20
 ### Step 1: Create Hydra Configs
 
 ```bash
-mkdir -p configs/experiment
-# Copy your existing YAML to configs/experiment/default.yaml
+mkdir -p src/uqlab_core/configs/experiment
+# Copy your existing YAML to src/uqlab_core/configs/experiment/default.yaml
 ```
 
 ### Step 2: Create Hydra Script
@@ -413,7 +413,7 @@ python train_with_hydra.py seed=42
 ### Example 3: Config Composition
 
 ```yaml
-# configs/experiment/ablation.yaml
+# src/uqlab_core/configs/experiment/ablation.yaml
 defaults:
   - default
   - override model: large  # Use large model config
