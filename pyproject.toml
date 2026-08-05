@@ -27,7 +27,6 @@ dev = [
 # UV Workspace Configuration (inspired by SPARK workflow)
 [tool.uv.workspace]
 members = [
-    "src/uqlab",
     "src/uqlab_core",
     "backend",
 ]
@@ -91,7 +90,7 @@ line-ending = "auto"
 
 # Pytest Configuration
 [tool.pytest.ini_options]
-testpaths = ["tests", "src/uqlab/tests"]
+testpaths = ["tests"]
 pythonpath = ["src", ".", "backend"]
 norecursedirs = ["tests/legacy", "src/walaris/classification/archive"]
 addopts = "--cov=uqlab --cov=app --cov-report=html --cov-report=term-missing"
