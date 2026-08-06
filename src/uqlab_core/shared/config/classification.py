@@ -61,7 +61,7 @@ def load_yaml_merging_defaults(path: Path) -> dict[str, Any]:
 
 def normalize_dinov2_model(model_name: str) -> str:
     """Legacy torch.hub names → short keys used by ``DINOv2Backbone``."""
-    from uqlab_core.models.scope.architecture import normalize_dinov2_model as _normalize
+    from uqlab_core.models.factory.architecture import normalize_dinov2_model as _normalize
 
     return _normalize(model_name)
 
@@ -271,7 +271,7 @@ class ModelConfig(BaseModel):
     
     @model_validator(mode="after")
     def sync_scope_and_mode(self) -> "ModelConfig":
-        from uqlab_core.models.scope.architecture import normalize_architecture, scope_to_training_mode
+        from uqlab_core.models.factory.architecture import normalize_architecture, scope_to_training_mode
 
         canonical = normalize_architecture(self.architecture)
         object.__setattr__(self, "architecture", canonical)
