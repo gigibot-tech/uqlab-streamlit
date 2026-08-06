@@ -10,15 +10,16 @@ After codebase consolidation, here's the current state of configs and imports in
 Located in [`configs/`](configs:1):
 ```
 configs/
-├── example_cnn_mcdropout.yaml
-├── example_resnet18_mcdropout.yaml
 ├── experiment/
 │   ├── default.yaml
 │   └── fast_pilot.yaml
-└── test/
-    ├── test_cnn_mcdropout.yaml
-    ├── test_dinov2_mlp.yaml
-    └── test_resnet18_mcdropout.yaml
+├── test/
+│   ├── test_cnn_mcdropout.yaml
+│   ├── test_dinov2_mlp.yaml
+│   └── test_resnet18_mcdropout.yaml
+└── examples/
+    ├── example_cnn_mcdropout.yaml
+    └── example_resnet18_mcdropout.yaml
 ```
 
 **Status**: ✅ **Still valid and used by [`run_fast.py`](run_fast.py:1)**
@@ -96,7 +97,8 @@ from uqlab.run_artifacts import save_zwischen_result
 uqlab-streamlit/
 ├── configs/                    # ✅ YAML configs (still used)
 │   ├── experiment/
-│   └── test/
+│   ├── test/
+│   └── examples/
 ├── src/
 │   ├── data/                   # ✅ RESTORED from archive
 │   ├── metrics/                # ✅ RESTORED from archive
