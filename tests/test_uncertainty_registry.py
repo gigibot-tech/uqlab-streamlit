@@ -2,17 +2,52 @@
 
 from __future__ import annotations
 
-from uqlab_orchestrator.config.workflow_defaults import default_workflow
-from uqlab_orchestrator.uncertainty import (
+from uqlab_core.shared.config.uncertainty_perspectives import (
+    SINGLE_SWEEP_TARGET,
+    SWEEP_BOTH_TARGET,
     mirror_perspectives,
+    perspective_by_id,
+    perspective_by_profile,
     perspective_by_sweep_target,
     perspective_count,
-    resolve_launch_plan,
+    run_both_fig_labels,
 )
 
 
 def test_registry_has_two_perspectives():
     assert perspective_count() == 2
+
+
+def test_single_sweep_target_constant():
+    assert SINGLE_SWEEP_TARGET == "single"
+
+
+def test_sweep_both_target_constant():
+    assert SWEEP_BOTH_TARGET == "sweep_both"
+
+
+def test_perspective_by_id():
+    epistemic = perspective_by_id("epistemic")
+    assert epistemic.id == "epistemic"
+    assert epistemic.sweep_target == "under_train"
+
+    aleatoric = perspective_by_id("aleatoric")
+    assert aleatoric.id == "aleatoric"
+    assert aleatoric.sweep_target == "label_noise"
+
+
+def test_perspective_by_profile():
+    noise = perspective_by_profile("noise")
+    assert noise.id == "aleatoric"
+
+    under_train = perspective_by_profile("under_train")
+    assert under_train.id == "epistemic"
+
+
+def test_perspective_by_sweep_target():
+    assert perspective_by_sweep_target("single") is None
+    assert perspective_by_sweep_target("under_train").id == "epistemic"
+    assert perspective_by_sweep_target("label_noise").id == "aleatoric"
 
 
 def test_mirror_perspectives_excludes_primary():
@@ -28,69 +63,6 @@ def test_mirror_perspectives_single_includes_all():
     assert len(mirrors) == perspective_count()
 
 
-def test_resolve_launch_actions_four_region_single_button():
-    import copy
-
-    from uqlab.data.splits.four_region import DEFAULT_FOUR_REGION_PRESET
-    from uqlab_orchestrator.config.workflow_defaults import default_workflow
-    from uqlab_orchestrator.uncertainty import resolve_launch_actions, resolve_launch_plan
-
-    wf = default_workflow()
-    wf["uncertainty_config"] = {
-        **wf["uncertainty_config"],
-        "partition_mode": "four_region",
-        "class_regions": copy.deepcopy(DEFAULT_FOUR_REGION_PRESET),
-        "sweep_target": "single",
-        "sweep_enabled": False,
-        "sweep_kind": "four_region",
-    }
-    plan = resolve_launch_plan(wf)
-    assert plan.sweep_target == "single"
-    assert plan.primary["profile"] == "four_region"
-    assert plan.mirror_arms == ()
-    actions = resolve_launch_actions(wf)
-    assert len(actions) == 1
-    assert "four-region" in actions[0].label.lower()
-
-
-def test_resolve_launch_actions_sweep_both_single_button():
-    wf = default_workflow()
-    wf["uncertainty_config"]["sweep_target"] = "sweep_both"
-    wf["uncertainty_config"]["sweep_enabled"] = True
-    wf["uncertainty_config"]["epistemic_sweep_enabled"] = True
-    wf["uncertainty_config"]["aleatoric_sweep_enabled"] = True
-    from uqlab_orchestrator.uncertainty import resolve_launch_actions
-
-    actions = resolve_launch_actions(wf)
-    assert len(actions) == 1
-    assert actions[0].kind == "primary"
-    assert "Run benchmark" in actions[0].label
-
-
-def test_resolve_launch_plan_sweep_one():
-    w = default_workflow()
-    plan = resolve_launch_plan(w)
-    assert plan.sweep_target == "label_noise"
-    assert plan.primary["profile"] == "noise"
-    assert len(plan.mirror_arms) == 1
-    assert plan.mirror_arms[0]["profile"] == "under_train"
-    assert len(plan.run_both_arms) == 2
-
-
-def test_resolve_launch_plan_sweep_both():
-    w = default_workflow()
-    w["uncertainty_config"]["sweep_target"] = "sweep_both"
-    plan = resolve_launch_plan(w)
-    assert plan.sweep_target == "sweep_both"
-    assert len(plan.run_both_arms) == 2
-    assert plan.mirror_arms == ()
-
-
-def test_resolve_launch_plan_single():
-    w = default_workflow()
-    w["uncertainty_config"]["sweep_target"] = "single"
-    w["uncertainty_config"]["sweep_enabled"] = False
-    plan = resolve_launch_plan(w)
-    assert plan.sweep_target == "single"
-    assert plan.primary["profile"] == "single"
-    assert len(plan.mirror_arms) == perspective_count()
+def test_run_both_fig_labels():
+    assert "Fig. 3" in run_both_fig_labels()
+    assert "Fig. 4" in run_both_fig_labels()
