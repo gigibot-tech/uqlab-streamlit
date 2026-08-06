@@ -20,7 +20,7 @@
 ### Option 1: Using the migration script
 ```bash
 cd uqlab-streamlit
-python3 backend/run_migration.py
+python3 backend/migrations/run_add_best_signals_column.py
 ```
 
 ### Option 2: Manual SQL execution
@@ -115,7 +115,7 @@ Stores parameter sweep experiments.
 ### Option 1: Using the migration script
 ```bash
 cd uqlab-streamlit
-python3 backend/run_benchmark_migration.py
+python3 backend/migrations/run_add_benchmark_tables.py
 ```
 
 ### Option 2: Manual SQL execution
