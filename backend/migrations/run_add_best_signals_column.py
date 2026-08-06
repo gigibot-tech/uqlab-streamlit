@@ -2,14 +2,14 @@
 Run database migration to add best_signals_json column.
 
 Usage:
-    python backend/run_migration.py
+    python backend/migrations/run_add_best_signals_column.py
 """
 
 import sys
 from pathlib import Path
 
 # Add backend to path
-backend_dir = Path(__file__).parent
+backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_dir))
 
 from sqlmodel import Session, text
@@ -17,7 +17,7 @@ from app.core.db import engine
 
 def run_migration():
     """Run the migration SQL script."""
-    migration_file = backend_dir / "migrations" / "add_best_signals_column.sql"
+    migration_file = Path(__file__).parent / "add_best_signals_column.sql"
     
     if not migration_file.exists():
         print(f"❌ Migration file not found: {migration_file}")
