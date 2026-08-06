@@ -8,7 +8,7 @@ echo "🔧 Fixing Python 3.14 SQLAlchemy compatibility..."
 echo ""
 
 # Navigate to backend directory
-cd "$(dirname "$0")/backend"
+cd "$(dirname "$0")/.."
 
 echo "📦 Upgrading SQLAlchemy to 2.0.36+..."
 uv pip install --upgrade "sqlalchemy>=2.0.36"
