@@ -1,8 +1,21 @@
 import os
 from collections import defaultdict
+from pathlib import Path
+
+
+def find_project_root() -> Path:
+    current = Path(__file__).resolve().parent
+    while current != current.parent:
+        if (current / "pyproject.toml").exists() or (current / "uv.lock").exists():
+            return current
+        current = current.parent
+    return Path.cwd()
+
+
+PROJECT_ROOT = find_project_root()
 
 # Get all .md files
-md_files = [f for f in os.listdir('.') if f.endswith('.md')]
+md_files = [f for f in os.listdir(PROJECT_ROOT) if f.endswith('.md')]
 
 # Define categories based on keywords
 categories = {

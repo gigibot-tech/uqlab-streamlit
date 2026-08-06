@@ -3,6 +3,14 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$SCRIPT_DIR"
+while [ "$PROJECT_ROOT" != "/" ] && [ ! -f "$PROJECT_ROOT/pyproject.toml" ] && [ ! -f "$PROJECT_ROOT/uv.lock" ]; do
+    PROJECT_ROOT="$(dirname "$PROJECT_ROOT")"
+done
+
+cd "$PROJECT_ROOT"
+
 echo "🗂️  Organizing root-level scripts..."
 
 # Create scripts directory if it doesn't exist
