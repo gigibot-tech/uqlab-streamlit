@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Union
 from uuid import UUID
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -24,8 +23,8 @@ def repository_root() -> Path:
 
 
 def configs_dir() -> Path:
-    """Experiment YAML configs (``configs/experiment``, ``configs/test``, …)."""
-    return repository_root() / "configs"
+    """Experiment YAML configs bundled with the package (``uqlab_core/configs/experiment``, ``uqlab_core/configs/test``, …)."""
+    return Path(__file__).resolve().parents[0] / "configs"
 
 
 def data_root() -> Path:
@@ -46,16 +45,16 @@ def experiments_root() -> Path:
     return root
 
 
-def experiment_dir(experiment_id: Union[str, UUID]) -> Path:
+def experiment_dir(experiment_id: str | UUID) -> Path:
     return experiments_root() / str(experiment_id)
 
 
-def experiment_results_dir(experiment_id: Union[str, UUID]) -> Path:
+def experiment_results_dir(experiment_id: str | UUID) -> Path:
     return experiment_dir(experiment_id) / "results"
 
 
 def resolve_experiment_results_dir(
-    experiment_id: Union[str, UUID],
+    experiment_id: str | UUID,
     *,
     results_path: str | Path | None = None,
 ) -> Path:
@@ -91,5 +90,5 @@ def resolve_experiment_results_dir(
     return experiment_results_dir(eid)
 
 
-def batch_root(batch_id: Union[str, UUID]) -> Path:
+def batch_root(batch_id: str | UUID) -> Path:
     return experiments_root() / f"batch_{batch_id}"
