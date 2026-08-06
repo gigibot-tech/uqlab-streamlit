@@ -21,7 +21,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import models
 
-from uqlab_core.models.scope.architecture import normalize_architecture, scope_to_training_mode
+from .architecture import normalize_architecture, scope_to_training_mode
 from uqlab_core.shared.config.classification import ModelConfig
 
 from .classification_models import EmbeddingDropoutMLP, EmbeddingMLP
