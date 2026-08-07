@@ -3,7 +3,12 @@
 
 set -e
 
+# Resolve project root so the script works from scripts/maintenance/
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$ROOT"
+
 echo "🗂️  Organizing root-level scripts..."
+echo "📁 Project root: $ROOT"
 
 # Create scripts directory if it doesn't exist
 mkdir -p scripts/maintenance
