@@ -25,7 +25,9 @@ def repository_root() -> Path:
 
 def configs_dir() -> Path:
     """Experiment YAML configs (``configs/experiment``, ``configs/test``, …)."""
-    return repository_root() / "configs"
+    # Canonical location is inside the uqlab_core package so configs ship with the package.
+    # A root-level ``configs`` symlink is kept for backward compatibility with docs/CLI.
+    return Path(__file__).resolve().parent / "configs"
 
 
 def data_root() -> Path:

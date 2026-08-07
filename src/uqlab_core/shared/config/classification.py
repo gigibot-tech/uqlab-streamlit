@@ -31,7 +31,7 @@ def load_yaml_merging_defaults(path: Path) -> dict[str, Any]:
     Load experiment YAML, resolving Hydra-style ``defaults: [default, ...]``.
 
     Only simple name refs in the same directory as ``path`` are supported
-    (matches ``configs/experiment/fast_pilot.yaml`` → ``default.yaml``).
+    (matches ``src/uqlab_core/configs/experiment/fast_pilot.yaml`` → ``default.yaml``).
     """
     with open(path) as f:
         config_dict = yaml.safe_load(f) or {}
