@@ -4,6 +4,21 @@ This directory contains scripts for analyzing experiment results from the UQ cla
 
 ## Available Scripts
 
+### `analyze_md_files.py`
+
+Lists and categorizes the Markdown documentation files at the project root by topic (architecture, UI, backend, validation, etc.). Useful for inventorying docs before reorganizations.
+
+**Usage:**
+```bash
+python scripts/analysis/analyze_md_files.py
+
+# Or make it executable and run directly
+chmod +x scripts/analysis/analyze_md_files.py
+./scripts/analysis/analyze_md_files.py
+```
+
+**Output:** a categorized list of all `.md` files directly under the repository root.
+
 ### `analyze_my_run.py`
 
 Analyzes experiment results from a single run directory and creates visualizations of AUROC metrics.

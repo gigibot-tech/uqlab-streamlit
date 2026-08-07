@@ -1,9 +1,14 @@
 #!/bin/bash
-# Script to organize root-level scripts into appropriate directories
+# Script to organize root-level scripts into appropriate directories.
+# Run from the repository root, or invoke this script directly from anywhere.
 
 set -e
 
-echo "🗂️  Organizing root-level scripts..."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+cd "$PROJECT_ROOT"
+
+echo "🗂️  Organizing root-level scripts in $PROJECT_ROOT..."
 
 # Create scripts directory if it doesn't exist
 mkdir -p scripts/maintenance
