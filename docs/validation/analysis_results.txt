@@ -129,4 +129,3 @@
    - inverse_mass: Best for epistemic (should be ~0.90+ AUROC)
    - dominance: Good for epistemic (should be ~0.75+ AUROC)
    - inverse_coherence: Best for aleatoric (should be ~0.70+ AUROC)
-
