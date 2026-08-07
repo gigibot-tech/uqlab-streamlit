@@ -65,7 +65,7 @@ def verify_ml_stack() -> None:
     except ImportError as exc:
         raise RuntimeError(
             f"ML stack import failed ({exc}). "
-            f"Start the backend with ./start_backend.sh from backend/ "
+            f"Start the backend with ./scripts/start_backend.sh from backend/ "
             f"so {SRC_DIR} is on PYTHONPATH (bootstrap v{ML_BOOTSTRAP_VERSION})."
         ) from exc
 

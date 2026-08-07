@@ -33,7 +33,7 @@ When the backend runs with auto-reload enabled (development mode), **any code ch
 ### How to Start
 ```bash
 cd backend
-./start_backend.sh
+./scripts/start_backend.sh
 ```
 
 ### What Happens
@@ -46,7 +46,7 @@ cd backend
 - Uses `uvicorn` with `--reload` flag
 - Monitors multiple directories with WatchFiles
 - Hot-reloads Python modules automatically
-- Runs via `run_dev.py`
+- Runs via `scripts/run_dev.py`
 
 ---
 
@@ -66,7 +66,7 @@ cd backend
 ### How to Start
 ```bash
 cd backend
-./start_backend_prod.sh
+./scripts/start_backend_prod.sh
 ```
 
 ### What Happens
@@ -79,7 +79,7 @@ cd backend
 - Uses `uvicorn` WITHOUT `--reload` flag
 - No file watching or monitoring
 - Stable process that runs until manually stopped
-- Runs via `run_prod.py`
+- Runs via `scripts/run_prod.py`
 
 ---
 
@@ -92,8 +92,8 @@ cd backend
 | **Kills experiments** | ⚠️ YES | ✅ No |
 | **Code changes apply** | Immediately | After manual restart |
 | **Use for experiments** | ❌ NEVER | ✅ ALWAYS |
-| **Startup script** | `start_backend.sh` | `start_backend_prod.sh` |
-| **Python script** | `run_dev.py` | `run_prod.py` |
+| **Startup script** | `scripts/start_backend.sh` | `scripts/start_backend_prod.sh` |
+| **Python script** | `scripts/run_dev.py` | `scripts/run_prod.py` |
 
 ---
 
@@ -101,12 +101,12 @@ cd backend
 
 ### From Development to Production
 1. Stop the development server (Ctrl+C)
-2. Start production mode: `./start_backend_prod.sh`
+2. Start production mode: `./scripts/start_backend_prod.sh`
 3. Your experiments will now be safe from restarts
 
 ### From Production to Development
 1. Stop the production server (Ctrl+C)
-2. Start development mode: `./start_backend.sh`
+2. Start development mode: `./scripts/start_backend.sh`
 3. Code changes will now trigger automatic restarts
 
 ---
@@ -120,7 +120,7 @@ cd backend
 4. **Test changes** in development mode before running experiments
 
 ### For Experiment Runners
-1. **Always use production mode** (`start_backend_prod.sh`)
+1. **Always use production mode** (`scripts/start_backend_prod.sh`)
 2. **Verify the mode** by checking the startup message
 3. **Don't edit code** while experiments are running
 4. **Wait for completion** before switching back to development mode
@@ -137,7 +137,7 @@ cd backend
 
 ### Problem: Experiment was killed mid-execution
 **Cause**: Backend was running in development mode and code changed  
-**Solution**: Always use `start_backend_prod.sh` for experiments
+**Solution**: Always use `scripts/start_backend_prod.sh` for experiments
 
 ### Problem: Pickle data truncation error
 **Cause**: Server restart interrupted multiprocessing operation  
@@ -157,7 +157,7 @@ cd backend
 
 ## Technical Implementation
 
-### Development Mode (`run_dev.py`)
+### Development Mode (`scripts/run_dev.py`)
 ```python
 uvicorn.run(
     "app.main:app",
@@ -168,7 +168,7 @@ uvicorn.run(
 )
 ```
 
-### Production Mode (`run_prod.py`)
+### Production Mode (`scripts/run_prod.py`)
 ```python
 uvicorn.run(
     "app.main:app",
@@ -182,6 +182,6 @@ uvicorn.run(
 
 ## Summary
 
-**Golden Rule**: If you're running an experiment, use production mode (`start_backend_prod.sh`). Period.
+**Golden Rule**: If you're running an experiment, use production mode (`scripts/start_backend_prod.sh`). Period.
 
 The few seconds saved by auto-reload are not worth losing hours of experiment results.

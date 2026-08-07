@@ -5,7 +5,7 @@
 ### Option 1: Using the startup script (Recommended)
 ```bash
 cd uqlab-streamlit/backend
-./start_backend.sh
+./scripts/start_backend.sh
 ```
 
 ### Option 2: Manual startup
@@ -54,7 +54,8 @@ backend/
 │   ├── domain/          # Domain models
 │   ├── repositories/    # Data access layer
 │   └── services/        # Business logic
-├── start_backend.sh     # Startup script
+├── scripts/
+│   └── start_backend.sh # Startup script
 └── pyproject.toml       # Dependencies
 ```
 
@@ -97,7 +98,7 @@ uv pip install -e .
 1. **Start backend** (in one terminal):
    ```bash
    cd uqlab-streamlit/backend
-   ./start_backend.sh
+   ./scripts/start_backend.sh
    ```
 
 2. **Start frontend** (in another terminal):
