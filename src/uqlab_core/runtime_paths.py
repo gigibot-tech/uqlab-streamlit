@@ -24,8 +24,8 @@ def repository_root() -> Path:
 
 
 def configs_dir() -> Path:
-    """Experiment YAML configs (``configs/experiment``, ``configs/test``, …)."""
-    return repository_root() / "configs"
+    """Experiment YAML configs shipped with the package (``configs/experiment``, …)."""
+    return Path(__file__).resolve().parent / "configs"
 
 
 def data_root() -> Path:
