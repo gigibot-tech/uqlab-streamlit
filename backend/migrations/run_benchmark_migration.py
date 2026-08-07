@@ -5,7 +5,7 @@ This script creates the new benchmarkresult and benchmarksweep tables
 for storing results from the uq_benchmarks package.
 
 Usage:
-    python backend/run_benchmark_migration.py
+    python backend/migrations/run_benchmark_migration.py
 """
 
 import sqlite3
@@ -15,7 +15,7 @@ from pathlib import Path
 def run_migration():
     """Run the benchmark tables migration."""
     # Database path
-    db_path = Path(__file__).parent / "app.db"
+    db_path = Path(__file__).resolve().parent.parent / "app.db"
     
     if not db_path.exists():
         print(f"❌ Database not found at {db_path}")
@@ -23,7 +23,7 @@ def run_migration():
         return
     
     # Read migration SQL
-    migration_path = Path(__file__).parent / "migrations" / "add_benchmark_tables.sql"
+    migration_path = Path(__file__).parent / "add_benchmark_tables.sql"
     
     if not migration_path.exists():
         print(f"❌ Migration file not found at {migration_path}")

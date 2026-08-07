@@ -4,11 +4,16 @@ Run database migration to add optional method_type column to batchexperiment tab
 This column is nullable for backward compatibility. Existing experiments will have NULL values.
 
 Usage:
-    python run_method_type_migration.py
+    python backend/migrations/run_method_type_migration.py
 """
 
+import sys
 import sqlite3
 from pathlib import Path
+
+# Add backend to path
+backend_dir = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(backend_dir))
 
 def run_migration():
     """Execute the method_type column migration."""
@@ -23,7 +28,7 @@ def run_migration():
         return False
     
     # Read migration SQL
-    migration_path = Path(__file__).parent / "migrations" / "add_method_type_column.sql"
+    migration_path = Path(__file__).parent / "add_method_type_column.sql"
     
     if not migration_path.exists():
         print(f"❌ Migration file not found at {migration_path}")
