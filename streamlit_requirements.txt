@@ -1,6 +1,6 @@
 # Deprecated — use uv from the repo root instead:
 #   uv sync
-#   ./start.sh
+#   ./scripts/start.sh
 #
 # Installs uqlab[ui] from the workspace (torch, streamlit, sklearn, …) plus scipy/kaleido.
 

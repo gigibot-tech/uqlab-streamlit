@@ -19,7 +19,7 @@ The easiest way to start both MinIO and the backend:
 
 ```bash
 cd uqlab-streamlit
-./start-with-minio.sh
+./scripts/start-with-minio.sh
 ```
 
 This script will:
@@ -282,7 +282,7 @@ For a streamlined workflow:
 
 ```bash
 # Start everything
-./start-with-minio.sh
+./scripts/start-with-minio.sh
 
 # Make changes - uvicorn auto-reloads
 

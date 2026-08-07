@@ -6,6 +6,10 @@
 
 set -e
 
+# Resolve project root from scripts/
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 # Colors for output
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -13,6 +17,9 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 echo -e "${GREEN}Starting uqlab-streamlit with MinIO storage backend${NC}"
+
+# Run docker-compose from the project root
+cd "$PROJECT_ROOT"
 
 # Check if docker-compose is available
 if ! command -v docker-compose &> /dev/null && ! command -v docker &> /dev/null; then
@@ -68,7 +75,7 @@ echo ""
 
 # Start uvicorn backend
 echo -e "${YELLOW}Starting uvicorn backend...${NC}"
-cd backend
+cd "$PROJECT_ROOT/backend"
 
 # Trap SIGINT and SIGTERM to gracefully shutdown
 trap 'echo -e "\n${YELLOW}Shutting down...${NC}"; kill $UVICORN_PID 2>/dev/null; exit 0' INT TERM
