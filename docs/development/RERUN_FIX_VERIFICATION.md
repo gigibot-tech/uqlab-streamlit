@@ -68,7 +68,7 @@ The issue is **NOT** an infinite rerun loop in the code. It's one of these:
 2. **Backend Connection Issues**
    - Backend not running or not responding
    - API calls timing out
-   - Solution: Ensure backend is running (`./start_backend.sh`)
+   - Solution: Ensure backend is running (`./backend/scripts/start_backend.sh`)
 
 3. **Browser/Cache Issues**
    - Old Streamlit state cached
