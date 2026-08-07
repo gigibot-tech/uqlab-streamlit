@@ -118,7 +118,7 @@ vendor: calculate_disentanglement_error
 
 - **Engine** lives in [`uqlab/runner/experiment_core.py`](../src/uqlab/runner/experiment_core.py) (`run_experiment_core`).
 - **Runner** ([`execute.py`](../src/uqlab/runner/execute.py)) loads YAML, validates, tees `experiment.log`, calls the engine.
-- **Scripts** ([`scripts/runners/run_fast_uncertainty_classification.py`](../../scripts/runners/run_fast_uncertainty_classification.py)) are thin CLIs → `run_from_yaml` only.
+- **Scripts** ([`src/uqlab_core/cli/run_fast_uncertainty.py`](../../src/uqlab_core/cli/run_fast_uncertainty.py)) are thin CLIs → `run_from_yaml` only.
 - **Backend** (`TrainingOrchestrator` + `DirectExecutor`) is job infrastructure (DI, DB, WebSocket) — **not** a separate ML stage. It injects and calls `run_from_yaml`.
 
 | Layer | ML logic? |
@@ -155,7 +155,7 @@ Rule: workflow steps import **`uqlab_orchestrator.*`** and **`uqlab.ui_component
 |-------|---------|------------------------|
 | **Runner (canonical)** | [`uqlab/runner/`](../src/uqlab/runner/) | **Defines** `run` / `run_config` |
 | **Backend** | `backend/.../direct_executor.py` | Yes — in-process worker for API jobs |
-| **CLI / scripts** | `scripts/run_fast_uncertainty_classification.py` (CLI → `run_from_yaml`) | Yes |
+| **CLI / scripts** | `src/uqlab_core/cli/run_fast_uncertainty.py` (CLI → `run_from_yaml`) | Yes |
 | **Flask wizard** | `uqlab-flask/executor.py` | Yes (local, no API) |
 | **Orchestrator** | `uqlab_orchestrator/experiment_launcher.py` | **No** — HTTP create/start only |
 | **Streamlit UI** | `uqlab/ui_components/` | **No** (except `read_experiment_log` for failed-run debug) |
@@ -303,7 +303,7 @@ flowchart TB
 |---------|------|
 | Runner | `src/uqlab/runner/execute.py` |
 | Train + eval core | `src/uqlab/runner/experiment_core.py` |
-| CLI wrapper | `scripts/runners/run_fast_uncertainty_classification.py` |
+| CLI wrapper | `src/uqlab_core/cli/run_fast_uncertainty.py` |
 | Signals / signal_table | `src/uqlab/evaluation/signals/` |
 | Disentanglement adapter | `src/uqlab/evaluation/benchmarks/disentangling/` |
 | Vendor metric | `src/uqlab/vendor/disentanglement_error/` |

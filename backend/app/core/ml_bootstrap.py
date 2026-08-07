@@ -101,7 +101,7 @@ def verify_ml_stack() -> None:
             f"Signal registry at {signal_registry.__file__!r} still exports raw 'dominance'."
         )
 
-    script_path = PROJECT_ROOT / "scripts" / "runners" / "run_fast_uncertainty_classification.py"
+    script_path = PROJECT_ROOT / "src" / "uqlab_core" / "cli" / "run_fast_uncertainty.py"
     if not script_path.is_file():
         raise RuntimeError(f"CLI wrapper not found (optional for API): {script_path}")
 

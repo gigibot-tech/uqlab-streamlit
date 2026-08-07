@@ -66,8 +66,10 @@ evaluation:
     
     cmd = [
         "python",
-        "scripts/run_fast_uncertainty_classification.py",
+        "src/uqlab_core/cli/run_fast_uncertainty.py",
+        "--config",
         str(config_path),
+        "--output_dir",
         str(output_dir)
     ]
     

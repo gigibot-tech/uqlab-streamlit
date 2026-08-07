@@ -60,7 +60,7 @@
 
 The executor does **not** replace the runner. It is a thin wrapper so the FastAPI process can invoke the ML stack in-process (no subprocess). `SubprocessExecutor` was removed (2026-06-24); only `DirectExecutor` remains.
 
-CLI dev path (no backend): `scripts/runners/run_fast_uncertainty_classification.py` → `run_from_yaml` directly.
+CLI dev path (no backend): `src/uqlab_core/cli/run_fast_uncertainty.py` → `run_from_yaml` directly.
 
 Default CLI config: [`configs/experiment/four_region.yaml`](configs/experiment/four_region.yaml) (`partition_mode: four_region`).
 
@@ -68,10 +68,12 @@ Default CLI config: [`configs/experiment/four_region.yaml`](configs/experiment/f
 
 | Directory | Role | Uses `ExperimentConfig`? |
 |-----------|------|---------------------------|
-| `scripts/runners/` | Train/evaluate via `run_from_yaml` | Yes (YAML → `from_yaml`) |
+| `src/uqlab_core/cli/` | Train/evaluate via `run_from_yaml` | Yes (YAML → `from_yaml`) |
+| `scripts/runners/` | Validation sweep orchestration | Yes (YAML → `from_yaml`) |
 | `scripts/analysis/` | Post-hoc scoring/plots on finished runs | No (reads `results.pt` / metrics JSON) |
 
-Runners: `run_fast_uncertainty_classification.py`, `run_validation_experiments.py`, `run_fast.py` (wrapper).  
+CLI runners: `run_fast_uncertainty.py`, `run_fast.py` (wrapper).  
+Sweeps: `scripts/runners/run_validation_experiments.py`.  
 Analysis: `disentanglement_error.py`, `four_region_validation.py`, `paper_benchmarks.py`.
 
 ---

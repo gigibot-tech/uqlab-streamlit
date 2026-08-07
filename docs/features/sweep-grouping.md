@@ -8,7 +8,7 @@ The user identified a critical architectural insight:
 
 ### What This Means
 
-When running parameter sweeps via the **script** (`run_fast_uncertainty_classification.py`), the system creates **individual experiments** in the database, but they are NOT linked as a "batch experiment". This creates a disconnect:
+When running parameter sweeps via the **script** (`src/uqlab_core/cli/run_fast_uncertainty.py`), the system creates **individual experiments** in the database, but they are NOT linked as a "batch experiment". This creates a disconnect:
 
 1. **Script-generated sweeps**: 50 individual `UncertaintyExperiment` records with no `batch_experiment_id`
 2. **UI-generated batches**: `BatchExperiment` record with linked `BatchExperimentRun` records
@@ -123,7 +123,7 @@ class UncertaintyExperiment(SQLModel, table=True):
 
 **Script Changes**:
 ```python
-# In run_fast_uncertainty_classification.py
+# In src/uqlab_core/cli/run_fast_uncertainty.py
 sweep_group_id = f"sweep_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
 for i, mc_passes_value in enumerate([0, 5, 10, 20, 50]):
