@@ -268,9 +268,9 @@ Run the validation script:
 
 ```bash
 cd uqlab-streamlit
-python scripts/run_fast_uncertainty_classification.py \
-    configs/test/test_my_custom_model.yaml \
-    /tmp/test_my_custom_model
+python src/uqlab_core/cli/run_fast_uncertainty.py \
+    --config configs/test/test_my_custom_model.yaml \
+    --output_dir /tmp/test_my_custom_model
 ```
 
 Verify:

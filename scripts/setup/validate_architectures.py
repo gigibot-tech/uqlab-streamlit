@@ -16,8 +16,9 @@ def run_test(config_name: str) -> bool:
     print(f"{'='*60}\n")
     
     cmd = [
-        "python", "scripts/run_fast_uncertainty_classification.py",
-        config_path, output_dir
+        "python", "src/uqlab_core/cli/run_fast_uncertainty.py",
+        "--config", config_path,
+        "--output_dir", output_dir
     ]
     
     try:

@@ -29,6 +29,9 @@ dependencies = [
 dinov2 = ["transformers>=4.36.0"]
 ek_fak = ["kronfluence>=0.1.0"]
 
+[project.scripts]
+uqlab-run = "uqlab_core.cli.run_fast_uncertainty:main"
+
 [tool.setuptools.package-dir]
 "uqlab_core" = "."
 

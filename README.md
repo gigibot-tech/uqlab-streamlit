@@ -49,7 +49,7 @@ uqlab-streamlit/
 Full flow diagram and FAQ: [`EXECUTION_FLOW_AND_CONFIG_GUIDE.md`](EXECUTION_FLOW_AND_CONFIG_GUIDE.md).  
 Package boundaries: [`ARCHITECTURE_CLARIFICATION.md`](ARCHITECTURE_CLARIFICATION.md).
 
-**Scripts:** `scripts/runners/` trains via `ExperimentConfig` → `run_from_yaml`; `scripts/analysis/` scores finished runs (disentanglement, four-region validation, paper CSVs).
+**Scripts:** `src/uqlab_core/cli/` trains via `ExperimentConfig` → `run_from_yaml`; `scripts/runners/` runs validation sweeps; `scripts/analysis/` scores finished runs (disentanglement, four-region validation, paper CSVs).
 
 ## 🚀 Quick Start
 

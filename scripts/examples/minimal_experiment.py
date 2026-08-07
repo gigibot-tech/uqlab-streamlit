@@ -3,11 +3,11 @@ Minimal Uncertainty Quantification Experiment
 ==============================================
 
 This script shows the ESSENTIAL code for an UQ experiment.
-Compare this to run_fast_uncertainty_classification.py (800+ lines).
+Compare this to src/uqlab_core/cli/run_fast_uncertainty.py (~60 lines).
 
 The difference:
 - This: ~80 lines of actual ML logic
-- Full script: ~800 lines (90% is config parsing, validation, logging)
+- Full CLI: ~60 lines (mostly config parsing, validation, logging)
 
 Run: python examples/minimal_experiment.py
 """

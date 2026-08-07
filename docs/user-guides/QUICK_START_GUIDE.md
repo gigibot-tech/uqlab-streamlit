@@ -177,13 +177,9 @@ These notebooks have pre-configured sweeps that populate `results/validation/`
 cd uqlab-streamlit
 source .venv/bin/activate
 
-python scripts/run_fast_uncertainty_classification.py \
-  --noise-type worse_label \
-  --under-supported "random:2" \
-  --under-train-per-class 50 \
-  --regular-train-per-class 300 \
-  --epochs 2 \
-  --mc-passes 10
+python src/uqlab_core/cli/run_fast_uncertainty.py \
+  --config configs/experiment/four_region.yaml \
+  --output_dir data/experiments/my_run/results
 ```
 
 ## Troubleshooting: "0 experiments in DB"

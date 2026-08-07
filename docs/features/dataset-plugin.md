@@ -12,7 +12,7 @@ flowchart LR
   Registry[dataset_registry DatasetSpec]
   Factory[load_classification_dataset]
   RunSpec[run_spec.build_run_yaml]
-  Script[run_fast_uncertainty_classification.py]
+  Script[src/uqlab_core/cli/run_fast_uncertainty.py]
   Catalog --> Registry
   Registry --> Factory
   RunSpec -->|data.dataset_name + paths.data_root| Script
