@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 SRC = ROOT / "src"
 FLASK_PKG = Path(__file__).resolve().parent
 for p in (str(SRC), str(ROOT), str(FLASK_PKG)):
