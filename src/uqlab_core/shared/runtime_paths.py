@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Union
 from uuid import UUID
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 def repository_root() -> Path:

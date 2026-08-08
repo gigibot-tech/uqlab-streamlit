@@ -22,7 +22,7 @@ from uqlab_core.models.scope.architecture import normalize_architecture, scope_t
 from uqlab_core.models.scope.training_scope import validate_training_scope
 from uqlab_core.runner.experiment_core import run_experiment_core
 from uqlab_core.shared.config.signals import normalize_evaluation_signals, validate_evaluation_signals
-from uqlab_core.runtime_paths import repository_root
+from uqlab_core.shared.runtime_paths import repository_root
 
 T = TypeVar("T")
 

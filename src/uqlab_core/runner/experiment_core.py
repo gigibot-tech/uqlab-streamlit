@@ -59,7 +59,7 @@ def run_experiment_core(
     2. **Train + eval** — ``run_train_and_eval_phases`` (see module docstring for Keras mapping)
     3. **Not here** — ``calculate_disentanglement_error`` / campaign PNG (needs N runs)
     """
-    from uqlab_core.runtime_paths import repository_root
+    from uqlab_core.shared.runtime_paths import repository_root
 
     root = project_root if project_root is not None else repository_root()
 
