@@ -7,14 +7,15 @@ After codebase consolidation, here's the current state of configs and imports in
 ## 1. Configuration Files
 
 ### Old YAML Configs (Still Valid)
-Located in [`configs/`](configs:1):
+Located in [`src/uqlab_core/configs/`](../../src/uqlab_core/configs):
 ```
-configs/
+src/uqlab_core/configs/
 ├── example_cnn_mcdropout.yaml
 ├── example_resnet18_mcdropout.yaml
 ├── experiment/
 │   ├── default.yaml
-│   └── fast_pilot.yaml
+│   ├── fast_pilot.yaml
+│   └── four_region.yaml
 └── test/
     ├── test_cnn_mcdropout.yaml
     ├── test_dinov2_mlp.yaml
@@ -94,17 +95,24 @@ from uqlab.run_artifacts import save_zwischen_result
 
 ```
 uqlab-streamlit/
-├── configs/                    # ✅ YAML configs (still used)
-│   ├── experiment/
-│   └── test/
 ├── src/
+│   ├── uqlab_core/             # ✅ ML core + YAML configs
+│   │   ├── configs/              # ✅ YAML configs (still used)
+│   │   │   ├── experiment/
+│   │   │   └── test/
+│   │   ├── data/
+│   │   ├── models/
+│   │   ├── evaluation/
+│   │   ├── runner/
+│   │   └── shared/
+│   ├── uqlab_orchestrator/     # Config transformation
 │   ├── data/                   # ✅ RESTORED from archive
 │   ├── metrics/                # ✅ RESTORED from archive
 │   ├── triage/                 # ✅ RESTORED from archive
 │   ├── models/                 # ✅ RESTORED from archive
 │   ├── experiments/            # ✅ RESTORED from archive
 │   ├── utils/                  # ✅ RESTORED from archive
-│   └── uqlab/                # ✅ NEW MLOps structure
+│   └── uqlab/                  # ✅ NEW MLOps structure
 │       ├── 1_data/
 │       ├── 2_models/
 │       ├── 3_training/
@@ -119,7 +127,7 @@ uqlab-streamlit/
 ├── archive/
 │   ├── legacy_src/             # Original archived location
 │   └── research/
-└── run_fast.py                 # ✅ Main entry point
+└── scripts/runners/run_fast.py  # ✅ Main entry point
 ```
 
 ## 4. What Models/Configs Are Used Now?
@@ -137,7 +145,7 @@ Located in [`src/uqlab/shared/config/`](src/uqlab/shared/config:1):
 - **Pydantic Schemas** - [`schemas.py`](src/uqlab/shared/config/schemas.py:1)
 
 ### Legacy Configs (Still Used)
-- **YAML files** in [`configs/`](configs:1) - Used by `run_fast.py` and scripts
+- **YAML files** in [`src/uqlab_core/configs/`](../../src/uqlab_core/configs) - Used by `run_fast.py` and scripts
 
 ## 5. Action Items
 
@@ -178,8 +186,8 @@ from src.data.cifar10n_loader import CIFAR10NDataset
 ```
 
 ### Config Strategy
-- **Short term**: Keep using YAML configs in `configs/`
-- **Long term**: Migrate to Python configs in `src/uqlab/shared/config/`
+- **Short term**: Keep using YAML configs in `src/uqlab_core/configs/`
+- **Long term**: Migrate to Python configs in `src/uqlab_core/shared/config/`
 
 ## 7. Summary
 
