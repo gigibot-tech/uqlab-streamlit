@@ -31,7 +31,11 @@ API documentation, endpoints, and schemas:
 
 ### 🚀 [Deployment](./deployment/)
 Deployment guides, CI/CD, and infrastructure:
-- *Coming soon*
+- [OpenShift Deployment Guide](./deployment/oc-deployment.md) - Full-stack OpenShift deployment
+- [CE Deployment Guide](./deployment/ce-deployment.md) - Code Engine deployment walkthrough
+- [Development Environment](./deployment/development.md) - Docker Compose local development
+- [Maintenance Guide](./deployment/maintenance.md) - Operational tasks and upkeep
+- [Release Notes](./deployment/release-notes.md) - Deployment-related release notes
 
 ### 💻 [Development](./development/)
 Development workflows and contributing guides:
