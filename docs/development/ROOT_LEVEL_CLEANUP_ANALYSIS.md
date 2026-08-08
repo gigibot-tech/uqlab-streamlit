@@ -151,13 +151,14 @@ uqlab-streamlit/
 ├── RENAME_TO_UQLAB.md          # Rename plan
 ├── archive/                    # Old files
 ├── backend/                    # FastAPI backend
-├── configs/                    # YAML configs
 ├── docs/                       # Documentation
 ├── frontend/                   # React frontend
 ├── notebooks/                  # Jupyter notebooks
 ├── scripts/                    # Utility scripts
 ├── src/                        # Main source code
-│   └── uqlab/                  # Main package
+│   ├── uqlab/                  # Main package
+│   └── uqlab_core/             # Core library
+│       └── configs/            # YAML configs
 └── tests/                      # Test files
 ```
 
