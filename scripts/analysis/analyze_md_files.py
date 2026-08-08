@@ -1,8 +1,18 @@
+#!/usr/bin/env python3
+"""Categorize root-level Markdown documentation files by topic."""
 import os
 from collections import defaultdict
+from pathlib import Path
 
-# Get all .md files
-md_files = [f for f in os.listdir('.') if f.endswith('.md')]
+# Resolve the project root so the script works regardless of where it is invoked.
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent.parent
+
+# Get all .md files directly under the project root.
+md_files = [
+    f for f in os.listdir(PROJECT_ROOT)
+    if f.endswith('.md') and (PROJECT_ROOT / f).is_file()
+]
 
 # Define categories based on keywords
 categories = {
