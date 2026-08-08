@@ -3,6 +3,10 @@
 
 set -e
 
+# Resolve repo root from scripts/maintenance/<script>
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$REPO_ROOT"
+
 echo "🗂️  Organizing root-level scripts..."
 
 # Create scripts directory if it doesn't exist
