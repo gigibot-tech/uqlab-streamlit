@@ -1,0 +1,20 @@
+# Fast Pilot Configuration
+# Quick experiments with reduced data for testing
+
+defaults:
+  - default
+
+# Override for faster experiments
+data:
+  under_train_per_class: 20  # Reduced from 50
+  regular_train_per_class: 100  # Reduced from 300
+  eval_per_group: 200  # Reduced from 600
+
+training:
+  epochs: 5  # Reduced from 12
+  train_batch_size: 128  # Reduced from 256
+
+evaluation:
+  mc_passes: 10  # Reduced from 20
+
+# Made with Bob

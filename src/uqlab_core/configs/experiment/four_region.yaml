@@ -1,0 +1,48 @@
+# Four-region experiment configuration (noisy / sparse / clean / ood)
+# Mirrors DEFAULT_FOUR_REGION_PRESET in src/uqlab/data/class_regions.py
+
+seed: 42
+device: auto
+
+data:
+  dataset_name: cifar10
+  noise_type: worse_label
+  partition_mode: four_region
+  class_regions:
+    noisy:
+      classes: [0, 1, 2, 3]
+      label_flip_pct: 30.0
+      train_fraction: 1.0
+    sparse:
+      classes: [4, 5]
+      train_fraction: 0.10
+    clean:
+      classes: [6, 7]
+      train_fraction: 1.0
+    ood:
+      classes: [8, 9]
+      train_fraction: 0.0
+  eval_per_group: 600
+
+model:
+  dinov2_model: small
+  hidden_dim: 256
+  dropout: 0.2
+  use_untrained_resnet: false
+
+training:
+  epochs: 12
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  train_batch_size: 256
+  feature_batch_size: 64
+
+evaluation:
+  mc_passes: 20
+  top_k: 10
+  attribution_method: dualxda
+
+paths:
+  cifar10n_root: ./data/cifar10n
+  feature_cache_dir: ./cache/fast_uncertainty_classification/features
+  results_base_dir: ./results
