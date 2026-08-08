@@ -8,7 +8,7 @@ Trainable PyTorch architectures and the model factory for fast-pilot uncertainty
 models/
 ├── training.py             # train_feature_model / train_image_model (paper fit)
 ├── factory/                # build_model(), heads, MC dropout helpers
-├── scope/                  # Canonical architecture names + training scope
+├── scope.py                # Canonical architecture names + training scope
 ├── features/               # DINOv2 embedding extraction
 └── backbones/              # DINOv2 weight loading
 ```
@@ -62,7 +62,7 @@ Entropy, mutual information, and SIRC scores are computed in [`evaluation/signal
 
 ## Training scope
 
-[`scope/training_scope.py`](scope/training_scope.py) and [`scope/architecture.py`](scope/architecture.py) map user-facing architecture strings to end-to-end vs feature-space training. The runner and UI pass these through `ModelConfig`.
+[`scope.py`](scope.py) maps user-facing architecture strings to end-to-end vs feature-space training. The runner and UI pass these through `ModelConfig`.
 
 ## Related docs
 
