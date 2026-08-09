@@ -5,7 +5,16 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+def _find_project_root(start: Path) -> Path:
+    """Locate project root by searching for pyproject.toml or the src package."""
+    for parent in (start, *start.parents):
+        if (parent / "pyproject.toml").exists() or (parent / "src").is_dir():
+            return parent
+    # Fallback to the original heuristic if no marker is found.
+    return start.parent.parent
+
+
+ROOT = _find_project_root(Path(__file__).resolve().parent)
 SRC = ROOT / "src"
 FLASK_PKG = Path(__file__).resolve().parent
 for p in (str(SRC), str(ROOT), str(FLASK_PKG)):
