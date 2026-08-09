@@ -134,10 +134,11 @@ Thumbs.db
 .AppleDouble
 .LSOverride
 
-# Ignore everything in src/ except uqlab submodule and uqlab_core package
+# Ignore everything in src/ except uqlab submodule, uqlab_core package, and the relocated Flask wizard
 src/*
 !src/uqlab/
 !src/uqlab_core/
+!src/uqlab_flask/
 
 # Keep important config files
 !.gitignore

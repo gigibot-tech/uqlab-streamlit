@@ -5,9 +5,12 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-SRC = ROOT / "src"
 FLASK_PKG = Path(__file__).resolve().parent
+# Locate the workspace root by the presence of pyproject.toml (robust to relocation).
+ROOT = FLASK_PKG
+while ROOT != ROOT.parent and not (ROOT / "pyproject.toml").is_file():
+    ROOT = ROOT.parent
+SRC = ROOT / "src"
 for p in (str(SRC), str(ROOT), str(FLASK_PKG)):
     if p not in sys.path:
         sys.path.insert(0, p)
