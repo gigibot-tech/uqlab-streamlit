@@ -6,9 +6,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
 def run_test(config_name: str) -> bool:
     """Run single architecture test"""
-    config_path = f"configs/test/{config_name}.yaml"
+    config_path = PROJECT_ROOT / "src" / "uqlab_core" / "configs" / "test" / f"{config_name}.yaml"
     output_dir = f"/tmp/test_{config_name}"
     
     print(f"\n{'='*60}")
