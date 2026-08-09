@@ -4,6 +4,8 @@ Script to generate the logical consistency validation notebook.
 This approach is more manageable than creating a large JSON file directly.
 """
 
+from __future__ import annotations
+
 import json
 from pathlib import Path
 
@@ -116,23 +118,23 @@ Load results from both validation notebooks and combine into unified DataFrames.
 
 add_code("""def load_sweep_results(results_dir, sweep_type):
     \"\"\"Load results from a sweep directory.
-    
+
     Args:
         results_dir: Path to results directory
         sweep_type: 'dataset_size' or 'label_noise'
-    
+
     Returns:
         DataFrame with all results
     \"\"\"
     metrics_file = results_dir / 'metrics.csv'
-    
+
     if not metrics_file.exists():
         print(f"Warning: {metrics_file} not found")
         return pd.DataFrame()
-    
+
     df = pd.read_csv(metrics_file)
     df['sweep_type'] = sweep_type
-    
+
     return df
 
 
@@ -161,5 +163,3 @@ with open(output_path, 'w') as f:
 
 print(f"Notebook generated: {output_path}")
 print(f"Total cells: {len(notebook['cells'])}")
-
-# Made with Bob

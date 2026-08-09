@@ -77,7 +77,7 @@ except (ValueError, TypeError, AttributeError) as e:
 
 **Fixes Applied:**
 
-Created new file: `notebooks/validation/validation_functions.py` with:
+Created new file: `src/uqlab_core/evaluation/validation_helpers.py` with:
 
 1. **`validate_uncertainty_decomposition(df, tolerance=0.05)`**
    - Validates: `total_uncertainty ≈ epistemic + aleatoric` (within ±5%)
@@ -100,7 +100,7 @@ Created new file: `notebooks/validation/validation_functions.py` with:
 **Usage in Notebook:**
 ```python
 # Add to notebook imports:
-from validation_functions import (
+from uqlab_core.evaluation.validation_helpers import (
     validate_uncertainty_decomposition,
     validate_non_negativity_and_bounds,
     validate_monotonicity
@@ -303,13 +303,13 @@ except Exception as e:
 | File | Lines Changed | Issues Fixed | Risk Level |
 |------|---------------|--------------|------------|
 | `run_validation_experiments.py` | 40 | 6 critical | 🔴 HIGH |
-| `validation_functions.py` | 165 (new) | 2 critical | 🔴 HIGH |
+| `src/uqlab_core/evaluation/validation_helpers.py` | 165 (new) | 2 critical | 🔴 HIGH |
 | `run_fast_uncertainty_classification.py` | 0 | 0 | 🟢 NONE |
 | `architecture_comparison_dataset_size.ipynb` | 0 | 0 | 🟢 NONE |
 | `architecture_comparison_label_noise.ipynb` | 0 | 0 | 🟢 NONE |
 | `logical_consistency_validation.ipynb` | 0 | 0* | 🟡 MEDIUM |
 
-*Fixed by creating external validation_functions.py module
+*Fixed by creating `src/uqlab_core/evaluation/validation_helpers.py`
 
 ---
 
@@ -333,8 +333,8 @@ except Exception as e:
 1. ✅ **Immediate:** All critical fixes applied
 2. 📝 **Recommended:** Add unit tests for new validation functions
 3. 📝 **Recommended:** Add integration tests for full pipeline
-4. 📝 **Optional:** Add type hints to validation_functions.py
-5. 📝 **Optional:** Create validation_functions_test.py
+4. 📝 **Optional:** Add type hints to `src/uqlab_core/evaluation/validation_helpers.py`
+5. 📝 **Optional:** Create `validation_helpers_test.py`
 
 ---
 
