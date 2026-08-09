@@ -111,6 +111,7 @@ exclude = ["venv", ".venv", "alembic", "migrations"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+exclude = ["uqlab_flask*"]
 
 [tool.setuptools.package-dir]
 "" = "src"
