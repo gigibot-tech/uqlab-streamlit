@@ -138,6 +138,7 @@ Thumbs.db
 src/*
 !src/uqlab/
 !src/uqlab_core/
+!src/uqlab_flask/
 
 # Keep important config files
 !.gitignore
