@@ -2,6 +2,7 @@
 """
 Validate all three architectures work end-to-end
 """
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -16,12 +17,15 @@ def run_test(config_name: str) -> bool:
     print(f"{'='*60}\n")
     
     cmd = [
-        "python", "scripts/run_fast_uncertainty_classification.py",
+        "python", "src/uqlab_core/cli/run_fast_uncertainty_classification.py",
         config_path, output_dir
     ]
     
+    env = os.environ.copy()
+    env["PYTHONPATH"] = "src"
+    
     try:
-        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True, env=env)
         print(f"✅ {config_name} PASSED")
         return True
     except subprocess.CalledProcessError as e:

@@ -36,7 +36,7 @@ Raw matrices are also cached under `<run_dir>/cache/` (GradDot, EK-FAC) during c
 | Fashion-MNIST + pixel MLP | [`four_region_fashion_mlp.yaml`](../../configs/experiment/four_region_fashion_mlp.yaml) |
 | CIFAR-10 + ResNet-18 | [`four_region_cifar_resnet.yaml`](../../configs/experiment/four_region_cifar_resnet.yaml) |
 | Notebook (two runs + plot loop) | [`notebooks/four_region_benchmark.ipynb`](../../notebooks/four_region_benchmark.ipynb) |
-| CLI | `python scripts/runners/run_fast_uncertainty_classification.py --config configs/experiment/four_region_fashion_mlp.yaml` |
+| CLI | `PYTHONPATH=src python src/uqlab_core/cli/run_fast_uncertainty_classification.py --config configs/experiment/four_region_fashion_mlp.yaml` |
 | Per-sample metrics + four-pool plots | `per_sample_signals.csv` + [`four_region_reporting.py`](../../src/uqlab/evaluation/reporting/four_region_reporting.py) |
 
 GradDot + DualXDA (+ optional EK-FAC) are enabled via `evaluation.signals.attribution` and

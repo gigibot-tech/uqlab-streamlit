@@ -15,7 +15,7 @@ from pathlib import Path
 
 # Files to update
 FILES_TO_UPDATE = [
-    "scripts/run_fast_uncertainty_classification.py",
+    "src/uqlab_core/cli/run_fast_uncertainty_classification.py",
     "scripts/examples/minimal_experiment.py",
     "tests/test_evaluation.py",
     "tests/test_config_schema.py",
@@ -123,7 +123,7 @@ A backup of the original `uqlab/evaluation/classification/` directory exists at:
 ## Files Updated
 
 All imports in the following files were updated:
-- `scripts/run_fast_uncertainty_classification.py`
+- `src/uqlab_core/cli/run_fast_uncertainty_classification.py`
 - `scripts/examples/minimal_experiment.py`
 - `tests/test_evaluation.py`
 - `tests/test_config_schema.py`
