@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]  # project root (ui/flask → project)
 SRC = ROOT / "src"
 FLASK_PKG = Path(__file__).resolve().parent
 for p in (str(SRC), str(ROOT), str(FLASK_PKG)):
