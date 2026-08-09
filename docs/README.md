@@ -35,7 +35,7 @@ Deployment guides, CI/CD, and infrastructure:
 
 ### 💻 [Development](./development/)
 Development workflows and contributing guides:
-- *Coming soon*
+- [Small Root-Folder Relocation Candidates](./development/SMALL_FILE_RELOCATION_CANDIDATES.md) — periodic audit of root folders whose files are small enough to relocate
 
 ## 🔍 Quick Navigation
 
@@ -58,8 +58,9 @@ Development workflows and contributing guides:
 
 ### By Date (Most Recent First)
 
-1. [Startup Issues](./troubleshooting/startup-issues.md)
-2. [Progressive UI Fixes](./troubleshooting/progressive-ui.md)
+1. [Small Root-Folder Relocation Candidates](./development/SMALL_FILE_RELOCATION_CANDIDATES.md)
+2. [Startup Issues](./troubleshooting/startup-issues.md)
+3. [Progressive UI Fixes](./troubleshooting/progressive-ui.md)
 3. [Sweep Grouping](./features/sweep-grouping.md)
 4. [ResNet Feature Extractor Fix](./troubleshooting/resnet-feature-extractor.md)
 5. [MinIO Implementation](./architecture/minio-storage.md)
@@ -122,4 +123,4 @@ If you can't find what you're looking for:
 
 ---
 
-*Last updated: 2026-06-18*
+*Last updated: 2026-08-09*
