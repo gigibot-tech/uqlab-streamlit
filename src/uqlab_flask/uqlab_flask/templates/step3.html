@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Step 3 — Sweep</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<h1>Step 3: Uncertainty sweep</h1>
+<form method="post">
+  <label><input type="checkbox" name="sweep_enabled" checked> Enable label-noise sweep</label>
+  <label>Sweep kind</label>
+  <select name="sweep_kind">
+    <option value="label_noise">Label noise (Fig. 4)</option>
+    <option value="dataset_size">Under-train (Fig. 3)</option>
+  </select>
+  <label>Mode</label>
+  <select name="sweep_mode">
+    <option value="quick">Quick</option>
+    <option value="full">Full</option>
+  </select>
+  <button type="submit">Continue</button>
+</form>
+</body>
+</html>

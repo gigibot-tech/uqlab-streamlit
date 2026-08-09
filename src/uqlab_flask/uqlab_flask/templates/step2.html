@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Step 2 — Model</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<h1>Step 2: Model &amp; training</h1>
+<form method="post">
+  <label>Architecture</label>
+  <select name="model_architecture">
+    <option value="resnet18">ResNet18</option>
+    <option value="dinov2-small">DINOv2 + MLP</option>
+    <option value="cnn">Small CNN</option>
+  </select>
+  <label>Training scope</label>
+  <select name="training_scope">
+    <option value="full">Full fine-tune</option>
+    <option value="head_only">Head only (freeze backbone)</option>
+    <option value="feature_space">Feature space (DINOv2)</option>
+  </select>
+  <label>Dropout (for predictive MC signals)</label>
+  <input name="dropout" type="number" step="0.05" min="0" max="0.5" value="{{ workflow.training_config.dropout | default(0) }}">
+  <label>Epochs</label>
+  <input name="epochs" type="number" value="{{ workflow.training_config.epochs | default(2) }}">
+  <label>Learning rate</label>
+  <input name="learning_rate" type="number" step="0.0001" value="{{ workflow.training_config.learning_rate | default(0.001) }}">
+  <label>Batch size</label>
+  <input name="batch_size" type="number" value="{{ workflow.training_config.batch_size | default(256) }}">
+  <input type="hidden" name="hidden_dim" value="256">
+  <button type="submit">Continue</button>
+</form>
+</body>
+</html>

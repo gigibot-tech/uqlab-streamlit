@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{% if group_id %}Sweep {{ group_id }}{% else %}Sweep history{% endif %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {% if group_id %}
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+  {% endif %}
+</head>
+<body>
+<nav class="nav">
+  <a href="/review">Wizard</a>
+  <a href="/sweeps">All sweeps</a>
+</nav>
+
+<section class="history-panel">
+  <h2>Sweep groups</h2>
+
+  <label for="sweep-select">Select group id</label>
+  <div class="picker-row">
+    <select id="sweep-select" class="sweep-select" size="10">
+      {% for item in history | default([]) %}
+      <option value="{{ item.group_id }}"{% if item.group_id == group_id %} selected{% endif %}>
+        {{ item.group_id }} — {{ item.status }} ({{ item.completed }}/{{ item.total }})
+      </option>
+      {% else %}
+      <option value="" disabled>No sweeps on disk yet</option>
+      {% endfor %}
+    </select>
+    <div class="picker-actions">
+      <button type="button" id="open-sweep-btn">Open selected</button>
+      <button type="button" id="refresh-history-btn" class="btn-secondary">Refresh list</button>
+    </div>
+  </div>
+
+  <form class="search-form" action="/sweeps" method="get">
+    <input type="search" name="q" placeholder="Or search: timestamp, name, run uuid…"
+           value="{{ search_query | default('') }}">
+    <button type="submit">Find</button>
+  </form>
+  {% if not_found %}
+  <p class="hint warn">No sweep matched “{{ search_query }}”.</p>
+  {% endif %}
+</section>
+
+{% if group_id %}
+<section class="detail-panel">
+  <h1>Current sweep</h1>
+  <p class="hint">Group <code>{{ group_id }}</code></p>
+
+  <div class="toolbar">
+    <button type="button" id="refresh-btn" class="btn-secondary">Refresh status</button>
+    <span id="poll-indicator" class="muted">Auto-updating every 3s</span>
+  </div>
+
+  <div class="progress-wrap">
+    <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
+  </div>
+  <p id="summary">Loading…</p>
+  <p id="sweep-status" class="status-badge">—</p>
+
+  <ul id="run-list" class="run-list">
+    {% for job in jobs %}
+    <li id="run-{{ job.run_id }}" class="run-item" data-status="{{ job.status }}">
+      <span class="run-index">{{ loop.index }}</span>
+      <span class="name">{{ job.meta.get('name', job.run_id[:8]) }}</span>
+      <span class="status status-{{ job.status }}">{{ job.status }}</span>
+      <span class="error muted"></span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section class="plot-panel">
+  <h2>3-line sweep plot</h2>
+  <p class="hint">X = swept parameter · Left Y = <strong>signal mean</strong> per eval pack (not AUROC) · Right Y = accuracy</p>
+  <div class="toolbar plot-toolbar">
+    <label for="signal-select">Signal</label>
+    <select id="signal-select"></select>
+    <button type="button" id="refresh-plot-btn" class="btn-secondary">Refresh plot</button>
+  </div>
+  <p id="plot-caption" class="muted">—</p>
+  <div id="sweep-plot" class="plot-host"></div>
+  <p id="plot-error" class="hint warn" hidden></p>
+</section>
+{% else %}
+<section class="detail-panel">
+  <p class="hint">Pick a group id above and click <strong>Open selected</strong>.</p>
+</section>
+{% endif %}
+
+<script>
+const groupId = {{ group_id | default('') | tojson }};
+const initialHistory = {{ history | default([]) | tojson }};
+
+function statusClass(status) {
+  return 'status-' + (status || 'unknown');
+}
+
+function fillSelect(sweeps) {
+  const select = document.getElementById('sweep-select');
+  if (!sweeps.length) {
+    select.innerHTML = '<option value="" disabled>No sweeps on disk yet</option>';
+    return;
+  }
+  select.innerHTML = sweeps.map(item => {
+    const selected = item.group_id === groupId ? ' selected' : '';
+    const detected = item.source === 'inferred' ? ' · detected' : '';
+    return `<option value="${item.group_id}"${selected}>${item.group_id} — ${item.status} (${item.completed}/${item.total})${detected}</option>`;
+  }).join('');
+}
+
+function openSelected() {
+  const select = document.getElementById('sweep-select');
+  const id = select.value;
+  if (id) window.location.href = '/sweep/' + id;
+}
+
+async function loadHistory() {
+  try {
+    const res = await fetch('/sweeps/list?limit=100');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    fillSelect(data.sweeps || []);
+  } catch (e) {
+    console.warn('history refresh failed, using server list', e);
+    fillSelect(initialHistory);
+  }
+}
+
+async function poll() {
+  if (!groupId) return;
+  try {
+    const res = await fetch('/sweep/' + groupId + '/status');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+
+    const total = data.total || data.runs.length;
+    const completed = data.completed || 0;
+    const pct = total ? Math.round((completed / total) * 100) : 0;
+    document.getElementById('progress-bar').style.width = pct + '%';
+
+    const sweepEl = document.getElementById('sweep-status');
+    sweepEl.textContent = data.status + (data.current_index ? ' · run ' + data.current_index + '/' + total : '');
+    sweepEl.className = 'status-badge ' + statusClass(data.status);
+
+    document.getElementById('summary').textContent =
+      `${completed}/${total} completed · ${data.active || 0} queued/running · ${data.failed || 0} failed`;
+
+    for (const run of data.runs) {
+      const li = document.getElementById('run-' + run.run_id);
+      if (!li) continue;
+      const statusEl = li.querySelector('.status');
+      statusEl.textContent = run.status;
+      statusEl.className = 'status ' + statusClass(run.status);
+      li.dataset.status = run.status;
+      const errEl = li.querySelector('.error');
+      errEl.textContent = run.error ? run.error : '';
+    }
+
+    const stillActive = (data.active || 0) > 0 || ['queued', 'running'].includes(data.status);
+    document.getElementById('poll-indicator').textContent =
+      stillActive ? 'Auto-updating every 3s' : 'Sweep finished — auto-poll stopped';
+    if (stillActive) {
+      window._pollTimer = setTimeout(refreshStatus, 3000);
+    } else if (window._lastPlotCompleted !== completed) {
+      window._lastPlotCompleted = completed;
+      loadPlot();
+    }
+  } catch (e) {
+    document.getElementById('summary').textContent = 'Could not load status: ' + e.message;
+    window._pollTimer = setTimeout(refreshStatus, 5000);
+  }
+}
+
+async function refreshStatus() {
+  if (window._pollTimer) clearTimeout(window._pollTimer);
+  await poll();
+}
+
+async function refreshAll() {
+  await loadHistory();
+  await refreshStatus();
+  await loadPlot();
+}
+
+function fillSignalSelect(available, selected, defaultSignal) {
+  const sel = document.getElementById('signal-select');
+  if (!sel) return;
+  if (!available.length) {
+    sel.innerHTML = '<option value="">—</option>';
+    return;
+  }
+  sel.innerHTML = available.map(s => {
+    const pick = s === selected ? ' selected' : '';
+    const def = s === defaultSignal ? ' (default)' : '';
+    return `<option value="${s}"${pick}>${s}${def}</option>`;
+  }).join('');
+}
+
+function renderPlot(data) {
+  const host = document.getElementById('sweep-plot');
+  const errEl = document.getElementById('plot-error');
+  const cap = document.getElementById('plot-caption');
+  if (!host || typeof Plotly === 'undefined') return;
+
+  errEl.hidden = true;
+  cap.textContent = `${data.signal_label} · ${data.x_label} · ${data.points} point(s)`;
+
+  const traces = data.traces.map(t => ({
+    x: t.x,
+    y: t.y,
+    name: t.name,
+    type: 'scatter',
+    mode: 'lines+markers',
+    yaxis: t.yaxis === 'right' ? 'y2' : 'y',
+    line: { color: t.color, dash: t.dash === 'dot' ? 'dot' : 'solid', width: 2 },
+    marker: { size: 7 },
+  }));
+
+  const layout = {
+    height: 360,
+    margin: { t: 24, r: 56, b: 48, l: 56 },
+    xaxis: { title: data.x_label },
+    yaxis: { title: data.y_left_title, side: 'left' },
+    yaxis2: {
+      title: data.y_right_title,
+      overlaying: 'y',
+      side: 'right',
+      range: [0, 1],
+    },
+    legend: { orientation: 'h', y: 1.12 },
+  };
+  Plotly.react(host, traces, layout, { responsive: true, displayModeBar: false });
+}
+
+async function loadPlot() {
+  if (!groupId) return;
+  const sel = document.getElementById('signal-select');
+  const signal = sel && sel.value ? sel.value : '';
+  const url = '/sweep/' + groupId + '/plot' + (signal ? '?signal=' + encodeURIComponent(signal) : '');
+  const errEl = document.getElementById('plot-error');
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+    fillSignalSelect(data.available_signals, data.signal, data.default_signal);
+    renderPlot(data);
+  } catch (e) {
+    if (errEl) {
+      errEl.textContent = e.message;
+      errEl.hidden = false;
+    }
+  }
+}
+
+document.getElementById('open-sweep-btn').addEventListener('click', openSelected);
+document.getElementById('sweep-select').addEventListener('dblclick', openSelected);
+document.getElementById('refresh-history-btn').addEventListener('click', loadHistory);
+if (document.getElementById('refresh-btn')) {
+  document.getElementById('refresh-btn').addEventListener('click', refreshAll);
+}
+if (document.getElementById('signal-select')) {
+  document.getElementById('signal-select').addEventListener('change', loadPlot);
+}
+if (document.getElementById('refresh-plot-btn')) {
+  document.getElementById('refresh-plot-btn').addEventListener('click', loadPlot);
+}
+
+fillSelect(initialHistory);
+refreshStatus();
+if (groupId) loadPlot();
+</script>
+</body>
+</html>

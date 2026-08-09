@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Step 1 — Dataset</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<h1>Step 1: Dataset</h1>
+<form method="post">
+  <label>Dataset</label>
+  <select name="dataset_name">
+    {% for d in datasets %}
+    <option value="{{ d }}" {% if workflow.dataset_config.dataset_name == d %}selected{% endif %}>{{ d }}</option>
+    {% endfor %}
+  </select>
+  <label>Noise type</label>
+  <select name="noise_type">
+    <option value="clean_label">clean_label</option>
+    <option value="worse_label">worse_label (CIFAR-10N)</option>
+  </select>
+  <button type="submit">Continue</button>
+</form>
+</body>
+</html>
