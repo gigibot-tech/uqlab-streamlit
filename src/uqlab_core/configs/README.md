@@ -1,9 +1,10 @@
 # Experiment YAML configs
 
 Runnable experiment configs for CLI, notebooks, and validation scripts.
+These files live inside the `uqlab_core` package so they move with the code.
 
 ```
-configs/
+src/uqlab_core/configs/
 ├── experiment/          # Primary experiment presets
 │   ├── default.yaml
 │   ├── fast_pilot.yaml
@@ -17,8 +18,8 @@ Load in Python:
 
 ```python
 from pathlib import Path
-from uqlab.runtime_paths import configs_dir
-from uqlab.shared.config.classification import ExperimentConfig
+from uqlab_core.runtime_paths import configs_dir
+from uqlab_core.shared.config.classification import ExperimentConfig
 
 config = ExperimentConfig.from_yaml(configs_dir() / "experiment" / "four_region.yaml")
 ```
