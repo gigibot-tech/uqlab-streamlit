@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Review &amp; Launch</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<h1>Review</h1>
+<p class="muted">One launch runs the full sweep sequentially (5 runs for quick label-noise).</p>
+<p><a href="/sweeps">View sweep history</a></p>
+<pre>{{ workflow | tojson(indent=2) }}</pre>
+<form method="post" action="{{ url_for('wizard.launch') }}" id="launch-form">
+  <input type="hidden" name="launch_token" value="{{ launch_token }}">
+  <button type="submit" id="launch-btn">Launch sweep</button>
+</form>
+<script>
+document.getElementById('launch-form').addEventListener('submit', function () {
+  const btn = document.getElementById('launch-btn');
+  btn.disabled = true;
+  btn.textContent = 'Launching…';
+});
+</script>
+</body>
+</html>
