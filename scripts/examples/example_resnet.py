@@ -11,6 +11,7 @@ Features:
 - Optional pretrained weights
 """
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -82,13 +83,16 @@ evaluation:
     
     cmd = [
         "python",
-        "scripts/run_fast_uncertainty_classification.py",
+        "src/uqlab_core/cli/run_fast_uncertainty_classification.py",
         str(config_path),
         str(output_dir)
     ]
     
+    env = os.environ.copy()
+    env["PYTHONPATH"] = "src"
+    
     try:
-        result = subprocess.run(cmd, check=True, capture_output=False, text=True)
+        result = subprocess.run(cmd, check=True, capture_output=False, text=True, env=env)
         
         print()
         print("="*60)
