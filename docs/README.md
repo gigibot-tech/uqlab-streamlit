@@ -37,6 +37,10 @@ Deployment guides, CI/CD, and infrastructure:
 Development workflows and contributing guides:
 - *Coming soon*
 
+### 📦 [Archive](./archive/)
+Historical reorganization plans, audits, and completed migrations:
+- [Small File Relocation Candidates (configs, 8feb)](./archive/SMALL_FILE_RELOCATION_CANDIDATES_8FEB.md) — root-level folder with all files under 200/300 LoC
+
 ## 🔍 Quick Navigation
 
 ### By Topic
@@ -58,13 +62,14 @@ Development workflows and contributing guides:
 
 ### By Date (Most Recent First)
 
-1. [Startup Issues](./troubleshooting/startup-issues.md)
-2. [Progressive UI Fixes](./troubleshooting/progressive-ui.md)
-3. [Sweep Grouping](./features/sweep-grouping.md)
-4. [ResNet Feature Extractor Fix](./troubleshooting/resnet-feature-extractor.md)
-5. [MinIO Implementation](./architecture/minio-storage.md)
-6. [MinIO Setup](./setup/minio.md)
-7. [UV & Ruff Setup](./setup/uv-ruff.md)
+1. [Small File Relocation Candidates (configs, 8feb)](./archive/SMALL_FILE_RELOCATION_CANDIDATES_8FEB.md)
+2. [Startup Issues](./troubleshooting/startup-issues.md)
+3. [Progressive UI Fixes](./troubleshooting/progressive-ui.md)
+4. [Sweep Grouping](./features/sweep-grouping.md)
+5. [ResNet Feature Extractor Fix](./troubleshooting/resnet-feature-extractor.md)
+6. [MinIO Implementation](./architecture/minio-storage.md)
+7. [MinIO Setup](./setup/minio.md)
+8. [UV & Ruff Setup](./setup/uv-ruff.md)
 
 ## 📝 Documentation Guidelines
 
@@ -122,4 +127,4 @@ If you can't find what you're looking for:
 
 ---
 
-*Last updated: 2026-06-18*
+*Last updated: 2026-08-09*
