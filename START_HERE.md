@@ -47,7 +47,7 @@ Wizard → YAML field mapping: [`docs/features/workflow-config.md`](docs/feature
 
 ```bash
 PYTHONPATH=src python scripts/runners/run_fast_uncertainty_classification.py \
-  --config configs/experiment/four_region.yaml \
+  --config src/uqlab_core/configs/experiment/four_region.yaml \
   --output_dir data/experiments/<run_id>/results
 ```
 
@@ -57,7 +57,7 @@ Or from Python:
 
 ```python
 from pathlib import Path
-from uqlab.runner.execute import run_from_yaml
+from uqlab_core.runner.execute import run_from_yaml
 
 run_from_yaml(Path("config.yaml"), Path("output_dir"))
 ```
