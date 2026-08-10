@@ -1,14 +1,20 @@
 #!/usr/bin/env python3
-"""Run an experiment from ExperimentConfig YAML via uqlab.runner.execute.run_from_yaml."""
+"""Run an experiment from ExperimentConfig YAML via uqlab_core.runner.execute.run_from_yaml."""
 
 from __future__ import annotations
 
 import argparse
+import sys
 from datetime import datetime
 from pathlib import Path
 
-from uqlab.runtime_paths import configs_dir, repository_root
-from uqlab.shared.config.classification import ExperimentConfig
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_SRC = _REPO_ROOT / "src"
+if str(_SRC) not in sys.path:
+    sys.path.insert(0, str(_SRC))
+
+from uqlab_core.runtime_paths import configs_dir, repository_root
+from uqlab_core.shared.config.classification import ExperimentConfig
 
 _DEFAULT_CONFIG = configs_dir() / "experiment" / "four_region.yaml"
 
@@ -48,7 +54,7 @@ def main() -> None:
         stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         results_dir = results_base / f"experiment_{stamp}"
 
-    from uqlab.runner.execute import run_from_yaml as pipeline_run
+    from uqlab_core.runner.execute import run_from_yaml as pipeline_run
 
     pipeline_run(config_path, results_dir, seed=seed, device_str=device_str)
 
