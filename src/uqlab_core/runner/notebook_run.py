@@ -17,6 +17,7 @@ from typing import Any
 from uqlab_core.data import build_run_data
 from uqlab_core.data.splits.four_region import DEFAULT_FOUR_REGION_PRESET
 from uqlab_core.runner.train_eval import run_paper_experiment
+from uqlab_core.runtime_paths import configs_dir
 from uqlab_core.shared.config.classification import ExperimentConfig
 from uqlab_core.shared.utils.classification import auto_device, set_seed
 
@@ -77,18 +78,17 @@ def default_four_region_plot_metrics(
     return metrics
 
 
-def default_four_region_runs(root: Any) -> list[dict[str, Any]]:
+def default_four_region_runs(root: Any) -> list[dict[str, Any]]:  # noqa: ARG001
     """Preset run entries for the four-region benchmark notebook."""
-    root = Path(root)
     return [
         {
             "name": "fashion_mlp",
-            "config_path": root / "configs/experiment/four_region_fashion_mlp.yaml",
+            "config_path": configs_dir() / "experiment" / "four_region_fashion_mlp.yaml",
             "class_regions": deepcopy(DEFAULT_FOUR_REGION_PRESET),
         },
         {
             "name": "cifar_resnet",
-            "config_path": root / "configs/experiment/four_region_cifar_resnet.yaml",
+            "config_path": configs_dir() / "experiment" / "four_region_cifar_resnet.yaml",
             "class_regions": deepcopy(DEFAULT_FOUR_REGION_PRESET),
         },
     ]
