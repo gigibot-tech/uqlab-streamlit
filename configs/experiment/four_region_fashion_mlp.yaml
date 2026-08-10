@@ -1,5 +1,5 @@
 # Four-region Fashion-MNIST + small pixel MLP (assignment default)
-# Mirrors notebooks/four_region_benchmark.ipynb RUNS[0]
+# Mirrors src/uqlab_core/notebooks/four_region_benchmark.ipynb RUNS[0]
 
 seed: 42
 device: auto

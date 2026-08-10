@@ -26,13 +26,13 @@ def candidate_repo_roots() -> list[Path]:
 def ensure_uqlab_path() -> Path:
     for base in candidate_repo_roots():
         src = base / "src"
-        if (src / "uqlab").is_dir():
+        if (src / "uqlab_core").is_dir() or (src / "uqlab").is_dir():
             src_s = str(src)
             if src_s not in sys.path:
                 sys.path.insert(0, src_s)
             return base
     raise ModuleNotFoundError(
-        "Could not find src/uqlab. Open the repo in Jupyter (uqlab-streamlit or notebooks/)."
+        "Could not find src/uqlab or src/uqlab_core. Open the repo in Jupyter (uqlab-streamlit or src/uqlab_core/notebooks/)."
     )
 
 
@@ -42,7 +42,7 @@ def find_bootstrap_file() -> Path:
         here,
         here.parent / "bootstrap_uqlab.py",
         *(
-            base / "notebooks" / "bootstrap_uqlab.py"
+            base / "src" / "uqlab_core" / "notebooks" / "bootstrap_uqlab.py"
             for base in candidate_repo_roots()
         ),
     ):

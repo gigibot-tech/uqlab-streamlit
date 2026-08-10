@@ -56,7 +56,7 @@
 - `consolidate_codebase.sh` - Already executed
 - `rename_to_uqlab.sh` - Will be executed once
 
-### 📊 MOVE - Notebooks (to notebooks/)
+### 📊 MOVE - Notebooks (to src/uqlab_core/notebooks/)
 - `resnet_baseline_experiment.ipynb`
 - `uncertainty_visualization_demo.ipynb`
 - `uncertainty_viz_3class.ipynb`
@@ -92,11 +92,11 @@ mv DEPENDENCY_ANALYSIS_*.md archive/old_docs/
 
 ### Phase 2: Move Notebooks
 ```bash
-# Already have notebooks/ directory
-mv resnet_baseline_experiment.ipynb notebooks/
-mv uncertainty_visualization_demo.ipynb notebooks/
-mv uncertainty_viz_3class.ipynb notebooks/
-mv watsonx_deployment_experiment.ipynb notebooks/
+# Already have src/uqlab_core/notebooks/ directory
+mv resnet_baseline_experiment.ipynb src/uqlab_core/notebooks/
+mv uncertainty_visualization_demo.ipynb src/uqlab_core/notebooks/
+mv uncertainty_viz_3class.ipynb src/uqlab_core/notebooks/
+mv watsonx_deployment_experiment.ipynb src/uqlab_core/notebooks/
 ```
 
 ### Phase 3: Move Utility Scripts
@@ -154,10 +154,11 @@ uqlab-streamlit/
 ├── configs/                    # YAML configs
 ├── docs/                       # Documentation
 ├── frontend/                   # React frontend
-├── notebooks/                  # Jupyter notebooks
 ├── scripts/                    # Utility scripts
 ├── src/                        # Main source code
-│   └── uqlab/                  # Main package
+│   ├── uqlab/                  # Main package
+│   └── uqlab_core/             # Core package
+│       └── notebooks/          # Jupyter notebooks
 └── tests/                      # Test files
 ```
 

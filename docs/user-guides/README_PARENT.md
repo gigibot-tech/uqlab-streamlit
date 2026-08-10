@@ -26,7 +26,7 @@ uqlab-streamlit/
 ├── streamlit_app_progressive.py  # Progressive/advanced UI
 ├── scripts/                      # Utility scripts
 ├── configs/                      # Configuration files
-├── notebooks/                    # Jupyter notebooks
+├── src/uqlab_core/notebooks/     # Jupyter notebooks
 └── docker-compose.yml            # Docker orchestration
 ```
 

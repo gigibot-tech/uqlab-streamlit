@@ -53,7 +53,7 @@ build_run_data (split + noise per YAML)
 
 ## Notebook benchmark is not a sweep
 
-[`four_region_benchmark.ipynb`](../../notebooks/four_region_benchmark.ipynb) runs **one** YAML point per dataset (30% flip, 10% sparse). Use `four_region_validation` for systematic grids.
+[`four_region_benchmark.ipynb`](../../src/uqlab_core/notebooks/four_region_benchmark.ipynb) runs **one** YAML point per dataset (30% flip, 10% sparse). Use `four_region_validation` for systematic grids.
 
 ## Related
 

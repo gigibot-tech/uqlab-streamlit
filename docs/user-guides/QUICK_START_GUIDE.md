@@ -165,7 +165,7 @@ Enable auto-refresh to see progress updates:
 ### Option C: Use Validation Presets (Notebooks)
 
 ```bash
-cd uqlab-streamlit/notebooks/validation
+cd uqlab-streamlit/src/uqlab_core/notebooks/validation
 jupyter lab architecture_comparison_label_noise.ipynb
 ```
 

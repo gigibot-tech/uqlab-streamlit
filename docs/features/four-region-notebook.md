@@ -1,6 +1,6 @@
 # Four-region benchmark notebook
 
-Notebook: [`notebooks/four_region_benchmark.ipynb`](../../notebooks/four_region_benchmark.ipynb)
+Notebook: [`src/uqlab_core/notebooks/four_region_benchmark.ipynb`](../../src/uqlab_core/notebooks/four_region_benchmark.ipynb)
 
 Six-step walkthrough (change `DATASET` in Step 1, Run All). Each step maps to a **`uqlab_core`** package.
 

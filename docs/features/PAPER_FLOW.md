@@ -36,7 +36,7 @@ Maps the Keras `InformationTheoreticModel` / `calculate_disentanglement_error` d
 
 ## Notebook minimal flow
 
-See [`notebooks/cifar10_paper_flow.ipynb`](../../notebooks/cifar10_paper_flow.ipynb) or the four-region notebook guide [`four-region-notebook.md`](four-region-notebook.md).
+See [`src/uqlab_core/notebooks/cifar10_paper_flow.ipynb`](../../src/uqlab_core/notebooks/cifar10_paper_flow.ipynb) or the four-region notebook guide [`four-region-notebook.md`](four-region-notebook.md).
 
 ```python
 from uqlab.data import build_run_data

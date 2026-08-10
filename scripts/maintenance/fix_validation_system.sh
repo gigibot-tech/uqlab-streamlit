@@ -79,7 +79,7 @@ echo "=================================="
 echo ""
 echo "Next steps:"
 echo "  1. Run: python scripts/run_validation_experiments.py --mode full"
-echo "  2. Open notebooks: jupyter notebook notebooks/validation/"
+echo "  2. Open notebooks: jupyter notebook src/uqlab_core/notebooks/validation/"
 echo ""
 
 # Made with Bob

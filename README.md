@@ -26,7 +26,7 @@ uqlab-streamlit/
 ├── streamlit_app.py              # Deprecated legacy UI (archived)
 ├── scripts/                      # Utility scripts
 ├── configs/                      # Experiment configurations
-├── notebooks/                    # Jupyter notebooks
+├── src/uqlab_core/notebooks/     # Jupyter notebooks
 ├── docker-compose.yml            # Docker orchestration
 └── README.md                     # This file
 ```
