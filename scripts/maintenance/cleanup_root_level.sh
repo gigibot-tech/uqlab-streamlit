@@ -29,10 +29,11 @@ echo -e "${GREEN}✓ Old documentation archived${NC}"
 
 # Phase 2: Move Notebooks
 echo -e "\n${BLUE}Phase 2: Moving notebooks...${NC}"
-mv resnet_baseline_experiment.ipynb notebooks/ 2>/dev/null || true
-mv uncertainty_visualization_demo.ipynb notebooks/ 2>/dev/null || true
-mv uncertainty_viz_3class.ipynb notebooks/ 2>/dev/null || true
-mv watsonx_deployment_experiment.ipynb notebooks/ 2>/dev/null || true
+mkdir -p src/uqlab_core/notebooks
+mv resnet_baseline_experiment.ipynb src/uqlab_core/notebooks/ 2>/dev/null || true
+mv uncertainty_visualization_demo.ipynb src/uqlab_core/notebooks/ 2>/dev/null || true
+mv uncertainty_viz_3class.ipynb src/uqlab_core/notebooks/ 2>/dev/null || true
+mv watsonx_deployment_experiment.ipynb src/uqlab_core/notebooks/ 2>/dev/null || true
 echo -e "${GREEN}✓ Notebooks moved${NC}"
 
 # Phase 3: Move Utility Scripts
@@ -74,7 +75,7 @@ echo "==============================${NC}"
 
 echo -e "\n${BLUE}Summary:${NC}"
 echo "  ✓ Old documentation → archive/old_docs/"
-echo "  ✓ Notebooks → notebooks/"
+echo "  ✓ Notebooks → src/uqlab_core/notebooks/"
 echo "  ✓ Utility scripts → scripts/utils/"
 echo "  ✓ Shell scripts → scripts/shell/"
 echo "  ✓ Duplicates deleted"

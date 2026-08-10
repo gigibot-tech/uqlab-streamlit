@@ -120,7 +120,7 @@ The four-region notebook adds **custom pairwise contrasts** (mean diff + AUROC) 
 
 ## Four-region notebook map
 
-[`notebooks/four_region_benchmark.ipynb`](../../../notebooks/four_region_benchmark.ipynb):
+[`src/uqlab_core/notebooks/four_region_benchmark.ipynb`](../notebooks/four_region_benchmark.ipynb):
 
 | Step | API |
 |------|-----|

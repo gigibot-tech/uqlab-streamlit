@@ -52,8 +52,8 @@ This section contains:
    ```
 
 2. **Navigate to validation notebooks**:
-   - `notebooks/validation/architecture_comparison_dataset_size.ipynb`
-   - `notebooks/validation/architecture_comparison_label_noise.ipynb`
+   - `architecture_comparison_dataset_size.ipynb`
+   - `architecture_comparison_label_noise.ipynb`
 
 3. **Run all cells** or run the new section specifically:
    - The new section is at the end of each notebook
@@ -105,7 +105,7 @@ def get_row3_signals(df: pd.DataFrame, sweep_type: str) -> list[tuple[str, float
 
 ### Import Path
 
-Notebooks import from the local package (run with cwd `notebooks/validation/`):
+Notebooks import from the local package (run with cwd `src/uqlab_core/notebooks/validation/`):
 
 ```python
 from notebook_support import plot_method_uncertainty_comparison, get_row3_signals
@@ -120,7 +120,7 @@ Streamlit uses the same logic via `ui_components/hypothesis_validation.py` (Plot
 If you get `ModuleNotFoundError: No module named 'ui_components'`:
 1. Ensure you're running from the correct directory
 2. Check that `sys.path.append('../..')` is executed before imports
-3. Verify the notebook is in `uqlab-streamlit/notebooks/validation/`
+3. Verify the notebook is in `uqlab-streamlit/src/uqlab_core/notebooks/validation/`
 
 ### Missing Data
 

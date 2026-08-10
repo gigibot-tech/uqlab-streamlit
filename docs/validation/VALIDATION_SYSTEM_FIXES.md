@@ -13,9 +13,9 @@ Performed comprehensive code review of the validation system and fixed all poten
 
 1. ✅ `scripts/run_fast_uncertainty_classification.py` (1031 lines)
 2. ✅ `scripts/run_validation_experiments.py` (481 lines)
-3. ✅ `notebooks/validation/architecture_comparison_dataset_size.ipynb` (655 lines)
-4. ✅ `notebooks/validation/architecture_comparison_label_noise.ipynb` (877 lines)
-5. ✅ `notebooks/validation/logical_consistency_validation.ipynb` (597 lines)
+3. ✅ `src/uqlab_core/notebooks/validation/architecture_comparison_dataset_size.ipynb` (655 lines)
+4. ✅ `src/uqlab_core/notebooks/validation/architecture_comparison_label_noise.ipynb` (877 lines)
+5. ✅ `src/uqlab_core/notebooks/validation/logical_consistency_validation.ipynb` (597 lines)
 
 ---
 
@@ -77,7 +77,7 @@ except (ValueError, TypeError, AttributeError) as e:
 
 **Fixes Applied:**
 
-Created new file: `notebooks/validation/validation_functions.py` with:
+Created new file: `src/uqlab_core/notebooks/validation/validation_functions.py` with:
 
 1. **`validate_uncertainty_decomposition(df, tolerance=0.05)`**
    - Validates: `total_uncertainty ≈ epistemic + aleatoric` (within ±5%)

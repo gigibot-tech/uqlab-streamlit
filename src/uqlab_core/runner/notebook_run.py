@@ -108,9 +108,9 @@ class NotebookContext:
 def _bootstrap_uqlab_path() -> Path:
     for base in (Path.cwd(), *Path.cwd().parents):
         for path in (
-            base / "notebooks" / "bootstrap_uqlab.py",
-            base / "uqlab-streamlit" / "notebooks" / "bootstrap_uqlab.py",
-            base / "four-region-benchmark" / "notebooks" / "bootstrap_uqlab.py",
+            base / "src" / "uqlab_core" / "notebooks" / "bootstrap_uqlab.py",
+            base / "uqlab-streamlit" / "src" / "uqlab_core" / "notebooks" / "bootstrap_uqlab.py",
+            base / "four-region-benchmark" / "src" / "uqlab_core" / "notebooks" / "bootstrap_uqlab.py",
         ):
             if not path.is_file():
                 continue
@@ -120,7 +120,7 @@ def _bootstrap_uqlab_path() -> Path:
             spec.loader.exec_module(mod)
             return mod.ensure_uqlab_path()
     raise ModuleNotFoundError(
-        "bootstrap_uqlab.py not found — open uqlab-streamlit/notebooks/ in Jupyter"
+        "bootstrap_uqlab.py not found — open uqlab-streamlit/src/uqlab_core/notebooks/ in Jupyter"
     )
 
 

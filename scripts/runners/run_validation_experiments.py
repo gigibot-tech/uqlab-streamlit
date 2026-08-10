@@ -629,9 +629,9 @@ Examples:
     print("\n✅ Validation data is ready!")
     print("\nNext steps:")
     print("  1. Run the validation notebooks to analyze results:")
-    print("     - notebooks/validation/dataset_size_validation.ipynb")
-    print("     - notebooks/validation/label_noise_validation.ipynb")
-    print("     - notebooks/validation/logical_consistency_validation.ipynb")
+    print("     - src/uqlab_core/notebooks/validation/dataset_size_validation.ipynb")
+    print("     - src/uqlab_core/notebooks/validation/label_noise_validation.ipynb")
+    print("     - src/uqlab_core/notebooks/validation/logical_consistency_validation.ipynb")
     print("  2. Review the validation reports in results/validation/")
     
     return 0
