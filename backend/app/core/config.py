@@ -49,8 +49,8 @@ class Settings(BaseSettings):
 
     PROJECT_NAME: str
     
-    # ML engine: ``uqlab.runner.experiment_core`` (CLI wrapper under scripts/runners/)
-    DTAG_ROOT: str = str(Path(__file__).resolve().parents[3] / "scripts")
+    # ML engine: ``uqlab_core.runner.experiment_core`` (CLI wrapper under src/uqlab_core/cli/)
+    DTAG_ROOT: str = str(Path(__file__).resolve().parents[3] / "src" / "uqlab_core" / "cli")
     
     # Persistent data root (experiments + default SQLite). Override via UQLAB_DATA_DIR.
     UQLAB_DATA_DIR: str = ""
