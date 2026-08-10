@@ -2,6 +2,7 @@
 """
 Validate all three architectures work end-to-end
 """
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -10,18 +11,21 @@ def run_test(config_name: str) -> bool:
     """Run single architecture test"""
     config_path = f"configs/test/{config_name}.yaml"
     output_dir = f"/tmp/test_{config_name}"
-    
+
     print(f"\n{'='*60}")
     print(f"Testing: {config_name}")
     print(f"{'='*60}\n")
-    
+
     cmd = [
-        "python", "scripts/run_fast_uncertainty_classification.py",
-        config_path, output_dir
+        "python3", "-m", "uqlab_core.cli.run_fast_uncertainty_classification",
+        "--config", config_path,
+        "--output_dir", output_dir,
     ]
-    
+    env = os.environ.copy()
+    env["PYTHONPATH"] = "src"
+
     try:
-        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True, env=env)
         print(f"✅ {config_name} PASSED")
         return True
     except subprocess.CalledProcessError as e:

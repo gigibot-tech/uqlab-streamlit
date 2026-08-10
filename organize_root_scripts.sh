@@ -41,9 +41,7 @@ mv remove_walaris_references.py scripts/maintenance/ 2>/dev/null || true
 mv update_imports.py scripts/fixes/ 2>/dev/null || true
 mv consolidate_uq_classification.py scripts/maintenance/ 2>/dev/null || true
 
-# Move run_fast.py to scripts/
-echo "🚀 Moving execution scripts to scripts/..."
-mv run_fast.py scripts/ 2>/dev/null || true
+# run_fast.py is now in src/uqlab_core/cli/ as part of the package CLI
 
 echo "✅ Root-level script organization complete!"
 echo ""
