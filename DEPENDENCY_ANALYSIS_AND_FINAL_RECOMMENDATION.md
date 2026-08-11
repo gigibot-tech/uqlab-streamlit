@@ -22,8 +22,8 @@ from uqlab_orchestrator.config import (
     get_sweep_target,
     launch_mirror_preview,
 )
-from uqlab_orchestrator.uncertainty import step3_sweep_options
-from uqlab_orchestrator.uncertainty.registry import SINGLE_SWEEP_TARGET, SWEEP_BOTH_TARGET
+from uqlab_core.uncertainty import step3_sweep_options
+from uqlab_core.uncertainty import SINGLE_SWEEP_TARGET, SWEEP_BOTH_TARGET
 from uqlab_orchestrator.run_spec import filter_under_train_values, is_clean_noise
 from uqlab_orchestrator.per_class_sweep import generate_per_class_experiments, get_sweep_summary
 ```
