@@ -100,6 +100,34 @@ results/
         └── auroc_metrics.csv
 ```
 
+### `validate_per_class_campaign.py`
+
+Validates per-class configuration campaigns for uncertainty quantification patterns. It checks that OOD, sparse, noisy, and clean classes produce the expected uncertainty levels and correlations.
+
+**Usage:**
+```bash
+# From project root
+PYTHONPATH=src python3 scripts/analysis/validate_per_class_campaign.py \
+    --run-ids uuid1,uuid2,uuid3 \
+    --output validation_report.json
+```
+
+**What it does:**
+1. Loads experiment artifacts from `data/experiments/<run_id>/`
+2. Extracts per-class configuration and uncertainty scores
+3. Validates patterns:
+   - OOD classes (0 samples) → highest uncertainty
+   - Sparse classes (<100 samples) → high epistemic uncertainty
+   - Noisy classes (>20% noise) → high aleatoric uncertainty
+   - Clean classes → low uncertainty
+4. Computes correlations between training samples/noise and uncertainty
+5. Exports a JSON report if `--output` is provided
+
+**Exit codes:**
+- `0` — validation score ≥ 0.8
+- `1` — validation score ≥ 0.6 (warning)
+- `2` — validation score < 0.6 (failure)
+
 ### `summary.json` Structure
 
 ```json
