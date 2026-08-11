@@ -31,7 +31,11 @@ API documentation, endpoints, and schemas:
 
 ### 🚀 [Deployment](./deployment/)
 Deployment guides, CI/CD, and infrastructure:
-- *Coming soon*
+- [OpenShift Deployment](./deployment/oc-deployment.md) - Deploy to OpenShift with automated scripts
+- [IBM Code Engine Deployment](./deployment/ce-deployment.md) - Serverless deployment to IBM Code Engine
+- [Development Environment](./deployment/development.md) - Local Docker Compose development setup
+- [Maintenance & Template Updates](./deployment/maintenance.md) - Keeping the deployment template current
+- [Release Notes](./deployment/release-notes.md) - Latest changes and version notes
 
 ### 💻 [Development](./development/)
 Development workflows and contributing guides:
@@ -44,6 +48,13 @@ Development workflows and contributing guides:
 **Storage & Infrastructure**
 - [MinIO Setup](./setup/minio.md)
 - [MinIO Implementation](./architecture/minio-storage.md)
+
+**Deployment & Infrastructure**
+- [OpenShift Deployment](./deployment/oc-deployment.md)
+- [IBM Code Engine Deployment](./deployment/ce-deployment.md)
+- [Development Environment](./deployment/development.md)
+- [Maintenance & Template Updates](./deployment/maintenance.md)
+- [Release Notes](./deployment/release-notes.md)
 
 **Machine Learning**
 - [ResNet Feature Extractor Fix](./troubleshooting/resnet-feature-extractor.md)
