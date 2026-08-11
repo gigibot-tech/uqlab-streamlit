@@ -161,6 +161,46 @@ uqlab-streamlit/
 └── tests/                      # Test files
 ```
 
+## `uqlab-flask` (Current Flask Wizard)
+
+The current tree contains `uqlab-flask/` instead of the proposed `frontend/` directory. It is a small local Flask wizard (no API) documented as the "Local Flask wizard" in `START_HERE.md`.
+
+### File Sizes
+
+| File | LoC |
+|------|-----|
+| `app.py` | 37 |
+| `README.md` | 33 |
+| `requirements.txt` | 2 |
+| `uqlab_flask/__init__.py` | 1 |
+| `uqlab_flask/routes/__init__.py` | 0 |
+| `uqlab_flask/routes/runs.py` | 139 |
+| `uqlab_flask/routes/wizard.py` | 282 |
+| `uqlab_flask/static/style.css` | 177 |
+| `uqlab_flask/templates/base.html` | 15 |
+| `uqlab_flask/templates/launched.html` | 276 |
+| `uqlab_flask/templates/review.html` | 25 |
+| `uqlab_flask/templates/step1.html` | 25 |
+| `uqlab_flask/templates/step2.html` | 35 |
+| `uqlab_flask/templates/step3.html` | 25 |
+| `uqlab_flask/templates/step4.html` | 18 |
+| `uqlab_flask/templates/step5.html` | 13 |
+| `uqlab_flask/templates/sweep_not_found.html` | 13 |
+| `uqlab_flask/executor.py` | 652 |
+
+All files except `uqlab_flask/executor.py` are under 300 LoC. The whole app is small enough to be considered for relocation or consolidation.
+
+### Relocation Options
+
+- **Option A — Keep as root-level `frontend/`**: Rename `uqlab-flask/` to `frontend/` to match the cleanup plan. This only changes the folder name and import references in `app.py` and routes.
+- **Option B — Move into `src/`**: Relocate the package to `src/uqlab_flask/` or `src/flask_ui/` so it lives alongside other source packages (`uqlab_core`, `uqlab_orchestrator`). The root entry point would become a thin launcher.
+- **Option C — Merge into `backend/`**: The wizard routes and run API overlap conceptually with the FastAPI backend. `routes/runs.py` and `routes/wizard.py` could be ported to `backend/app/api/routes/` and `backend/app/`, while `executor.py` could be unified with `backend/app/services/executors/direct_executor.py`.
+- **Option D — Archive**: If the Streamlit progressive UI is the primary UI and the Flask wizard is no longer maintained, the entire folder could be archived.
+
+### Recommendation
+
+Option A is the lowest-friction change and aligns with the cleanup plan. Option B is better if the goal is to keep the root free of application code. Option C makes sense only if the backend should also serve the HTML wizard.
+
 ## Benefits
 
 ✅ **Cleaner root** - Only essential files  
