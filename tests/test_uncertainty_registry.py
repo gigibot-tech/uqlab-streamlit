@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from uqlab_orchestrator.config.workflow_defaults import default_workflow
-from uqlab_orchestrator.uncertainty import (
+from uqlab_core.uncertainty import (
     mirror_perspectives,
     perspective_by_sweep_target,
     perspective_count,
@@ -33,7 +33,7 @@ def test_resolve_launch_actions_four_region_single_button():
 
     from uqlab.data.splits.four_region import DEFAULT_FOUR_REGION_PRESET
     from uqlab_orchestrator.config.workflow_defaults import default_workflow
-    from uqlab_orchestrator.uncertainty import resolve_launch_actions, resolve_launch_plan
+    from uqlab_core.uncertainty import resolve_launch_actions, resolve_launch_plan
 
     wf = default_workflow()
     wf["uncertainty_config"] = {
@@ -59,7 +59,7 @@ def test_resolve_launch_actions_sweep_both_single_button():
     wf["uncertainty_config"]["sweep_enabled"] = True
     wf["uncertainty_config"]["epistemic_sweep_enabled"] = True
     wf["uncertainty_config"]["aleatoric_sweep_enabled"] = True
-    from uqlab_orchestrator.uncertainty import resolve_launch_actions
+    from uqlab_core.uncertainty import resolve_launch_actions
 
     actions = resolve_launch_actions(wf)
     assert len(actions) == 1
