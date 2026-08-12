@@ -20,7 +20,7 @@ The backend app is created in:
 
 At startup:
 
-- `lifespan(app)` validates that `run_fast_uncertainty_classification.py` exists under `settings.DTAG_ROOT`
+- `lifespan(app)` validates that `src/uqlab_core/cli/run_fast_uncertainty.py` exists under `settings.DTAG_ROOT`
 - the database is initialized with `init_db(session)`
 - then the FastAPI app includes the API router with:
 
