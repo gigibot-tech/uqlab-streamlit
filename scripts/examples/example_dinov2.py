@@ -15,14 +15,15 @@ import subprocess
 import sys
 from pathlib import Path
 
+
 def main():
     """Run DINOv2 training example."""
-    
-    print("="*60)
+
+    print("=" * 60)
     print("DINOv2 + MLP Training Example")
-    print("="*60)
+    print("=" * 60)
     print()
-    
+
     # Configuration
     config_content = """
 dataset:
@@ -49,35 +50,37 @@ training:
 evaluation:
   mc_passes: 20
 """
-    
+
     # Save config
     config_path = Path("/tmp/example_dinov2_config.yaml")
     config_path.write_text(config_content)
     print(f"✓ Config saved to: {config_path}")
-    
+
     # Output directory
     output_dir = Path("/tmp/example_dinov2_output")
     print(f"✓ Output directory: {output_dir}")
     print()
-    
+
     # Run training
     print("Starting training...")
-    print("-"*60)
-    
+    print("-" * 60)
+
     cmd = [
         "python",
-        "scripts/run_fast_uncertainty_classification.py",
+        "src/uqlab_core/cli/run_fast_uncertainty.py",
+        "--config",
         str(config_path),
-        str(output_dir)
+        "--output_dir",
+        str(output_dir),
     ]
-    
+
     try:
         result = subprocess.run(cmd, check=True, capture_output=False, text=True)
-        
+
         print()
-        print("="*60)
+        print("=" * 60)
         print("✅ Training completed successfully!")
-        print("="*60)
+        print("=" * 60)
         print()
         print(f"Results saved to: {output_dir}")
         print()
@@ -86,16 +89,17 @@ evaluation:
         print(f"  - {output_dir}/model.pt")
         print(f"  - {output_dir}/attribution_signals.npz")
         print()
-        
+
         return 0
-        
+
     except subprocess.CalledProcessError as e:
         print()
-        print("="*60)
+        print("=" * 60)
         print("❌ Training failed!")
-        print("="*60)
+        print("=" * 60)
         print(f"Error: {e}")
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())
