@@ -12,8 +12,8 @@ Lean Flask shell over the existing uqlab runner (`uqlab.runner.execute.run_from_
 
 ```bash
 cd uqlab-streamlit
-pip install -r uqlab-flask/requirements.txt
-PYTHONPATH=src:uqlab-flask python uqlab-flask/app.py
+pip install -r services/uqlab-flask/requirements.txt
+PYTHONPATH=src:services/uqlab-flask python services/uqlab-flask/app.py
 ```
 
 Open http://127.0.0.1:5001 — 5-step wizard, one **Launch** runs the full sweep sequentially.
