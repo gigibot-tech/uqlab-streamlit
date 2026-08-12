@@ -46,7 +46,7 @@ Wizard → YAML field mapping: [`docs/features/workflow-config.md`](docs/feature
 ## Run one experiment (no UI)
 
 ```bash
-PYTHONPATH=src python scripts/runners/run_fast_uncertainty_classification.py \
+PYTHONPATH=src python src/uqlab_core/cli/run_fast_uncertainty.py \
   --config configs/experiment/four_region.yaml \
   --output_dir data/experiments/<run_id>/results
 ```
@@ -57,7 +57,7 @@ Or from Python:
 
 ```python
 from pathlib import Path
-from uqlab.runner.execute import run_from_yaml
+from uqlab_core.runner.execute import run_from_yaml
 
 run_from_yaml(Path("config.yaml"), Path("output_dir"))
 ```
@@ -77,9 +77,9 @@ No DI framework — reproducibility comes from **one config file + one pipeline*
 Copy these for a new project; treat UI and backend as replaceable shell:
 
 ```
-src/uqlab/                    # ML core
+src/uqlab_core/               # ML core
 src/uqlab_orchestrator/       # config + launch + sweep grouping
-scripts/runners/run_fast_uncertainty_classification.py
+src/uqlab_core/cli/run_fast_uncertainty.py
 scripts/analysis/disentanglement_error.py   # post-hoc paper metric
 ```
 

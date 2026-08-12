@@ -15,14 +15,15 @@ import subprocess
 import sys
 from pathlib import Path
 
+
 def main():
     """Run CNN training example."""
-    
-    print("="*60)
+
+    print("=" * 60)
     print("CNN MC Dropout Training Example")
-    print("="*60)
+    print("=" * 60)
     print()
-    
+
     # Configuration
     config_content = """
 dataset:
@@ -50,20 +51,20 @@ training:
 evaluation:
   mc_passes: 20
 """
-    
+
     # Save config
     config_path = Path("/tmp/example_cnn_config.yaml")
     config_path.write_text(config_content)
     print(f"✓ Config saved to: {config_path}")
-    
+
     # Output directory
     output_dir = Path("/tmp/example_cnn_output")
     print(f"✓ Output directory: {output_dir}")
     print()
-    
+
     # Run training
     print("Starting training...")
-    print("-"*60)
+    print("-" * 60)
     print()
     print("Architecture:")
     print("  Conv2d(3→32, 3×3) + ReLU + MaxPool")
@@ -72,22 +73,24 @@ evaluation:
     print("  Linear(64×4×4 → 128) + ReLU + Dropout(0.5)")
     print("  Linear(128 → 10)")
     print()
-    print("-"*60)
-    
+    print("-" * 60)
+
     cmd = [
         "python",
-        "scripts/run_fast_uncertainty_classification.py",
+        "src/uqlab_core/cli/run_fast_uncertainty.py",
+        "--config",
         str(config_path),
-        str(output_dir)
+        "--output_dir",
+        str(output_dir),
     ]
-    
+
     try:
         result = subprocess.run(cmd, check=True, capture_output=False, text=True)
-        
+
         print()
-        print("="*60)
+        print("=" * 60)
         print("✅ Training completed successfully!")
-        print("="*60)
+        print("=" * 60)
         print()
         print(f"Results saved to: {output_dir}")
         print()
@@ -101,16 +104,17 @@ evaluation:
         print("  - Training time: ~15 minutes (single GPU)")
         print("  - Inference time: Fast")
         print()
-        
+
         return 0
-        
+
     except subprocess.CalledProcessError as e:
         print()
-        print("="*60)
+        print("=" * 60)
         print("❌ Training failed!")
-        print("="*60)
+        print("=" * 60)
         print(f"Error: {e}")
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

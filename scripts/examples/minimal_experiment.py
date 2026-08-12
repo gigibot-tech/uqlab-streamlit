@@ -3,11 +3,11 @@ Minimal Uncertainty Quantification Experiment
 ==============================================
 
 This script shows the ESSENTIAL code for an UQ experiment.
-Compare this to run_fast_uncertainty_classification.py (800+ lines).
+Compare this to src/uqlab_core/cli/run_fast_uncertainty.py (~60 lines).
 
 The difference:
 - This: ~80 lines of actual ML logic
-- Full script: ~800 lines (90% is config parsing, validation, logging)
+- Full script: ~60 lines (config parsing, validation, logging are handled by uqlab_core)
 
 Run: python examples/minimal_experiment.py
 """
@@ -20,16 +20,17 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 import torch
+
 from uqlab.data.datasets.registry import load_classification_dataset
 from uqlab.data.splits.experiment_loader import (
     EmbeddingOrganizer,
-    sample_indices_for_experiment,
     build_and_train_feature_model,
+    sample_indices_for_experiment,
 )
-from uqlab.models.factory.classification_models import EmbeddingDataset
 from uqlab.evaluation.metrics.scoring import binary_auroc
-from uqlab.shared.utils.classification import auto_device, dino_transform, set_seed
 from uqlab.evaluation.signals.mc_dropout import calculate_mc_dropout_uncertainty
+from uqlab.models.factory.classification_models import EmbeddingDataset
+from uqlab.shared.utils.classification import auto_device, dino_transform, set_seed
 
 
 def run_minimal_experiment():
@@ -37,11 +38,11 @@ def run_minimal_experiment():
     The CORE experiment in ~50 lines.
     Everything else in the full script is infrastructure.
     """
-    
+
     # ========== 1. SETUP (3 lines) ==========
     set_seed(42)
     device = auto_device("auto")
-    
+
     # ========== 2. LOAD DATA (5 lines) ==========
     dataset = load_classification_dataset(
         "cifar10n",
@@ -51,22 +52,22 @@ def run_minimal_experiment():
         download=True,
         transform=dino_transform(),
     )
-    
+
     # ========== 3. SAMPLE SPLITS (5 lines) ==========
     split = sample_indices_for_experiment(
         dataset,
         under_supported_classes=[3, 5],  # Cat, Dog under-supported
-        under_train_per_class=50,        # Few samples for under-supported
-        regular_train_per_class=300,     # Normal samples for others
-        eval_per_group=600,              # Eval samples per group
+        under_train_per_class=50,  # Few samples for under-supported
+        regular_train_per_class=300,  # Normal samples for others
+        eval_per_group=600,  # Eval samples per group
         seed=42,
     )
-    
+
     print(f"Train samples: {len(split.train_indices)}")
     print(f"Clean eval: {len(split.clean_eval_indices)}")
     print(f"Aleatoric eval: {len(split.aleatoric_eval_indices)}")
     print(f"Epistemic eval: {len(split.epistemic_eval_indices)}")
-    
+
     # ========== 4. EXTRACT FEATURES (10 lines) ==========
     # This is the complex part - but it's ONE abstraction
     organizer = EmbeddingOrganizer(
@@ -78,15 +79,15 @@ def run_minimal_experiment():
         batch_size=64,
         device=device,
     )
-    
+
     print("Extracting DINOv2 features (cached after first run)...")
     organizer.load_or_compute_features()
-    
+
     train_pack = organizer.get_train_pack()
     clean_eval_pack = organizer.get_clean_eval_pack()
     aleatoric_eval_pack = organizer.get_aleatoric_eval_pack()
     epistemic_eval_pack = organizer.get_epistemic_eval_pack()
-    
+
     # ========== 5. TRAIN MODEL (5 lines) ==========
     train_dataset = EmbeddingDataset(
         train_pack["features"],
@@ -95,7 +96,7 @@ def run_minimal_experiment():
         train_pack["is_noisy"],
         train_pack["original_indices"],
     )
-    
+
     print("Training classifier...")
     model = build_and_train_feature_model(
         train_dataset,
@@ -108,10 +109,10 @@ def run_minimal_experiment():
         learning_rate=0.001,
         weight_decay=0.0001,
     )
-    
+
     # ========== 6. COMPUTE UNCERTAINTY (10 lines) ==========
     print("Computing uncertainty scores...")
-    
+
     # MC Dropout uncertainty for each eval group
     clean_uncertainty = calculate_mc_dropout_uncertainty(
         model.mc_forward(clean_eval_pack["features"].to(device), n_passes=20).cpu()
@@ -122,31 +123,27 @@ def run_minimal_experiment():
     epistemic_uncertainty = calculate_mc_dropout_uncertainty(
         model.mc_forward(epistemic_eval_pack["features"].to(device), n_passes=20).cpu()
     )
-    
+
     # ========== 7. EVALUATE (10 lines) ==========
     print("\nResults:")
     print("=" * 50)
-    
+
     # Aleatoric: Can we detect noisy labels?
-    aleatoric_auroc = binary_auroc(
-        aleatoric_uncertainty["entropy"],
-        aleatoric_eval_pack["is_noisy"]
-    )
+    aleatoric_auroc = binary_auroc(aleatoric_uncertainty["entropy"], aleatoric_eval_pack["is_noisy"])
     print(f"Aleatoric AUROC (detect noisy labels): {aleatoric_auroc:.3f}")
-    
+
     # Epistemic: Can we detect under-supported classes?
     # Compare epistemic vs clean uncertainty
-    combined_uncertainty = torch.cat([
-        epistemic_uncertainty["entropy"],
-        clean_uncertainty["entropy"]
-    ])
-    is_epistemic = torch.cat([
-        torch.ones(len(epistemic_uncertainty["entropy"]), dtype=torch.bool),
-        torch.zeros(len(clean_uncertainty["entropy"]), dtype=torch.bool)
-    ])
+    combined_uncertainty = torch.cat([epistemic_uncertainty["entropy"], clean_uncertainty["entropy"]])
+    is_epistemic = torch.cat(
+        [
+            torch.ones(len(epistemic_uncertainty["entropy"]), dtype=torch.bool),
+            torch.zeros(len(clean_uncertainty["entropy"]), dtype=torch.bool),
+        ]
+    )
     epistemic_auroc = binary_auroc(combined_uncertainty, is_epistemic)
     print(f"Epistemic AUROC (detect under-supported): {epistemic_auroc:.3f}")
-    
+
     print("=" * 50)
     print("\nDone! This is the CORE experiment.")
     print("Everything else in the full script is:")
