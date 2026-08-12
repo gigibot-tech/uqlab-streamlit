@@ -16,6 +16,7 @@
 | [validation-sweeps.md](validation-sweeps.md) | Legacy + four-region sweep grids → metrics |
 | [four-region-notebook.md](four-region-notebook.md) | Six-step benchmark notebook (`uqlab_core`) |
 | [ui-debug.md](ui-debug.md) | Streamlit debug surfaces |
+| [small-file-relocation.md](small-file-relocation.md) | Root folders small enough to relocate |
 | [run-recovery.md](run-recovery.md) | Finalize failed runs from disk (`zwischen/`) |
 
 **Module READMEs:** [`src/uqlab_core/data/README.md`](../../src/uqlab_core/data/README.md) · [`src/uqlab_core/evaluation/README.md`](../../src/uqlab_core/evaluation/README.md)
