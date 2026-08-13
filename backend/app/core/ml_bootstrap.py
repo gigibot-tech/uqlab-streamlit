@@ -15,11 +15,13 @@ ML_BOOTSTRAP_VERSION = 3
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 SRC_DIR = PROJECT_ROOT / "src"
 
-_REQUIRED_DUALXDA_METRICS = frozenset({
-    "inverse_coherence_dualxda",
-    "inverse_dominance_dualxda",
-    "inverse_mass_dualxda",
-})
+_REQUIRED_DUALXDA_METRICS = frozenset(
+    {
+        "inverse_coherence_dualxda",
+        "inverse_dominance_dualxda",
+        "inverse_mass_dualxda",
+    }
+)
 
 
 def ensure_ml_paths() -> Path:
@@ -53,15 +55,17 @@ def verify_ml_stack() -> None:
     ensure_ml_paths()
 
     try:
-        from uqlab_orchestrator.run_spec import validate_run_yaml  # noqa: F401
         from uqlab.data.datasets.registry import compute_dataset_stats  # noqa: F401
-        from uqlab.data.splits.experiment_loader import sample_indices_for_experiment  # noqa: F401
-        from uqlab.runner.experiment_core import run_experiment_core
+        from uqlab.data.splits.experiment_loader import (
+            sample_indices_for_experiment,  # noqa: F401
+        )
         from uqlab.evaluation.reporting.result_writers import build_results_markdown
         from uqlab.evaluation.signals.registry import (
             METRICS,
             resolve_signal_table_key,
         )
+        from uqlab.runner.experiment_core import run_experiment_core
+        from uqlab_orchestrator.run_spec import validate_run_yaml  # noqa: F401
     except ImportError as exc:
         raise RuntimeError(
             f"ML stack import failed ({exc}). "
@@ -69,8 +73,8 @@ def verify_ml_stack() -> None:
             f"so {SRC_DIR} is on PYTHONPATH (bootstrap v{ML_BOOTSTRAP_VERSION})."
         ) from exc
 
-    import uqlab_orchestrator.run_spec as run_spec
     import uqlab.evaluation.signals.registry as signal_registry
+    import uqlab_orchestrator.run_spec as run_spec
 
     if not hasattr(run_spec, "validate_run_yaml"):
         raise RuntimeError(
@@ -78,7 +82,9 @@ def verify_ml_stack() -> None:
         )
 
     if not callable(run_experiment_core):
-        raise RuntimeError("uqlab.runner.experiment_core.run_experiment_core is not callable")
+        raise RuntimeError(
+            "uqlab.runner.experiment_core.run_experiment_core is not callable"
+        )
 
     if not callable(resolve_signal_table_key):
         raise RuntimeError(
@@ -101,9 +107,17 @@ def verify_ml_stack() -> None:
             f"Signal registry at {signal_registry.__file__!r} still exports raw 'dominance'."
         )
 
-    script_path = PROJECT_ROOT / "scripts" / "runners" / "run_fast_uncertainty_classification.py"
+    canonical_cli = (
+        PROJECT_ROOT / "src" / "uqlab_core" / "cli" / "run_fast_uncertainty.py"
+    )
+    legacy_cli = (
+        PROJECT_ROOT / "scripts" / "runners" / "run_fast_uncertainty_classification.py"
+    )
+    script_path = canonical_cli if canonical_cli.is_file() else legacy_cli
     if not script_path.is_file():
-        raise RuntimeError(f"CLI wrapper not found (optional for API): {script_path}")
+        raise RuntimeError(
+            f"CLI wrapper not found (optional for API): tried {canonical_cli} and {legacy_cli}"
+        )
 
     logger.info(
         "ML stack OK (bootstrap v%s): registry=%s metrics=%d evaluator=%s cli=%s",
