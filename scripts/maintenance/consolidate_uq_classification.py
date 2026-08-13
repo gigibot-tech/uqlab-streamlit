@@ -19,10 +19,10 @@ FILES_TO_UPDATE = [
     "scripts/examples/minimal_experiment.py",
     "tests/test_evaluation.py",
     "tests/test_config_schema.py",
-    "tests/legacy/test_model_config.py",
+    "archive/tests/legacy/test_model_config.py",
     "scripts/legacy/export_to_watsonx.py",
-    "tests/legacy/test_refactor.py",
-    "tests/legacy/test_model_config_simple.py",
+    "archive/tests/legacy/test_refactor.py",
+    "archive/tests/legacy/test_model_config_simple.py",
     "streamlit_app.py",
     "src/uqlab/data/__init__.py",
     "src/uqlab/ui_components/results/results.py",
@@ -127,10 +127,10 @@ All imports in the following files were updated:
 - `scripts/examples/minimal_experiment.py`
 - `tests/test_evaluation.py`
 - `tests/test_config_schema.py`
-- `tests/legacy/test_model_config.py`
+- `archive/tests/legacy/test_model_config.py`
 - `scripts/legacy/export_to_watsonx.py`
-- `tests/legacy/test_refactor.py`
-- `tests/legacy/test_model_config_simple.py`
+- `archive/tests/legacy/test_refactor.py`
+- `archive/tests/legacy/test_model_config_simple.py`
 - `streamlit_app.py`
 - `src/uqlab/data/__init__.py`
 - `src/uqlab/ui_components/results/results.py`

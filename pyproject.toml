@@ -93,7 +93,7 @@ line-ending = "auto"
 [tool.pytest.ini_options]
 testpaths = ["tests", "src/uqlab/tests"]
 pythonpath = ["src", ".", "backend"]
-norecursedirs = ["tests/legacy", "src/walaris/classification/archive"]
+norecursedirs = ["archive/tests/legacy", "src/walaris/classification/archive"]
 addopts = "--cov=uqlab --cov=app --cov-report=html --cov-report=term-missing"
 
 # MyPy Configuration
