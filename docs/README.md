@@ -31,11 +31,14 @@ API documentation, endpoints, and schemas:
 
 ### 🚀 [Deployment](./deployment/)
 Deployment guides, CI/CD, and infrastructure:
-- *Coming soon*
+- [OpenShift Deployment](./deployment/oc-deployment.md) - Deploy to OpenShift with PostgreSQL and OAuth2
+- [Code Engine Deployment](./deployment/ce-deployment.md) - Deploy to IBM Cloud Code Engine
 
 ### 💻 [Development](./development/)
 Development workflows and contributing guides:
-- *Coming soon*
+- [Local Development Setup](./development/development.md) - Docker Compose and tooling setup
+- [Template Maintenance](./development/maintenance.md) - Branching and update workflow
+- [Release Notes](./development/release-notes.md) - Version history and highlights
 
 ## 🔍 Quick Navigation
 
@@ -44,6 +47,11 @@ Development workflows and contributing guides:
 **Storage & Infrastructure**
 - [MinIO Setup](./setup/minio.md)
 - [MinIO Implementation](./architecture/minio-storage.md)
+
+**Deployment & Infrastructure**
+- [OpenShift Deployment](./deployment/oc-deployment.md)
+- [Code Engine Deployment](./deployment/ce-deployment.md)
+- [Local Development Setup](./development/development.md)
 
 **Machine Learning**
 - [ResNet Feature Extractor Fix](./troubleshooting/resnet-feature-extractor.md)
