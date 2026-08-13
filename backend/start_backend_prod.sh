@@ -16,4 +16,4 @@ echo ""
 
 "${PYTHON}" -c "from app.core.ml_bootstrap import ML_BOOTSTRAP_VERSION, verify_ml_stack; verify_ml_stack(); print(f'Preflight OK (bootstrap v{ML_BOOTSTRAP_VERSION})')"
 
-exec "${PYTHON}" run_prod.py
+exec "${PYTHON}" scripts/run_prod.py
