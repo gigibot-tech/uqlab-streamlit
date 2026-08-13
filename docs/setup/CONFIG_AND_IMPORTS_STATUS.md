@@ -10,15 +10,17 @@ After codebase consolidation, here's the current state of configs and imports in
 Located in [`configs/`](configs:1):
 ```
 configs/
-├── example_cnn_mcdropout.yaml
-├── example_resnet18_mcdropout.yaml
 ├── experiment/
 │   ├── default.yaml
 │   └── fast_pilot.yaml
-└── test/
-    ├── test_cnn_mcdropout.yaml
-    ├── test_dinov2_mlp.yaml
-    └── test_resnet18_mcdropout.yaml
+└── examples/
+    ├── example_cnn_mcdropout.yaml
+    └── example_resnet18_mcdropout.yaml
+
+tests/fixtures/configs/
+├── test_cnn_mcdropout.yaml
+├── test_dinov2_mlp.yaml
+└── test_resnet18_mcdropout.yaml
 ```
 
 **Status**: ✅ **Still valid and used by [`run_fast.py`](run_fast.py:1)**
