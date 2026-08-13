@@ -1,57 +1,34 @@
 #!/usr/bin/env python3
-"""Run an experiment from ExperimentConfig YAML via uqlab.runner.execute.run_from_yaml."""
+"""Backward-compatible CLI wrapper (deprecated).
+
+The canonical implementation now lives in ``uqlab_core.cli.run_fast_uncertainty``
+and is exposed as the ``uqlab-run`` console script after installing the workspace.
+
+Keep this shim so existing documentation, examples, and the FastAPI bootstrap
+continue to find a runnable file at the historic path.
+"""
 
 from __future__ import annotations
 
-import argparse
-from datetime import datetime
+import sys
+import warnings
 from pathlib import Path
 
-from uqlab.runtime_paths import configs_dir, repository_root
-from uqlab.shared.config.classification import ExperimentConfig
-
-_DEFAULT_CONFIG = configs_dir() / "experiment" / "four_region.yaml"
-
-
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Run experiment from ExperimentConfig YAML")
-    parser.add_argument(
-        "--config",
-        type=Path,
-        default=_DEFAULT_CONFIG,
-        help=f"YAML config (default: {_DEFAULT_CONFIG})",
-    )
-    parser.add_argument("--seed", type=int, default=None, help="Random seed override")
-    parser.add_argument(
-        "--device",
-        type=str,
-        default=None,
-        choices=["auto", "cpu", "cuda", "mps"],
-        help="Device override",
-    )
-    parser.add_argument("--output_dir", type=Path, default=None, help="Output directory override")
-    args = parser.parse_args()
-
-    config_path = args.config.resolve()
-    if not config_path.is_file():
-        raise FileNotFoundError(f"Config file not found: {config_path}")
-
-    config = ExperimentConfig.from_yaml(config_path)
-    seed = args.seed if args.seed is not None else config.seed
-    device_str = args.device if args.device is not None else config.device
-
-    if args.output_dir:
-        results_dir = args.output_dir
-    else:
-        root = repository_root()
-        results_base = root / config.paths.results_base_dir
-        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        results_dir = results_base / f"experiment_{stamp}"
-
-    from uqlab.runner.execute import run_from_yaml as pipeline_run
-
-    pipeline_run(config_path, results_dir, seed=seed, device_str=device_str)
-
-
 if __name__ == "__main__":
+    warnings.warn(
+        "scripts/runners/run_fast_uncertainty_classification.py is deprecated. "
+        "Use `uqlab-run` or `python -m uqlab_core.cli.run_fast_uncertainty` instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
+    _ROOT = Path(__file__).resolve().parents[2]
+    _SRC = _ROOT / "src"
+    for _p in (_SRC, _ROOT):
+        _s = str(_p)
+        if _s not in sys.path:
+            sys.path.insert(0, _s)
+
+    from uqlab_core.cli.run_fast_uncertainty import main
+
     main()
