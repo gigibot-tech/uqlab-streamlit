@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 
 from app.core.config import settings
-from app.storage.base import StorageBackend
+from app.infrastructure.storage.base import StorageBackend
 
 logger = logging.getLogger(__name__)
 

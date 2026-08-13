@@ -299,10 +299,10 @@ from backend.app.repositories.batch_experiment_repository import BatchExperiment
 from backend.app.services.batch_experiment_service import BatchExperimentService
 from backend.app.services.training_orchestrator import TrainingOrchestrator
 
-# Storage
-from backend.app.storage.factory import create_storage
-from backend.app.storage.filesystem import FilesystemStorage
-from backend.app.storage.s3 import S3Storage
+# Storage (experiment artifact backends)
+from backend.app.infrastructure.storage.factory import get_storage_backend
+from backend.app.infrastructure.storage.filesystem import FilesystemStorageBackend
+from backend.app.infrastructure.storage.s3 import S3StorageBackend
 ```
 
 ### ⚠️ Legacy Backend Imports (Avoid in New Code)
@@ -351,8 +351,8 @@ from backend.app.repositories.experiment_repository import ExperimentRepository
 # Service
 from backend.app.services.training_orchestrator import TrainingOrchestrator
 
-# Storage
-from backend.app.storage.factory import create_storage
+# Storage (experiment artifact backends)
+from backend.app.infrastructure.storage.factory import get_storage_backend
 ```
 
 ### Pattern 3: Streamlit UI Component

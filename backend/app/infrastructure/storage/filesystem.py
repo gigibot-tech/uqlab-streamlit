@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.storage.base import StorageBackend
+from app.infrastructure.storage.base import StorageBackend
 
 
 class FilesystemStorageBackend(StorageBackend):
