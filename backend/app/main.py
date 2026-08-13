@@ -16,7 +16,7 @@ from starlette.middleware.cors import CORSMiddleware
 from app.api.main import api_router
 from app.core.config import settings
 from app.core.db import engine, init_db
-from app.storage.factory import get_storage_backend
+from app.infrastructure.storage.factory import get_storage_backend
 
 logger = logging.getLogger(__name__)
 
