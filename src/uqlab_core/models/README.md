@@ -67,7 +67,7 @@ Entropy, mutual information, and SIRC scores are computed in [`evaluation/signal
 ## Related docs
 
 - **Uncertainty signals & AUROC** → [`evaluation/signals/README.md`](../evaluation/signals/README.md)
-- **Paper disentanglement benchmark** → [`docs/features/disentanglement-benchmark.md`](../../../docs/features/disentanglement-benchmark.md)
+- **Paper disentanglement benchmark** → [`docs/features/evaluation/disentanglement-benchmark.md`](../../../docs/features/evaluation/disentanglement-benchmark.md)
 - **UQ flow** → [`docs/UQLAB_FLOW.md`](../../../docs/UQLAB_FLOW.md)
 - **Evaluation** → [`evaluation/README.md`](../evaluation/README.md)
 

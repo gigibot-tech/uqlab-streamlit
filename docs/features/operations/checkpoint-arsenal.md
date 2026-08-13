@@ -55,7 +55,7 @@ cd backend
 ./start_backend_prod.sh
 ```
 
-See [BACKEND_MODES.md](../../backend/BACKEND_MODES.md). Step 5 review also reminds you to use prod mode for sweeps.
+See [BACKEND_MODES.md](../../../backend/BACKEND_MODES.md). Step 5 review also reminds you to use prod mode for sweeps.
 
 ## Modules
 

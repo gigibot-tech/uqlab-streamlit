@@ -1,7 +1,7 @@
 # Evaluation pipeline
 
-**Data first:** [`data-pipeline.md`](data-pipeline.md) — `build_run_data`  
-**Module README:** [`src/uqlab_core/evaluation/README.md`](../../src/uqlab_core/evaluation/README.md)
+**Data first:** [`data-pipeline.md`](../data/data-pipeline.md) — `build_run_data`  
+**Module README:** [`src/uqlab_core/evaluation/README.md`](../../../src/uqlab_core/evaluation/README.md)
 
 Maps YAML → train → uncertainty signals → on-disk artifacts.
 
@@ -28,7 +28,7 @@ flowchart LR
 
 ## Collect vs score (canonical split)
 
-Implementation: [`src/uqlab_core/evaluation/pipeline.py`](../../src/uqlab_core/evaluation/pipeline.py)
+Implementation: [`src/uqlab_core/evaluation/pipeline.py`](../../../src/uqlab_core/evaluation/pipeline.py)
 
 | Phase | Function | Needs model? | Produces |
 |-------|----------|--------------|----------|
@@ -38,7 +38,7 @@ Implementation: [`src/uqlab_core/evaluation/pipeline.py`](../../src/uqlab_core/e
 \*Score runs a small linear classifier on signals for macro-F1; no forward/attribution pass.
 
 **Collect** = sources → `PrimitiveStore` (core vectors) → registry → scalars.  
-**Score** = [`scoring.py`](../../src/uqlab_core/evaluation/scoring.py) on scalars only.
+**Score** = [`scoring.py`](../../../src/uqlab_core/evaluation/scoring.py) on scalars only.
 
 `uqlab.runner.phases.eval` is a thin shim re-exporting `*_core` functions — prefer `uqlab_core.evaluation.pipeline` in new code.
 
@@ -51,7 +51,7 @@ ctx = setup_notebook(seed=42)
 # Steps 2–5 mirror experiment_core: build_run_data → train → collect → score
 ```
 
-Four-region walkthrough: [`four-region-notebook.md`](four-region-notebook.md).
+Four-region walkthrough: [`four-region-notebook.md`](../data/four-region-notebook.md).
 
 ## Artifacts
 
@@ -64,6 +64,6 @@ Four-region walkthrough: [`four-region-notebook.md`](four-region-notebook.md).
 
 ## Related
 
-- [`signals/README.md`](../../src/uqlab_core/evaluation/signals/README.md) — catalog, registry, vectors
+- [`signals/README.md`](../../../src/uqlab_core/evaluation/signals/README.md) — catalog, registry, vectors
 - [`ATTRIBUTION_ARTIFACTS.md`](ATTRIBUTION_ARTIFACTS.md) — zwischen layout
 - [`validation-sweeps.md`](validation-sweeps.md) — sweep → metrics path

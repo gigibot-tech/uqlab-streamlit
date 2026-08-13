@@ -41,7 +41,7 @@ Intermediate tensors before scalar metrics:
 3. If new primitives are needed, extend a source in `sources.py`.
 4. Enable in YAML `evaluation.signals` or notebook `cfg.evaluation.signals`.
 
-See [`docs/features/signal-registry.md`](../../../../docs/features/signal-registry.md).
+See [`docs/features/evaluation/signal-registry.md`](../../../../docs/features/evaluation/signal-registry.md).
 
 ## Collect vs score
 

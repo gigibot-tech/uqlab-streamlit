@@ -1,7 +1,7 @@
 # Four-region partition (data layer)
 
-**Canonical code:** [`src/uqlab_core/data/splits/four_region.py`](../../src/uqlab_core/data/splits/four_region.py)  
-**Entry:** [`build_run_data`](../../src/uqlab_core/data/buildData.py) when `data.partition_mode: four_region`
+**Canonical code:** [`src/uqlab_core/data/splits/four_region.py`](../../../src/uqlab_core/data/splits/four_region.py)  
+**Entry:** [`build_run_data`](../../../src/uqlab_core/data/buildData.py) when `data.partition_mode: four_region`
 
 Partitioning is a **data** concern. Evaluation only reads the resulting `group` labels — it does not flip labels or subsample training data.
 
@@ -39,7 +39,7 @@ flowchart LR
 ## Where metrics are computed
 
 1. **Data layer** applies partition + noise → group labels on each eval sample.
-2. **Collect** (`uqlab_core.evaluation.pipeline.collect_uncertainty_signals`) runs attribution/MC sources → `signal_table` scalars via [`signals/registry.py`](../../src/uqlab_core/evaluation/signals/registry.py).
+2. **Collect** (`uqlab_core.evaluation.pipeline.collect_uncertainty_signals`) runs attribution/MC sources → `signal_table` scalars via [`signals/registry.py`](../../../src/uqlab_core/evaluation/signals/registry.py).
 3. **Score** (`score_uncertainty_signals`) ranks scalars (AUROC) → `per_sample_signals.csv`.
 4. **Notebook Step 6** (optional) post-hoc tables via `attribution_distribution_summary` — not written to `summary.json`.
 
@@ -50,13 +50,13 @@ See [`four-region-notebook.md`](four-region-notebook.md) for the 6-step walkthro
 | Use case | Orchestrator | Swept knob |
 |----------|--------------|------------|
 | Single assignment run | Notebook YAML / `experiment_core` | Fixed 30% flip, 10% sparse (preset) |
-| Region-axis validation | [`four_region_validation.py`](../../src/uqlab/evaluation/validation/four_region_validation.py) | `label_flip_pct` or `sparse.train_fraction` |
-| Legacy paper sweeps | [`validation_config.py`](../../src/uqlab_orchestrator/config/validation_config.py) | Global `aleatoric_noise_percentage` / `under_train_per_class` |
+| Region-axis validation | [`four_region_validation.py`](../../../src/uqlab/evaluation/validation/four_region_validation.py) | `label_flip_pct` or `sparse.train_fraction` |
+| Legacy paper sweeps | [`validation_config.py`](../../../src/uqlab_orchestrator/config/validation_config.py) | Global `aleatoric_noise_percentage` / `under_train_per_class` |
 
-Details: [`validation-sweeps.md`](validation-sweeps.md).
+Details: [`validation-sweeps.md`](../evaluation/validation-sweeps.md).
 
 ## Related
 
 - [`data-pipeline.md`](data-pipeline.md) — `build_run_data` walkthrough
-- [`src/uqlab_core/data/README.md`](../../src/uqlab_core/data/README.md) — module README with mermaid
-- [`evaluation-protocol.md`](evaluation-protocol.md) — how four-region reuses the same eval stack
+- [`src/uqlab_core/data/README.md`](../../../src/uqlab_core/data/README.md) — module README with mermaid
+- [`evaluation-protocol.md`](../evaluation/evaluation-protocol.md) — how four-region reuses the same eval stack

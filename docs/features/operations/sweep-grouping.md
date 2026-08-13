@@ -301,7 +301,7 @@ This is a **distinguished engineer-level insight** because it identifies:
 
 ## Sweep line plots: eval pool semantics (config-implicit)
 
-**Canonical eval summary:** [`evaluation-protocol.md`](evaluation-protocol.md).
+**Canonical eval summary:** [`evaluation-protocol.md`](../evaluation/evaluation-protocol.md).
 
 Each run evaluates samples in three **eval packs** (from `data_loader.py`):
 

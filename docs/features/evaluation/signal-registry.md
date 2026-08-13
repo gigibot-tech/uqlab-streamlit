@@ -7,17 +7,17 @@ DA backends that feed attribution metrics:
 - **DualXDA** → `dualxda.*` primitives → `inverse_*_dualxda` metrics
 - **EK-FAC / Kronfluence** → `ek_fak.*` primitives → `inverse_*_ek_fak` metrics
 
-- **Sources** ([`sources.py`](../../src/uqlab/evaluation/signals/sources.py)): run only what enabled metrics need.
-- **Primitives** ([`primitives.py`](../../src/uqlab/evaluation/signals/primitives.py)): `dict[str, Tensor]` with dotted keys (`forward.det_logits`, `dualxda.coherence`, `ek_fak.mass`, …).
-- **Metrics** ([`registry.py`](../../src/uqlab/evaluation/signals/registry.py)): `METRICS` dict of `MetricEntry` — each metric is a small `compute(store)` function.
+- **Sources** ([`sources.py`](../../../src/uqlab/evaluation/signals/sources.py)): run only what enabled metrics need.
+- **Primitives** ([`primitives.py`](../../../src/uqlab/evaluation/signals/primitives.py)): `dict[str, Tensor]` with dotted keys (`forward.det_logits`, `dualxda.coherence`, `ek_fak.mass`, …).
+- **Metrics** ([`registry.py`](../../../src/uqlab/evaluation/signals/registry.py)): `METRICS` dict of `MetricEntry` — each metric is a small `compute(store)` function.
 
-[`formulas.py`](../../src/uqlab/evaluation/signals/formulas.py) remains the **audit manifest** (provenance for runs); runtime does not execute the formula DAG.
+[`formulas.py`](../../../src/uqlab/evaluation/signals/formulas.py) remains the **audit manifest** (provenance for runs); runtime does not execute the formula DAG.
 
-Legacy `SignalCalculator` lives in [`archive/legacy_src/evaluation/signal_calculator.py`](../../archive/legacy_src/evaluation/signal_calculator.py).
+Legacy `SignalCalculator` lives in [`archive/legacy_src/evaluation/signal_calculator.py`](../../../archive/legacy_src/evaluation/signal_calculator.py).
 
 ## Evaluation loops
 
-See [`docs/UQLAB_FLOW.md`](../../docs/UQLAB_FLOW.md#evaluation-loops-one-job-many-consumers) for the full diagram. Short version:
+See [`docs/UQLAB_FLOW.md`](../../UQLAB_FLOW.md#evaluation-loops-one-job-many-consumers) for the full diagram. Short version:
 
 | Loop | Function | Iterates |
 |------|----------|----------|
@@ -94,7 +94,7 @@ Set `evaluation.attribution_backends: [integrated_gradients]` in run YAML.
 ## Canonical metrics
 
 Shared catalog (display names, bridge presets, ``predict_disentangling`` notes):
-[`shared/config/signals.py`](../../src/uqlab/shared/config/signals.py) — ``SIGNAL_CATALOG``, ``DISENTANGLING_BRIDGE_PRESETS``, ``PREDICT_DISENTANGLING_NOTE``.
+[`shared/config/signals.py`](../../../src/uqlab/shared/config/signals.py) — ``SIGNAL_CATALOG``, ``DISENTANGLING_BRIDGE_PRESETS``, ``PREDICT_DISENTANGLING_NOTE``.
 
 | Metric | Sources | Tag | Aleatoric / epistemic | Notes |
 |--------|---------|-----|----------------------|-------|
@@ -112,7 +112,7 @@ Shared catalog (display names, bridge presets, ``predict_disentangling`` notes):
 
 Legacy ids `inverse_coherence`, `inverse_mass`, `inverse_dominance` alias to `*_dualxda`.
 
-Upstream Keras mapping → [`docs/UQLAB_FLOW.md`](../../docs/UQLAB_FLOW.md#paper-vs-signal-pairing-bridge-defaults).
+Upstream Keras mapping → [`docs/UQLAB_FLOW.md`](../../UQLAB_FLOW.md#paper-vs-signal-pairing-bridge-defaults).
 
 ## Config
 

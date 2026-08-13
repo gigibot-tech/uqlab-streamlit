@@ -1,6 +1,6 @@
 # Disentanglement benchmark (paper metric)
 
-**Flow →** [`docs/UQLAB_FLOW.md`](../UQLAB_FLOW.md)
+**Flow →** [`docs/UQLAB_FLOW.md`](../../UQLAB_FLOW.md)
 
 Upstream package: [ivopascal/disentanglement_error](https://github.com/ivopascal/disentanglement_error) — vendored under `src/uqlab/vendor/disentanglement_error/` (see `UPSTREAM.md`).
 

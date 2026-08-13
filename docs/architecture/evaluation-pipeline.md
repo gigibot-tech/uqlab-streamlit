@@ -114,7 +114,7 @@ Additional artifacts written in the orchestrator (not in `result_writers.py`):
 | Doc | Focus |
 |-----|-------|
 | [`docs/UQLAB_FLOW.md`](../UQLAB_FLOW.md) | System overview + artifact contract |
-| [`docs/features/evaluation-protocol.md`](../features/evaluation-protocol.md) | Evaluation methodology |
+| [`docs/features/evaluation/evaluation-protocol.md`](../features/evaluation/evaluation-protocol.md) | Evaluation methodology |
 | [`src/uqlab/evaluation/README.md`](../../src/uqlab/evaluation/README.md) | Package overview |
 | [`docs/debug/EVAL_ARTIFACTS.md`](../debug/EVAL_ARTIFACTS.md) | Output files |
 

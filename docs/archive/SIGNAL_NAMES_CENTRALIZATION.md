@@ -14,7 +14,7 @@ All **exported** fast-pilot metrics are defined once in:
 | **Run artifacts** | `uqlab.run_artifacts` | `FAST_PILOT_SIGNAL_NAMES` (= `tuple(signal_names())`) |
 | **Config / YAML** | `uqlab.shared.config.signals` | `normalize_evaluation_signals`, `validate_evaluation_signals`, `SIGNAL_ID_ALIASES` |
 
-See also: [`docs/features/signal-registry.md`](docs/features/signal-registry.md) (EK-FAK plug-in cookbook).
+See also: [`docs/features/evaluation/signal-registry.md`](docs/features/evaluation/signal-registry.md) (EK-FAK plug-in cookbook).
 
 ## Canonical 7 metrics
 

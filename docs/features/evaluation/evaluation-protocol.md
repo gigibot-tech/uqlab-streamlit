@@ -1,17 +1,17 @@
 # Evaluation protocol (current vs 4-region)
 
-**Flow →** [`docs/UQLAB_FLOW.md`](../UQLAB_FLOW.md)
+**Flow →** [`docs/UQLAB_FLOW.md`](../../UQLAB_FLOW.md)
 
 Canonical summary of how fast-pilot **train / eval / scoring / plots** work today, and how a proposed **four-region CIFAR-10 partition** should work while reusing the same pipeline.
 
 For deeper detail see:
 
-- [`docs/signals/UNCERTAINTY_SUBSET_LOGIC.md`](../signals/UNCERTAINTY_SUBSET_LOGIC.md) — training subset + eval pool selection
-- [`docs/features/disentanglement-benchmark.md`](disentanglement-benchmark.md) — paper metric vs pool-filtered sweep plots
-- [`docs/features/sweep-grouping.md`](sweep-grouping.md) — campaign grouping + eval pool plot semantics
-- [`docs/features/ATTRIBUTION_ARTIFACTS.md`](ATTRIBUTION_ARTIFACTS.md) — `zwischen/` influence matrices + assignment notebook/YAML mapping
+- [`docs/signals/UNCERTAINTY_SUBSET_LOGIC.md`](../../signals/UNCERTAINTY_SUBSET_LOGIC.md) — training subset + eval pool selection
+- [`disentanglement-benchmark.md`](disentanglement-benchmark.md) — paper metric vs pool-filtered sweep plots
+- [`sweep-grouping.md`](../operations/sweep-grouping.md) — campaign grouping + eval pool plot semantics
+- [`ATTRIBUTION_ARTIFACTS.md`](ATTRIBUTION_ARTIFACTS.md) — `zwischen/` influence matrices + assignment notebook/YAML mapping
 
-Reference paper: [`src/uqlab/2408.12175v3.pdf`](../../src/uqlab/2408.12175v3.pdf)
+Reference paper: [`src/uqlab/2408.12175v3.pdf`](../../../src/uqlab/2408.12175v3.pdf)
 
 ---
 
@@ -66,13 +66,13 @@ flowchart LR
 | **Paper sweeps (Fig 3 / Fig 4)** | One axis per campaign: under-train **or** label-noise | Reproduce paper disentanglement curves (swept Percentage 0–1) |
 | **4-region partition (proposed)** | Fixed class blocks in one run; Step 3 assigns all 10 classes | Simultaneous noisy + sparse + clean + OOD eval in **one** run |
 
-The paper ([2408.12175v3.pdf](../../src/uqlab/2408.12175v3.pdf)) uses **swept axes + global signal means** (`expected_entropy`, `mutual_info`), not the 4-region layout. The four-region partition is an **additional** benchmark mode, not a reinterpretation of Fig 3/4.
+The paper ([2408.12175v3.pdf](../../../src/uqlab/2408.12175v3.pdf)) uses **swept axes + global signal means** (`expected_entropy`, `mutual_info`), not the 4-region layout. The four-region partition is an **additional** benchmark mode, not a reinterpretation of Fig 3/4.
 
 ---
 
 ## How evaluation is done today
 
-Source of truth: [`src/uqlab/data/setup.py`](../../src/uqlab/data/setup.py), [`src/uqlab/runner/experiment_core.py`](../../src/uqlab/runner/experiment_core.py), [`src/uqlab/runner/phases/eval.py`](../../src/uqlab/runner/phases/eval.py).
+Source of truth: [`src/uqlab/data/setup.py`](../../../src/uqlab/data/setup.py), [`src/uqlab/runner/experiment_core.py`](../../../src/uqlab/runner/experiment_core.py), [`src/uqlab/runner/phases/eval.py`](../../../src/uqlab/runner/phases/eval.py).
 
 ### End-to-end path
 
@@ -88,14 +88,14 @@ workflow (Steps 1–5)
 
 ### Config knobs (`config.yaml` `data` block)
 
-Compiled by [`run_spec.build_run_yaml`](../../src/uqlab_orchestrator/run_spec.py):
+Compiled by [`run_spec.build_run_yaml`](../../../src/uqlab_orchestrator/run_spec.py):
 
 | Field | Role |
 |-------|------|
 | `under_supported_classes` | Classes with sparse training (typically 2 IDs) |
 | `under_train_per_class` | Training samples per under-supported class (epistemic manipulation) |
 | `regular_train_per_class` | Training samples per regular class |
-| `aleatoric_noise_percentage` | Global synthetic noise injected before split ([`dataset_registry.load_dataset`](../../src/uqlab/data/dataset_registry.py) → `inject_custom_noise`) |
+| `aleatoric_noise_percentage` | Global synthetic noise injected before split ([`dataset_registry.load_dataset`](../../../src/uqlab/data/dataset_registry.py) → `inject_custom_noise`) |
 | `eval_per_group` | Cap on samples drawn per eval pack |
 | `seed` | Reproducibility for split sampling |
 
@@ -106,7 +106,7 @@ Paper sweep defaults (from `run_spec` docstring):
 
 ### Train split
 
-[`sample_train_eval_indices`](../../src/uqlab/data/fast_pilot_loader.py) (~L92–115):
+[`sample_train_eval_indices`](../../../src/uqlab/data/fast_pilot_loader.py) (~L92–115):
 
 - **Under-supported classes:** first `under_train_per_class` **clean** samples per class
 - **Regular classes:** first `regular_train_per_class` samples (noisy + clean mixed in index order)
@@ -145,14 +145,14 @@ Pool-filtered means in `results.pt` (for sweep diagnostic plots):
 {signal}_mean_clean        # clean pool only
 ```
 
-See [`run_artifacts._signal_means_from_results_pt`](../../src/uqlab/run_artifacts.py).
+See [`run_artifacts._signal_means_from_results_pt`](../../../src/uqlab/run_artifacts.py).
 
 ### Two plotting semantics
 
 | View | Y curves | When to use |
 |------|----------|-------------|
-| **Paper plot** ([`paper_benchmark_plot.py`](../../src/uqlab/evaluation/pipeline/paper_benchmark_plot.py)) | Accuracy + global `{expected_entropy}_mean` + `{mutual_info}_mean` vs Percentage (0–1) | Fig 3/4 campaign sweeps |
-| **Pool diagnostic** ([`sweep_line_plot.py`](../../src/uqlab/evaluation/pipeline/sweep_line_plot.py)) | One signal's mean in primary eval pool (+ optional mirror) + accuracy vs swept param | Per-pool diagnostics; mirror often empty on single-arm sweeps |
+| **Paper plot** ([`paper_benchmark_plot.py`](../../../src/uqlab/evaluation/pipeline/paper_benchmark_plot.py)) | Accuracy + global `{expected_entropy}_mean` + `{mutual_info}_mean` vs Percentage (0–1) | Fig 3/4 campaign sweeps |
+| **Pool diagnostic** ([`sweep_line_plot.py`](../../../src/uqlab/evaluation/pipeline/sweep_line_plot.py)) | One signal's mean in primary eval pool (+ optional mirror) + accuracy vs swept param | Per-pool diagnostics; mirror often empty on single-arm sweeps |
 
 Details: [`disentanglement-benchmark.md`](disentanglement-benchmark.md).
 
@@ -206,13 +206,13 @@ Implementation touch points (four-region mode). Everything else reuses the exist
 
 | Touch point | Change | Reuses |
 |-------------|--------|--------|
-| **Step 3 UI** | Partition mode: 4 region cards — class multiselect per region (disjoint, cover 0–9), per-region noise % / train fraction / withhold | [`step3_uncertainty.py`](../../src/uqlab/ui_components/workflow/step3_uncertainty.py) panel patterns |
+| **Step 3 UI** | Partition mode: 4 region cards — class multiselect per region (disjoint, cover 0–9), per-region noise % / train fraction / withhold | [`step3_uncertainty.py`](../../../src/uqlab/ui_components/workflow/step3_uncertainty.py) panel patterns |
 | **`run_spec.build_run_yaml`** | Compile Step 3 → `data.class_regions` + `partition_mode: four_region` | Existing YAML for model/training/evaluation |
 | **Noise injection** | Per-region label flip before split | `dataset.noise_mask` contract |
 | **`sample_train_eval_indices`** | Interpret `class_regions` when `partition_mode=four_region` | Same `SplitSpec` return type |
-| **Group labels + artifacts** | `GROUP_OOD = 3`; `{signal}_mean_ood` in metrics | [`run_artifacts.py`](../../src/uqlab/run_artifacts.py) pool loop |
-| **Scoring** | Optional OOD one-vs-rest AUROC | [`evaluation/metrics/scoring.py`](../../src/uqlab/evaluation/metrics/scoring.py) |
-| **Plots** | Fixed-run dashboard: 4 pool mean traces (or 2×2 grid) | [`sweep_plot_pools.py`](../../src/uqlab/evaluation/pipeline/sweep_plot_pools.py) |
+| **Group labels + artifacts** | `GROUP_OOD = 3`; `{signal}_mean_ood` in metrics | [`run_artifacts.py`](../../../src/uqlab/run_artifacts.py) pool loop |
+| **Scoring** | Optional OOD one-vs-rest AUROC | [`evaluation/metrics/scoring.py`](../../../src/uqlab/evaluation/metrics/scoring.py) |
+| **Plots** | Fixed-run dashboard: 4 pool mean traces (or 2×2 grid) | [`sweep_plot_pools.py`](../../../src/uqlab/evaluation/pipeline/sweep_plot_pools.py) |
 
 **Explicitly unchanged:** `pipeline.run`, DualXDA/MC signal collection, zwischen recovery, API, Fig 3/4 launch arms, paper benchmark sweeps.
 
@@ -265,12 +265,12 @@ Legacy paper-sweep configs continue to use `under_supported_classes`, `under_tra
 
 | Concern | Location |
 |---------|----------|
-| Split construction | [`fast_pilot_loader.sample_train_eval_indices`](../../src/uqlab/data/fast_pilot_loader.py) |
-| Pool expectations for plots | [`benchmark_axes.py`](../../src/uqlab/data/benchmark_axes.py), [`sweep_plot_pools.py`](../../src/uqlab/evaluation/pipeline/sweep_plot_pools.py) |
-| Eval + scoring | [`fast_pilot_eval.py`](../../src/uqlab/evaluation/pipeline/fast_pilot_eval.py) |
-| Metrics from disk | [`run_artifacts.metrics_row_from_run`](../../src/uqlab/run_artifacts.py) |
-| Wizard → YAML | [`run_spec.py`](../../src/uqlab_orchestrator/run_spec.py) |
-| Step 3 UI | [`step3_uncertainty.py`](../../src/uqlab/ui_components/workflow/step3_uncertainty.py) |
+| Split construction | [`fast_pilot_loader.sample_train_eval_indices`](../../../src/uqlab/data/fast_pilot_loader.py) |
+| Pool expectations for plots | [`benchmark_axes.py`](../../../src/uqlab/data/benchmark_axes.py), [`sweep_plot_pools.py`](../../../src/uqlab/evaluation/pipeline/sweep_plot_pools.py) |
+| Eval + scoring | [`fast_pilot_eval.py`](../../../src/uqlab/evaluation/pipeline/fast_pilot_eval.py) |
+| Metrics from disk | [`run_artifacts.metrics_row_from_run`](../../../src/uqlab/run_artifacts.py) |
+| Wizard → YAML | [`run_spec.py`](../../../src/uqlab_orchestrator/run_spec.py) |
+| Step 3 UI | [`step3_uncertainty.py`](../../../src/uqlab/ui_components/workflow/step3_uncertainty.py) |
 
 ---
 
