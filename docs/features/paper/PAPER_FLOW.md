@@ -2,16 +2,16 @@
 
 Maps the Keras `InformationTheoreticModel` / `calculate_disentanglement_error` demo to UQLab modules and on-disk artifacts.
 
-**If you only read one function:** [`run_experiment_core`](../../src/uqlab/runner/experiment_core.py) (CLI) or [`run_notebook_experiment`](../../src/uqlab/runner/notebook_run.py) (notebooks).
+**If you only read one function:** [`run_experiment_core`](../../../src/uqlab/runner/experiment_core.py) (CLI) or [`run_notebook_experiment`](../../../src/uqlab/runner/notebook_run.py) (notebooks).
 
 ## Single run (`run_experiment_core` or `run_paper_experiment`)
 
 | Paper (Keras) | UQLab | Module | Artifact |
 |---|---|---|---|
-| `model.fit(x, y)` | load + train | [`build_run_data`](../../src/uqlab/data/pipeline.py) → [`run_paper_experiment`](../../src/uqlab/runner/train_eval.py) → [`models/training.py`](../../src/uqlab/models/training.py) | `checkpoint.pt`, `training_data.csv` |
-| MC → `expected_entropy`, `mutual_information` | MC dropout signals | [`run_uncertainty_eval`](../../src/uqlab/evaluation/pipeline.py) step 1 | `zwischen/01..05_*.pt`, `signal_table` in `results.pt` |
+| `model.fit(x, y)` | load + train | [`build_run_data`](../../../src/uqlab/data/pipeline.py) → [`run_paper_experiment`](../../../src/uqlab/runner/train_eval.py) → [`models/training.py`](../../../src/uqlab/models/training.py) | `checkpoint.pt`, `training_data.csv` |
+| MC → `expected_entropy`, `mutual_information` | MC dropout signals | [`run_uncertainty_eval`](../../../src/uqlab/evaluation/pipeline.py) step 1 | `zwischen/01..05_*.pt`, `signal_table` in `results.pt` |
 | `predict_disentangling(x)` | per-sample vectors | `run_uncertainty_eval` step 2 | `per_sample_signals.csv`, `results.pt` |
-| run record | summary dict | [`evaluation/reporting/run_summary.py`](../../src/uqlab/evaluation/reporting/run_summary.py) | `summary.json`, `summary.md`, `signal_formulas.json` |
+| run record | summary dict | [`evaluation/reporting/run_summary.py`](../../../src/uqlab/evaluation/reporting/run_summary.py) | `summary.json`, `summary.md`, `signal_formulas.json` |
 
 ### SAVE vs LOG (one run)
 
@@ -26,9 +26,9 @@ Maps the Keras `InformationTheoreticModel` / `calculate_disentanglement_error` d
 
 | Paper | UQLab | Output |
 |---|---|---|
-| `calculate_disentanglement_error(...)` | [`campaign_score.py`](../../src/uqlab/evaluation/reporting/campaign_score.py) + vendor | DE scalar, sweep JSON |
+| `calculate_disentanglement_error(...)` | [`campaign_score.py`](../../../src/uqlab/evaluation/reporting/campaign_score.py) + vendor | DE scalar, sweep JSON |
 | `json_results_to_df(...)` | `PaperSweepSeries.to_dataframe()` | long CSV columns |
-| `df.groupby(...).plot()` | [`persist_campaign_paper_plot`](../../src/uqlab/evaluation/reporting/paper_benchmark_plot.py) | **`{sweep_kind}_three_line.png`** + `{sweep_kind}_curves.csv` |
+| `df.groupby(...).plot()` | [`persist_campaign_paper_plot`](../../../src/uqlab/evaluation/reporting/paper_benchmark_plot.py) | **`{sweep_kind}_three_line.png`** + `{sweep_kind}_curves.csv` |
 
 **Campaign end (automatic):** validation runner calls `persist_campaign_paper_plot` after each sweep.
 
@@ -36,7 +36,7 @@ Maps the Keras `InformationTheoreticModel` / `calculate_disentanglement_error` d
 
 ## Notebook minimal flow
 
-See [`notebooks/cifar10_paper_flow.ipynb`](../../notebooks/cifar10_paper_flow.ipynb) or the four-region notebook guide [`four-region-notebook.md`](four-region-notebook.md).
+See [`notebooks/cifar10_paper_flow.ipynb`](../../../notebooks/cifar10_paper_flow.ipynb) or the four-region notebook guide [`four-region-notebook.md`](../data/four-region-notebook.md).
 
 ```python
 from uqlab.data import build_run_data

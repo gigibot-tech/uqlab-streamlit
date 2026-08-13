@@ -2,7 +2,7 @@
 
 Called only from :func:`uqlab_core.runner.execute.run_from_yaml` (or ``run_from_python_config``).
 
-Paper API map: ``docs/features/PAPER_FLOW.md``
+Paper API map: ``docs/features/paper/PAPER_FLOW.md``
 
 One run = one paper sweep point. Multi-run DE + PNG = campaign end (not here).
 """

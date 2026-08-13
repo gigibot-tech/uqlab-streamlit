@@ -14,7 +14,7 @@ Every run folder should contain (when successful):
 | ``checkpoint.pt`` | :func:`save_run_checkpoint` | ``model.fit`` weights |
 | ``results.pt`` | :func:`export_results_pt` | bridge for ``predict_disentangling`` |
 
-See ``docs/features/PAPER_FLOW.md`` for the Keras demo mapping.
+See ``docs/features/paper/PAPER_FLOW.md`` for the Keras demo mapping.
 
 Use :func:`load_run_directory` to inspect a run; use :func:`metrics_row_from_run`
 when building ``metrics.csv`` rows.

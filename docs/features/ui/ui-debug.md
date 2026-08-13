@@ -1,10 +1,10 @@
 # UI debug (progressive app)
 
-Hide or show blocks in [`streamlit_app_progressive.py`](../../streamlit_app_progressive.py) without deleting code.
+Hide or show blocks in [`streamlit_app_progressive.py`](../../../streamlit_app_progressive.py) without deleting code.
 
 **Where:** sidebar footer → **UI debug — components**
 
-**Agent workflow:** [`.cursor/skills/ui-debug/SKILL.md`](../../.cursor/skills/ui-debug/SKILL.md)
+**Agent workflow:** [`.cursor/skills/ui-debug/SKILL.md`](../../../.cursor/skills/ui-debug/SKILL.md)
 
 ## Quick actions
 

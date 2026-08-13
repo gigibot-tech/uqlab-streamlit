@@ -1,6 +1,6 @@
 # Uncertainty Subset Logic: Eval and DualXDA Training Data
 
-> **Canonical eval summary:** [`docs/features/evaluation-protocol.md`](../features/evaluation-protocol.md) — end-to-end protocol (current vs proposed 4-region partition). This doc goes deeper on subset selection mechanics.
+> **Canonical eval summary:** [`docs/features/evaluation/evaluation-protocol.md`](../features/evaluation/evaluation-protocol.md) — end-to-end protocol (current vs proposed 4-region partition). This doc goes deeper on subset selection mechanics.
 
 ## Overview
 

@@ -1,6 +1,6 @@
 # Four-region benchmark notebook
 
-Notebook: [`notebooks/four_region_benchmark.ipynb`](../../notebooks/four_region_benchmark.ipynb)
+Notebook: [`notebooks/four_region_benchmark.ipynb`](../../../notebooks/four_region_benchmark.ipynb)
 
 Six-step walkthrough (change `DATASET` in Step 1, Run All). Each step maps to a **`uqlab_core`** package.
 
@@ -13,7 +13,7 @@ Six-step walkthrough (change `DATASET` in Step 1, Run All). Each step maps to a 
 | 5 | `uqlab_core.evaluation` | **Score** scalars → AUROC/CSV | `score_uncertainty_signals` |
 | 6 | analysis | Plots + tables (not in `summary.json`) | `four_region_reporting`, `attribution_distribution_summary` |
 
-Same train/eval chain as [`experiment_core.py`](../../src/uqlab_core/runner/experiment_core.py) → [`train_eval.run_paper_experiment`](../../src/uqlab_core/runner/train_eval.py).
+Same train/eval chain as [`experiment_core.py`](../../../src/uqlab_core/runner/experiment_core.py) → [`train_eval.run_paper_experiment`](../../../src/uqlab_core/runner/train_eval.py).
 
 ## Step 2 — data layer (partition lives here)
 
@@ -55,10 +55,10 @@ Enable distribution signals in `cfg.evaluation.signals["attribution"]` before co
 
 This notebook runs **one** YAML point. Systematic grids:
 
-- Noise 0–100% on noisy region → [`four_region_validation.py`](../../src/uqlab/evaluation/validation/four_region_validation.py)
+- Noise 0–100% on noisy region → [`four_region_validation.py`](../../../src/uqlab/evaluation/validation/four_region_validation.py)
 - Sparse 1–100% train fraction → same
 
-See [`validation-sweeps.md`](validation-sweeps.md).
+See [`validation-sweeps.md`](../evaluation/validation-sweeps.md).
 
 ## Results
 

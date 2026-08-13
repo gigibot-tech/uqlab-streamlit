@@ -3,7 +3,7 @@
 Full eval×train influence matrices and aggregated attribution scalars written during
 `collect_uncertainty_signals`.
 
-See also: [`evaluation-protocol.md`](evaluation-protocol.md), [`PAPER_FLOW.md`](PAPER_FLOW.md).
+See also: [`evaluation-protocol.md`](evaluation-protocol.md), [`PAPER_FLOW.md`](../paper/PAPER_FLOW.md).
 
 ---
 
@@ -32,12 +32,12 @@ Raw matrices are also cached under `<run_dir>/cache/` (GradDot, EK-FAC) during c
 
 | Assignment piece | UQLab entry point |
 |----------------|-------------------|
-| Four-region split (noisy / sparse / clean / OOD) | `data.partition_mode: four_region` + `class_regions` — [`four_region.yaml`](../../configs/experiment/four_region.yaml) |
-| Fashion-MNIST + pixel MLP | [`four_region_fashion_mlp.yaml`](../../configs/experiment/four_region_fashion_mlp.yaml) |
-| CIFAR-10 + ResNet-18 | [`four_region_cifar_resnet.yaml`](../../configs/experiment/four_region_cifar_resnet.yaml) |
-| Notebook (two runs + plot loop) | [`notebooks/four_region_benchmark.ipynb`](../../notebooks/four_region_benchmark.ipynb) |
+| Four-region split (noisy / sparse / clean / OOD) | `data.partition_mode: four_region` + `class_regions` — [`four_region.yaml`](../../../configs/experiment/four_region.yaml) |
+| Fashion-MNIST + pixel MLP | [`four_region_fashion_mlp.yaml`](../../../configs/experiment/four_region_fashion_mlp.yaml) |
+| CIFAR-10 + ResNet-18 | [`four_region_cifar_resnet.yaml`](../../../configs/experiment/four_region_cifar_resnet.yaml) |
+| Notebook (two runs + plot loop) | [`notebooks/four_region_benchmark.ipynb`](../../../notebooks/four_region_benchmark.ipynb) |
 | CLI | `python scripts/runners/run_fast_uncertainty_classification.py --config configs/experiment/four_region_fashion_mlp.yaml` |
-| Per-sample metrics + four-pool plots | `per_sample_signals.csv` + [`four_region_reporting.py`](../../src/uqlab/evaluation/reporting/four_region_reporting.py) |
+| Per-sample metrics + four-pool plots | `per_sample_signals.csv` + [`four_region_reporting.py`](../../../src/uqlab/evaluation/reporting/four_region_reporting.py) |
 
 GradDot + DualXDA (+ optional EK-FAC) are enabled via `evaluation.signals.attribution` and
 `evaluation.attribution_backends: [dualxda, graddot]` (see YAML presets above).

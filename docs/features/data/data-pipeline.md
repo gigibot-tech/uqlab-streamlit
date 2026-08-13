@@ -2,7 +2,7 @@
 
 Single entrypoint for experiment data — mirrors the MLGym idea of one obvious call per task.
 
-**Module README:** [`src/uqlab_core/data/README.md`](../../src/uqlab_core/data/README.md)
+**Module README:** [`src/uqlab_core/data/README.md`](../../../src/uqlab_core/data/README.md)
 
 ## The one call
 
@@ -27,7 +27,7 @@ Pass `bundle.data_pack` and `bundle.split_spec` to `run_paper_experiment` / `run
 
 | Step | Function | Module |
 |------|----------|--------|
-| 1 | `step1_load_dataset_and_splits` | [`uqlab_core/data/buildData.py`](../../src/uqlab_core/data/buildData.py) |
+| 1 | `step1_load_dataset_and_splits` | [`uqlab_core/data/buildData.py`](../../../src/uqlab_core/data/buildData.py) |
 | 2 | `step2_materialize_tensor_packs` | same |
 
 Step 1: parse YAML data fields → `load_classification_dataset` → sample indices (legacy or four-region).
@@ -55,7 +55,7 @@ model:
 
 ## Four-region partition
 
-When `partition_mode: four_region`, class blocks and train/noise policies are defined in `data.class_regions`. Implementation: [`src/uqlab_core/data/splits/four_region.py`](../../src/uqlab_core/data/splits/four_region.py).
+When `partition_mode: four_region`, class blocks and train/noise policies are defined in `data.class_regions`. Implementation: [`src/uqlab_core/data/splits/four_region.py`](../../../src/uqlab_core/data/splits/four_region.py).
 
 | Region | Classes (default) | Train policy | Eval `group` |
 |--------|-------------------|--------------|--------------|
@@ -80,11 +80,11 @@ Never import `uqlab.data.datasets.loaders.*` in application code.
 
 ## Runner integration
 
-[`uqlab_core/runner/experiment_core.py`](../../src/uqlab_core/runner/experiment_core.py) calls `build_run_data` once before training.
+[`uqlab_core/runner/experiment_core.py`](../../../src/uqlab_core/runner/experiment_core.py) calls `build_run_data` once before training.
 
 ## Related
 
 - [`dataset-plugin.md`](dataset-plugin.md) — adding a new dataset via registry
 - [`four-region-partition.md`](four-region-partition.md) — split → group → metrics
-- [`validation-sweeps.md`](validation-sweeps.md) — noise/sparsity grids
-- [`PAPER_FLOW.md`](PAPER_FLOW.md) — full paper API map
+- [`validation-sweeps.md`](../evaluation/validation-sweeps.md) — noise/sparsity grids
+- [`PAPER_FLOW.md`](../paper/PAPER_FLOW.md) — full paper API map

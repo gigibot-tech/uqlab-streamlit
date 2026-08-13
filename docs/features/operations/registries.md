@@ -2,11 +2,11 @@
 
 Where named knobs are defined and how they connect to runs.
 
-**Experiment flow:** [`docs/UQLAB_FLOW.md`](../UQLAB_FLOW.md)
+**Experiment flow:** [`docs/UQLAB_FLOW.md`](../../UQLAB_FLOW.md)
 
 ## `METRICS` — uncertainty signals
 
-**File:** [`src/uqlab/evaluation/signals/registry.py`](../../src/uqlab/evaluation/signals/registry.py)
+**File:** [`src/uqlab/evaluation/signals/registry.py`](../../../src/uqlab/evaluation/signals/registry.py)
 
 | ID | Family | Aleatoric | Epistemic | Source |
 |----|--------|-----------|-----------|--------|
@@ -19,11 +19,11 @@ Where named knobs are defined and how they connect to runs.
 
 **Plug-in path:** `run_sources` → `PrimitiveStore` → `METRICS[id].compute` → `signal_table` in `results.pt`.
 
-Detail: [`signal-registry.md`](signal-registry.md)
+Detail: [`signal-registry.md`](../evaluation/signal-registry.md)
 
 ## `SOURCE_REGISTRY` — computation backends
 
-**File:** [`src/uqlab/evaluation/signals/sources.py`](../../src/uqlab/evaluation/signals/sources.py)
+**File:** [`src/uqlab/evaluation/signals/sources.py`](../../../src/uqlab/evaluation/signals/sources.py)
 
 | Source | Provides |
 |--------|----------|
@@ -33,12 +33,12 @@ Detail: [`signal-registry.md`](signal-registry.md)
 
 ## `UNCERTAINTY_PERSPECTIVES` — sweep types (UI / launch)
 
-**Package:** [`src/uqlab_orchestrator/uncertainty/`](../../src/uqlab_orchestrator/uncertainty/)
+**Package:** [`src/uqlab_orchestrator/uncertainty/`](../../../src/uqlab_orchestrator/uncertainty/)
 
 Drives Step 5 launch buttons: label-noise (aleatoric axis) vs under-train / dataset size (epistemic axis). `resolve_launch_actions` builds primary + mirror sweep arms.
 
 ## `ModelRegistry` — architectures
 
-**File:** [`src/uqlab/models/architectures.py`](../../src/uqlab/models/architectures.py)
+**File:** [`src/uqlab/models/architectures.py`](../../../src/uqlab/models/architectures.py)
 
 Maps `model_architecture` YAML values to trainable backbones + heads (ResNet, DINOv2, DualXDA, …).
