@@ -8,15 +8,15 @@ from pathlib import Path
 
 def run_test(config_name: str) -> bool:
     """Run single architecture test"""
-    config_path = f"configs/test/{config_name}.yaml"
+    config_path = f"src/uqlab_core/configs/test/{config_name}.yaml"
     output_dir = f"/tmp/test_{config_name}"
-    
+
     print(f"\n{'='*60}")
     print(f"Testing: {config_name}")
     print(f"{'='*60}\n")
-    
+
     cmd = [
-        "python", "scripts/run_fast_uncertainty_classification.py",
+        "python", "scripts/runners/run_fast_uncertainty_classification.py",
         config_path, output_dir
     ]
     
