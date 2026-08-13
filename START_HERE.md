@@ -86,7 +86,7 @@ scripts/analysis/disentanglement_error.py   # post-hoc paper metric
 ## Results and plots
 
 - API experiments: **Results** section below Step 5 (toggle in sidebar **UI debug**).
-- Hiding UI blocks → sidebar **UI debug**; see [`.cursor/skills/ui-debug/`](.cursor/skills/ui-debug/SKILL.md) and [`docs/features/ui-debug.md`](docs/features/ui-debug.md).
+- Hiding UI blocks → sidebar **UI debug**; see [`.cursor/skills/ui-debug/`](.cursor/skills/ui-debug/SKILL.md) and [`docs/streamlit/ui-debug.md`](docs/streamlit/ui-debug.md).
 - Paper sweeps = **two separate 1D campaigns** (Fig 3 under-train + Fig 4 label noise), not a 2D grid. Launch from Step 5 or sidebar **Quick launch**.
 - 3-line sweep plot: signal pool means + accuracy (not AUROC) — needs `results.pt` on disk.
 - Sweep grouping: [`uqlab_orchestrator/sweep_groups.py`](src/uqlab_orchestrator/sweep_groups.py)
