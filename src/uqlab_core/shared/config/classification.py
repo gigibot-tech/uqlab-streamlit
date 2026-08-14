@@ -31,7 +31,7 @@ def load_yaml_merging_defaults(path: Path) -> dict[str, Any]:
     Load experiment YAML, resolving Hydra-style ``defaults: [default, ...]``.
 
     Only simple name refs in the same directory as ``path`` are supported
-    (matches ``configs/experiment/fast_pilot.yaml`` → ``default.yaml``).
+    (matches ``src/uqlab_core/configs/experiment/fast_pilot.yaml`` → ``default.yaml``).
     """
     with open(path) as f:
         config_dict = yaml.safe_load(f) or {}
@@ -518,6 +518,8 @@ class ExperimentConfig:
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
+    from uqlab_core.runtime_paths import configs_dir
+
     parser = argparse.ArgumentParser(
         description="Fast uncertainty classification with DualXDA attribution signals",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -525,7 +527,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--config",
         type=str,
-        default="configs/fast_uq_classification.yaml",
+        default=str(configs_dir() / "experiment" / "four_region.yaml"),
         help="Path to YAML configuration file"
     )
     parser.add_argument(
