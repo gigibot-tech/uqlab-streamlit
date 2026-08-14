@@ -1,13 +1,18 @@
-"""Architecture names and training scope resolution."""
+"""Backward-compatibility shim for the relocated scope module.
 
-from uqlab_core.models.scope.architecture import (
+Implementation now lives directly under ``uqlab_core.models``:
+- ``architecture``
+- ``training_scope``
+"""
+
+from uqlab_core.models.architecture import (
     CanonicalArchitecture,
     TrainingScope,
     normalize_architecture,
     normalize_dinov2_model,
     scope_to_training_mode,
 )
-from uqlab_core.models.scope.training_scope import (
+from uqlab_core.models.training_scope import (
     ResolvedTrainingScope,
     resolve_training_scope,
     validate_training_scope,

@@ -7,8 +7,9 @@ Trainable PyTorch architectures and the model factory for fast-pilot uncertainty
 ```
 models/
 ├── training.py             # train_feature_model / train_image_model (paper fit)
+├── architecture.py         # Canonical architecture names + aliases
+├── training_scope.py       # Resolve/validate trainable scope after model build
 ├── factory/                # build_model(), heads, MC dropout helpers
-├── scope/                  # Canonical architecture names + training scope
 ├── features/               # DINOv2 embedding extraction
 └── backbones/              # DINOv2 weight loading
 ```
@@ -62,7 +63,9 @@ Entropy, mutual information, and SIRC scores are computed in [`evaluation/signal
 
 ## Training scope
 
-[`scope/training_scope.py`](scope/training_scope.py) and [`scope/architecture.py`](scope/architecture.py) map user-facing architecture strings to end-to-end vs feature-space training. The runner and UI pass these through `ModelConfig`.
+[`training_scope.py`](training_scope.py) and [`architecture.py`](architecture.py) map user-facing architecture strings to end-to-end vs feature-space training. The runner and UI pass these through `ModelConfig`.
+
+A backward-compatibility shim remains at [`scope/`](scope/) so existing imports of `uqlab_core.models.scope.*` continue to work.
 
 ## Related docs
 
