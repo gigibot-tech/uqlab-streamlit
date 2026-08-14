@@ -73,6 +73,14 @@ def main():
     # ...
 ```
 
+### Campaign reporting
+
+- **`generate_campaign_report.py`** — Build a PDF report for a sweep campaign (config timeline + per-signal sweep plots).
+- **`generate_campaign_config_timeline.py`** — Export a compact config timeline figure showing shared baseline and per-run parameter deltas.
+- **`report_unified.py`** — Load and print a summary of merged validation + paper metrics; optionally export a PNG figure.
+- **`generate_thesis_diagram.py`** — Generate a two-panel thesis schematic from an experiment config YAML.
+- **`calculate_ude_scores.py`** — Calculate UDE (Uncertainty Disentanglement Error) scores from validation results.
+
 ## Adding New Analysis Scripts
 
 When adding new analysis scripts:
