@@ -95,7 +95,7 @@ from uqlab.models.factory import build_model
 
 # runner/pipeline.py
 from uqlab.shared.config.classification import ExperimentConfig
-from uqlab.models.scope.architecture import normalize_architecture
+from uqlab_core.models.architecture import normalize_architecture
 ```
 
 ---
