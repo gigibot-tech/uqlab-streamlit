@@ -3,6 +3,10 @@
 
 set -e
 
+# Anchor to the repository root so the relative paths below are correct
+# regardless of where this script is invoked from.
+cd "$(dirname "$0")/../.."
+
 echo "🗂️  Organizing root-level scripts..."
 
 # Create scripts directory if it doesn't exist
