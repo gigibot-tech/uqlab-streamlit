@@ -8,7 +8,7 @@ from typing import Literal
 import torch.nn as nn
 
 from uqlab_core.evaluation.signals.dualxda_tracer import infer_classifier_layer_name
-from uqlab_core.models.scope.architecture import CanonicalArchitecture, TrainingScope, normalize_architecture
+from uqlab_core.shared.config.scope.architecture import CanonicalArchitecture, TrainingScope, normalize_architecture
 
 DataMode = Literal["images", "embeddings"]
 

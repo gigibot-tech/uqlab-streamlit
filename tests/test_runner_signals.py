@@ -31,7 +31,7 @@ from uqlab.evaluation.signals.sources import (
     EvalContext,
     sources_for_metrics,
 )
-from uqlab.models.scope.architecture import normalize_architecture, scope_to_training_mode
+from uqlab_core.shared.config.scope import normalize_architecture, scope_to_training_mode
 from uqlab.shared.config.signals import (
     DEFAULT_SIGNALS,
     DISENTANGLING_BRIDGE_PRESETS,

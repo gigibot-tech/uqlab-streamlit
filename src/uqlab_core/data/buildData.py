@@ -34,7 +34,7 @@ from uqlab_core.data.splits.experiment_loader import (
 from uqlab_core.data.splits.four_region import normalize_class_regions
 from uqlab_core.models.factory.classification_models import EmbeddingDataset
 from uqlab_core.models.features.feature_extractors import DINOv2FeatureExtractor, create_feature_extractor
-from uqlab_core.models.scope.architecture import normalize_architecture
+from uqlab_core.shared.config.scope.architecture import normalize_architecture
 from uqlab_core.run_artifacts import GROUP_ALEATORIC, GROUP_CLEAN, GROUP_EPISTEMIC, GROUP_OOD
 from uqlab_core.shared.config.classification import ExperimentConfig, TrainingConfig
 from uqlab_core.shared.utils.classification import dino_transform
