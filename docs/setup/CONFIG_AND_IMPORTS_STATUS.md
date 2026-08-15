@@ -6,10 +6,10 @@ After codebase consolidation, here's the current state of configs and imports in
 
 ## 1. Configuration Files
 
-### Old YAML Configs (Still Valid)
-Located in [`configs/`](configs:1):
+### YAML Configs
+Located in [`src/uqlab_core/configs/`](src/uqlab_core/configs:1):
 ```
-configs/
+src/uqlab_core/configs/
 ├── example_cnn_mcdropout.yaml
 ├── example_resnet18_mcdropout.yaml
 ├── experiment/
@@ -21,7 +21,7 @@ configs/
     └── test_resnet18_mcdropout.yaml
 ```
 
-**Status**: ✅ **Still valid and used by [`run_fast.py`](run_fast.py:1)**
+**Status**: ✅ **Still valid and used by `scripts/runners/run_fast_uncertainty_classification.py`**
 
 ### New Python Configs (Post-Consolidation)
 Located in [`src/uqlab/shared/config/`](src/uqlab/shared/config:1):

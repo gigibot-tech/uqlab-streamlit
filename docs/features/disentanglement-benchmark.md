@@ -18,8 +18,8 @@ Disentanglement is **post-hoc**: it reads uncertainty vectors from `results.pt`.
 Run a sweep point (or four-region experiment) like any other job:
 
 ```bash
-PYTHONPATH=src python scripts/runners/run_fast_uncertainty_classification.py \
-  --config configs/experiment/four_region.yaml \
+PYTHONPATH=src python3 scripts/runners/run_fast_uncertainty_classification.py \
+  --config src/uqlab_core/configs/experiment/four_region.yaml \
   --output_dir results/my_run
 ```
 
