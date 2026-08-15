@@ -145,7 +145,7 @@ Dependencies flow **`scripts → uqlab`**, never `uqlab → scripts`.
 | Facades | `uqlab_orchestrator/signal_facade.py`, `dataset_facade.py` | **No** |
 | ML core | `uqlab/evaluation/signals/registry.py`, `runner/` | Yes (when explicitly imported) |
 
-Rule: workflow steps import **`uqlab_orchestrator.*`** and **`uqlab.ui_components.*`** only (`runtime_paths` allowlisted). Enforced by `tests/test_ui_import_is_light.py`.
+Rule: workflow steps import **`uqlab_orchestrator.*`** and **`uqlab.ui_components.*`** only (`runtime_paths` allowlisted). Enforced by `tests/visualization/test_ui_import_is_light.py`.
 
 ### Where does the runner live? (uqlab, not Streamlit)
 

@@ -70,5 +70,5 @@ See [BACKEND_MODES.md](../../backend/BACKEND_MODES.md). Step 5 review also remin
 ## Tests
 
 ```bash
-PYTHONPATH=src PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest tests/test_checkpoint_arsenal.py -q
+PYTHONPATH=src PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest tests/runner/test_checkpoint_arsenal.py -q
 ```

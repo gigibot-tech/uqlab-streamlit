@@ -18,7 +18,7 @@ from pathlib import Path
 
 # Import the model
 import sys
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from uqlab.models.factory import ResNet18MCDropout
 

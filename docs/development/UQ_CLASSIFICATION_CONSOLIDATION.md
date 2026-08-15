@@ -28,8 +28,8 @@ A backup of the original `uqlab/evaluation/classification/` directory exists at:
 All imports in the following files were updated:
 - `scripts/run_fast_uncertainty_classification.py`
 - `scripts/examples/minimal_experiment.py`
-- `tests/test_evaluation.py`
-- `tests/test_config_schema.py`
+- `tests/evaluation/test_evaluation.py`
+- `tests/config/test_config_schema.py`
 - `tests/legacy/test_model_config.py`
 - `scripts/legacy/export_to_watsonx.py`
 - `tests/legacy/test_refactor.py`

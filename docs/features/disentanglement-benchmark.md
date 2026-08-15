@@ -96,6 +96,6 @@ scripts/analysis/    post-hoc (no training)
 
 ## Tests
 
-- `tests/test_disentangling_model.py` — `ExperimentDisentanglingModel`, `json_results_to_df`
-- `tests/test_campaign_paper_score.py` — aggregate mock `results.pt` → paper point
-- `tests/test_paper_benchmark_plot.py` — campaign → plot payload, correlations
+- `tests/evaluation/test_disentangling_model.py` — `ExperimentDisentanglingModel`, `json_results_to_df`
+- `tests/campaign/test_campaign_paper_score.py` — aggregate mock `results.pt` → paper point
+- `tests/campaign/test_paper_benchmark_plot.py` — campaign → plot payload, correlations

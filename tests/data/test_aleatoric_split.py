@@ -9,7 +9,7 @@ import numpy as np
 from uqlab.data.datasets.registry import load_classification_dataset
 from uqlab.data.splits.experiment_loader import sample_indices_for_experiment
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_cifar10_synthetic_noise_populates_aleatoric_eval():
