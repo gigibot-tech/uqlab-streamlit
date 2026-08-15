@@ -7,7 +7,7 @@ import json
 from flask import Blueprint, current_app, jsonify, request, send_file
 
 from uqlab_orchestrator.run_spec import build_run_yaml, validate_run_yaml
-from uqlab_flask.executor import (
+from flask_ui.executor import (
     get_job,
     get_sweep_group,
     list_sweep_history,

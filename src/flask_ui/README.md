@@ -1,8 +1,8 @@
 # UQLab Flask UI
 
-Lean Flask shell over the existing uqlab runner (`uqlab.runner.execute.run_from_yaml`).
+Lean Flask shell over the existing uqlab runner (`uqlab_core.runner.execute.run_from_yaml`).
 
-## Patterns (see `src/uqlab/runner/patterns.py`)
+## Patterns (see `src/uqlab_core/runner/patterns.py`)
 
 - **Pipeline** — load config → validate → execute
 - **Factory** — `build_model()` picks classifier by architecture
@@ -12,8 +12,8 @@ Lean Flask shell over the existing uqlab runner (`uqlab.runner.execute.run_from_
 
 ```bash
 cd uqlab-streamlit
-pip install -r uqlab-flask/requirements.txt
-PYTHONPATH=src:uqlab-flask python uqlab-flask/app.py
+pip install -r src/flask_ui/requirements.txt
+PYTHONPATH=src python src/flask_ui/app.py
 ```
 
 Open http://127.0.0.1:5001 — 5-step wizard, one **Launch** runs the full sweep sequentially.
