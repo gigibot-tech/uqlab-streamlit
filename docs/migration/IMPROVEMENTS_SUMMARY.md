@@ -33,8 +33,8 @@ config_dict = yaml.safe_load(open("config.yaml"))
 **Files**:
 - `pytest.ini` - Test configuration
 - `tests/__init__.py` - Test package
-- `tests/test_config_schema.py` - Config validation tests (200 lines)
-- `tests/test_evaluation.py` - Metrics tests (149 lines)
+- `tests/config/test_config_schema.py` - Config validation tests (200 lines)
+- `tests/evaluation/test_evaluation.py` - Metrics tests (149 lines)
 - `tests/README.md` - Test documentation
 
 **Features**:
@@ -227,7 +227,7 @@ print('✅ Config validation works!')
 
 ```bash
 cd uqlab-streamlit
-pytest tests/test_config_schema.py -v
+pytest tests/config/test_config_schema.py -v
 # Should show all tests passing
 ```
 

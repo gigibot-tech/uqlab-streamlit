@@ -118,7 +118,7 @@ pip install pytest pytest-cov
 pytest
 
 # Run specific test file
-pytest tests/test_config_schema.py
+pytest tests/config/test_config_schema.py
 
 # Run with coverage
 pytest --cov=uq_classification --cov-report=html

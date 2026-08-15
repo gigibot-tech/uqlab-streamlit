@@ -49,7 +49,7 @@ else:
 ```
 
 ### 3. **Comprehensive Unit Tests** ✅
-**File**: [`tests/test_workflow_validation.py`](uqlab-streamlit/tests/test_workflow_validation.py:1)
+**File**: [`tests/config/test_workflow_validation.py`](uqlab-streamlit/tests/config/test_workflow_validation.py:1)
 
 Created 497 lines of tests covering:
 - ✅ Dataset configuration validation
@@ -216,16 +216,16 @@ if errors:
 ### Run Unit Tests
 ```bash
 cd uqlab-streamlit
-pytest tests/test_workflow_validation.py -v
+pytest tests/config/test_workflow_validation.py -v
 ```
 
 ### Expected Output
 ```
-tests/test_workflow_validation.py::TestDatasetConfig::test_valid_clean_dataset PASSED
-tests/test_workflow_validation.py::TestDatasetConfig::test_valid_noisy_dataset PASSED
-tests/test_workflow_validation.py::TestDatasetConfig::test_invalid_noise_type PASSED
+tests/config/test_workflow_validation.py::TestDatasetConfig::test_valid_clean_dataset PASSED
+tests/config/test_workflow_validation.py::TestDatasetConfig::test_valid_noisy_dataset PASSED
+tests/config/test_workflow_validation.py::TestDatasetConfig::test_invalid_noise_type PASSED
 ...
-tests/test_workflow_validation.py::TestValidationHelpers::test_get_validation_errors_invalid PASSED
+tests/config/test_workflow_validation.py::TestValidationHelpers::test_get_validation_errors_invalid PASSED
 
 ======================== 20 passed in 0.5s ========================
 ```
@@ -287,7 +287,7 @@ if errors:
 
 ### Created
 1. `src/uqlab/shared/config/workflow_validation.py` (283 lines)
-2. `tests/test_workflow_validation.py` (497 lines)
+2. `tests/config/test_workflow_validation.py` (497 lines)
 3. `CONFIG_VALIDATION_FIX.md` (244 lines)
 4. `GRANITE_SWITCH_INSPIRATION.md` (449 lines)
 5. `ENTERPRISE_VALIDATION_COMPLETE.md` (this file)
