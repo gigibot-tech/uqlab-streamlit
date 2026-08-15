@@ -166,4 +166,57 @@ uqlab-streamlit/
 ✅ **Cleaner root** - Only essential files  
 ✅ **Better organization** - Files in appropriate folders  
 ✅ **Easier navigation** - Less clutter  
-✅ **Preserved history** - Old files archived, not deleted  
+✅ **Preserved history** - Old files archived, not deleted
+
+---
+
+## Small File Relocation (2026-08-15)
+
+A pass over the current root for files **<300 lines of code** found several candidates that could be relocated or consolidated. The actions below were applied on branch `cursor/small-file-relocation-candidates-7fcc`.
+
+### ✅ Relocated
+
+| File | LoC | Old Location | New Location | Rationale |
+|------|-----|--------------|--------------|-----------|
+| `organize_root_scripts.sh` | 57 | root | `scripts/maintenance/` | Root-organization script; fits the existing maintenance/cleanup folder. |
+| `analyze_md_files.py` | 63 | root | `scripts/maintenance/` | Small utility for categorizing markdown files; no root-level references. |
+| `analysis_results.txt` | 132 | root | `docs/validation/` | Generated artifact referenced by `docs/validation/HYPOTHESIS_VERIFICATION_RESULTS.md`; keeping it next to that doc preserves the link. |
+| `package-lock.json` | 6 | root | — | Deleted. Empty lockfile with no `package.json`; already listed in `.gitignore`. |
+
+### ⚠️ Remaining Candidates (require care or discussion)
+
+These files are still small enough to consider moving, but have references or represent conventional root configuration.
+
+| File | LoC | Proposed Action | Notes |
+|------|-----|-----------------|-------|
+| `streamlit_requirements.txt` | 10 | Delete | Marked deprecated in-file. Still referenced by `scripts/deployment/run_streamlit.sh`, `scripts/deployment/run_streamlit_modular.sh`, and several docs. References should be updated to `uv sync` before removal. |
+| `mypy.ini` | 80 | Merge into `pyproject.toml` then delete | `[tool.mypy]` already exists in `pyproject.toml`. Merge unique per-module settings (e.g., `ignore_missing_imports` for third-party libs) first. |
+| `pytest.ini` | 46 | Merge into `pyproject.toml` then delete | `[tool.pytest.ini_options]` already exists in `pyproject.toml`. Combine `addopts`, markers, and `filterwarnings` carefully. |
+| `.ruffignore` | 17 | Merge into `pyproject.toml` then delete | `tool.ruff.extend-exclude` already exists; add the remaining ignore patterns there. |
+| `.gitignore_parent` | 118 | Merge unique patterns into `.gitignore` then delete | Mostly a duplicate of `.gitignore`. Unique patterns (e.g., `*.ipynb`) should be evaluated before merging. |
+| `START_HERE.md` | 97 | Keep or move to `docs/` | Referenced by `README.md`, `streamlit_app_progressive.py`, and `docs/features/workflow-config.md`. If moved, all references must be updated. |
+| `start.sh` | 61 | Keep (or move to `scripts/deployment/`) | Referenced by `START_HERE.md` as the entry point for the frontend. Keep in root for discoverability. |
+| `start-with-minio.sh` | 88 | Keep (or move to `scripts/deployment/`) | Docker/MinIO startup helper; paired with `docker-compose.yml`. Keep in root for discoverability. |
+
+### 🚫 Keep in Root
+
+These are standard project-level files and should stay:
+
+- `pyproject.toml` (116 LoC) — workspace definition, dependencies, tool configs
+- `Makefile` (119 LoC) — development commands
+- `.gitignore` (150 LoC) — git ignore rules
+- `.gitmodules` (3 LoC) — submodule definition
+- `.env.example` (29 LoC) / `.env.production.example` (68 LoC) — environment templates
+- `docker-compose.yml` (44 LoC) — Docker services
+- `.python-version` (1 LoC) — pyenv version pin
+- `.bobignore` (14 LoC) — Bob-specific ignore rules
+- `README.md` — primary project README
+- `streamlit_app_progressive.py` — main Streamlit entry point
+- `2408.12175v3.pdf`, `three_axioms_demonstration.png` — reference assets
+
+### Summary of Applied Changes
+
+- Reduced root clutter by 4 files (2 scripts, 1 generated artifact, 1 stale lockfile).
+- No code imports or runtime paths were broken by the relocated files.
+- Config consolidation candidates were documented but left untouched to avoid tooling regressions.
+  

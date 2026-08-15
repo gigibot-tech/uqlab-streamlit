@@ -3,6 +3,9 @@
 
 set -e
 
+# Run from the repo root so relative paths work regardless of where the script is invoked.
+cd "$(dirname "$0")/../.."
+
 echo "🗂️  Organizing root-level scripts..."
 
 # Create scripts directory if it doesn't exist
