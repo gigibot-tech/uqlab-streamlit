@@ -104,7 +104,7 @@ def review():
 
 @bp.route("/launch", methods=["POST"])
 def launch():
-    from uqlab_flask.executor import get_sweep_group, submit_sweep, sweep_is_active
+    from flask_ui.executor import get_sweep_group, submit_sweep, sweep_is_active
 
     experiments_dir = current_app.config["EXPERIMENTS_DIR"]
     token = request.form.get("launch_token")
@@ -145,7 +145,7 @@ def launched_legacy():
 @bp.route("/sweeps", endpoint="sweeps_hub")
 def sweeps_hub():
     """History hub — pick or search a sweep group."""
-    from uqlab_flask.executor import list_sweep_history, resolve_group_id
+    from flask_ui.executor import list_sweep_history, resolve_group_id
 
     experiments_dir = current_app.config["EXPERIMENTS_DIR"]
     query = request.args.get("q", "").strip()
@@ -167,7 +167,7 @@ def sweeps_hub():
 @bp.route("/sweeps/list")
 def sweeps_list_json():
     """JSON list for refresh — lives on wizard blueprint (no /api prefix)."""
-    from uqlab_flask.executor import list_sweep_history
+    from flask_ui.executor import list_sweep_history
 
     experiments_dir = current_app.config["EXPERIMENTS_DIR"]
     limit = min(int(request.args.get("limit", 100)), 200)
@@ -195,7 +195,7 @@ def _render_sweep_page(
 
 @bp.route("/sweep/<group_id>/status")
 def sweep_status_json(group_id: str):
-    from uqlab_flask.executor import get_job, get_sweep_group
+    from flask_ui.executor import get_job, get_sweep_group
 
     experiments_dir = current_app.config["EXPERIMENTS_DIR"]
     sweep = get_sweep_group(group_id, experiments_dir=experiments_dir)
@@ -239,8 +239,8 @@ def sweep_status_json(group_id: str):
 @bp.route("/sweep/<group_id>/plot")
 def sweep_plot_json(group_id: str):
     """3-line sweep plot data (signal means + accuracy); not AUROC."""
-    from uqlab.evaluation.reporting.sweep_line_plot import build_sweep_line_plot
-    from uqlab_flask.executor import get_sweep_group
+    from uqlab_core.evaluation.reporting.sweep_line_plot import build_sweep_line_plot
+    from flask_ui.executor import get_sweep_group
 
     experiments_dir = current_app.config["EXPERIMENTS_DIR"]
     sweep = get_sweep_group(group_id, experiments_dir=experiments_dir)
@@ -261,7 +261,7 @@ def sweep_plot_json(group_id: str):
 
 @bp.route("/sweep/<group_id>")
 def sweep_status(group_id: str):
-    from uqlab_flask.executor import get_job, get_sweep_group, list_sweep_history
+    from flask_ui.executor import get_job, get_sweep_group, list_sweep_history
 
     experiments_dir = current_app.config["EXPERIMENTS_DIR"]
     sweep = get_sweep_group(group_id, experiments_dir=experiments_dir)

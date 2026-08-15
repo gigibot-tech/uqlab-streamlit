@@ -15,9 +15,9 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 
-from uqlab.runner.execute import run_from_yaml as pipeline_run
+from uqlab_core.runner.execute import run_from_yaml as pipeline_run
 
-log = logging.getLogger("uqlab_flask.executor")
+log = logging.getLogger("flask_ui.executor")
 
 _lock = threading.Lock()
 _jobs: Dict[str, RunJob] = {}
