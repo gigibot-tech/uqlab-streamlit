@@ -24,8 +24,12 @@ def repository_root() -> Path:
 
 
 def configs_dir() -> Path:
-    """Experiment YAML configs (``configs/experiment``, ``configs/test``, …)."""
-    return repository_root() / "configs"
+    """Experiment YAML configs (``src/uqlab_core/configs``)."""
+    repo_candidate = repository_root() / "src" / "uqlab_core" / "configs"
+    if repo_candidate.is_dir():
+        return repo_candidate
+    # Fall back to installed package location
+    return Path(__file__).resolve().parent / "configs"
 
 
 def data_root() -> Path:
