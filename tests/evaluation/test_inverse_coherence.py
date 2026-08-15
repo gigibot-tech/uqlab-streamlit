@@ -5,7 +5,7 @@ from pathlib import Path
 
 import torch
 
-_root = Path(__file__).resolve().parents[1]
+_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_root / "src"))
 sys.path.insert(0, str(_root))
 

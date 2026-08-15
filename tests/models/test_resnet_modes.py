@@ -14,9 +14,9 @@ import sys
 from pathlib import Path
 
 # Add src to path
-sys.path.insert(0, str(Path(__file__).parent / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 # Add 2_models directory to path
-sys.path.insert(0, str(Path(__file__).parent / "src" / "uqlab" / "2_models"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src" / "uqlab" / "2_models"))
 
 import torch
 import torch.nn as nn

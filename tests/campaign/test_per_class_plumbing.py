@@ -113,7 +113,7 @@ def test_validate_pilot_data_request_per_class_raises():
 
 
 def test_disentanglement_launcher_has_no_per_class_launcher_import():
-    source = Path(__file__).resolve().parents[1] / "src" / "uqlab_orchestrator" / "disentanglement_launcher.py"
+    source = Path(__file__).resolve().parents[2] / "src" / "uqlab_orchestrator" / "disentanglement_launcher.py"
     text = source.read_text()
     assert "per_class_launcher" not in text
 
