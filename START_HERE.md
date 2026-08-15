@@ -46,8 +46,8 @@ Wizard → YAML field mapping: [`docs/features/workflow-config.md`](docs/feature
 ## Run one experiment (no UI)
 
 ```bash
-PYTHONPATH=src python scripts/runners/run_fast_uncertainty_classification.py \
-  --config configs/experiment/four_region.yaml \
+PYTHONPATH=src python3 scripts/runners/run_fast_uncertainty_classification.py \
+  --config src/uqlab_core/configs/experiment/four_region.yaml \
   --output_dir data/experiments/<run_id>/results
 ```
 

@@ -8,12 +8,12 @@ Panel B: uncertainty signal pipeline (primitives → signals → metrics).
 Examples
 --------
   cd uqlab-streamlit
-  PYTHONPATH=src python3 scripts/generate_thesis_diagram.py \\
-    --config configs/experiment/default.yaml \\
+  PYTHONPATH=src python3 scripts/setup/generate_thesis_diagram.py \\
+    --config src/uqlab_core/configs/experiment/default.yaml \\
     --symbolic \\
     -o /tmp/thesis_schematic.pdf
 
-  PYTHONPATH=src python3 scripts/generate_thesis_diagram.py \\
+  PYTHONPATH=src python3 scripts/setup/generate_thesis_diagram.py \\
     --config experiments/<run_id>/config.yaml \\
     -o thesis_schematic.pdf
 """
@@ -82,8 +82,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Config not found: {config_path}", file=sys.stderr)
         return 1
 
-    from uqlab.shared.config.classification import ExperimentConfig
-    from uqlab.evaluation.reporting.thesis_diagram import (
+    from uqlab_core.shared.config.classification import ExperimentConfig
+    from uqlab_core.evaluation.reporting.thesis_diagram import (
         build_thesis_figure,
         load_thesis_diagram_inputs,
         save_thesis_figure,
