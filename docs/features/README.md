@@ -17,7 +17,7 @@
 | [four-region-notebook.md](four-region-notebook.md) | Six-step benchmark notebook (`uqlab_core`) |
 | [ui-debug.md](ui-debug.md) | Streamlit debug surfaces |
 | [run-recovery.md](run-recovery.md) | Finalize failed runs from disk (`zwischen/`) |
-
+| [small-file-relocation.md](small-file-relocation.md) | Root-level small folder relocation log |
 **Module READMEs:** [`src/uqlab_core/data/README.md`](../../src/uqlab_core/data/README.md) · [`src/uqlab_core/evaluation/README.md`](../../src/uqlab_core/evaluation/README.md)
 
 **Architecture (start here):** [UQLAB_FLOW.md](../UQLAB_FLOW.md)
