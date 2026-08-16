@@ -31,11 +31,14 @@ API documentation, endpoints, and schemas:
 
 ### 🚀 [Deployment](./deployment/)
 Deployment guides, CI/CD, and infrastructure:
-- *Coming soon*
+- [IBM Code Engine Deployment](./deployment/ce-deployment.md) - Serverless container deployment
+- [OpenShift Deployment](./deployment/oc-deployment.md) - Automated OpenShift deployment script
 
 ### 💻 [Development](./development/)
 Development workflows and contributing guides:
-- *Coming soon*
+- [Local Development](./development/development.md) - Docker Compose and local development setup
+- [Maintenance and Updates](./development/maintenance.md) - Template maintenance workflow
+- [Release Notes](./development/release-notes.md) - Version history
 
 ## 🔍 Quick Navigation
 
@@ -44,6 +47,10 @@ Development workflows and contributing guides:
 **Storage & Infrastructure**
 - [MinIO Setup](./setup/minio.md)
 - [MinIO Implementation](./architecture/minio-storage.md)
+
+**Deployment & Infrastructure**
+- [IBM Code Engine Deployment](./deployment/ce-deployment.md)
+- [OpenShift Deployment](./deployment/oc-deployment.md)
 
 **Machine Learning**
 - [ResNet Feature Extractor Fix](./troubleshooting/resnet-feature-extractor.md)
@@ -55,6 +62,8 @@ Development workflows and contributing guides:
 
 **Development Tools**
 - [UV & Ruff Setup](./setup/uv-ruff.md)
+- [Local Development](./development/development.md)
+- [Maintenance and Updates](./development/maintenance.md)
 
 ### By Date (Most Recent First)
 
@@ -65,6 +74,11 @@ Development workflows and contributing guides:
 5. [MinIO Implementation](./architecture/minio-storage.md)
 6. [MinIO Setup](./setup/minio.md)
 7. [UV & Ruff Setup](./setup/uv-ruff.md)
+8. [IBM Code Engine Deployment](./deployment/ce-deployment.md)
+9. [OpenShift Deployment](./deployment/oc-deployment.md)
+10. [Local Development](./development/development.md)
+11. [Maintenance and Updates](./development/maintenance.md)
+12. [Release Notes](./development/release-notes.md)
 
 ## 📝 Documentation Guidelines
 
