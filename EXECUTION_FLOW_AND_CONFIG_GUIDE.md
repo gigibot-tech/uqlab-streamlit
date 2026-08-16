@@ -62,7 +62,7 @@ The executor does **not** replace the runner. It is a thin wrapper so the FastAP
 
 CLI dev path (no backend): `scripts/runners/run_fast_uncertainty_classification.py` → `run_from_yaml` directly.
 
-Default CLI config: [`configs/experiment/four_region.yaml`](configs/experiment/four_region.yaml) (`partition_mode: four_region`).
+Default CLI config: [`src/uqlab_core/configs/experiment/four_region.yaml`](src/uqlab_core/configs/experiment/four_region.yaml) (`partition_mode: four_region`).
 
 ### Runners vs analysis scripts
 
