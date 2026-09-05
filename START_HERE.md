@@ -14,7 +14,7 @@ make run-frontend     # terminal 2 — progressive UI on :8501
 Primary UI: [`streamlit_app_progressive.py`](streamlit_app_progressive.py)  
 Legacy UI: [`streamlit_app.py`](streamlit_app.py) (deprecated — use progressive)
 
-Local Flask wizard (no API): [`uqlab-flask/app.py`](uqlab-flask/app.py) on :5001
+Archived Flask wizard (no API): [`dead_code/uqlab-flask/app.py`](dead_code/uqlab-flask/app.py) on :5001 (deprecated)
 
 ## The four boxes (MLgym map)
 
