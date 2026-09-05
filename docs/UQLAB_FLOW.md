@@ -247,7 +247,7 @@ Entropy math in [`evaluation/signals/mc_dropout.py`](../src/uqlab/evaluation/sig
 |----------|------|------|
 | **METRICS** | `evaluation/signals/registry.py` | Signal id → compute fn → `signal_table` column |
 | **Sources** | `evaluation/signals/sources.py` | `mc_dropout`, `attribution_dualxda`, `attribution_ek_fak`, `deterministic_forward` |
-| **UNCERTAINTY_PERSPECTIVES** | `uqlab_orchestrator/uncertainty/` | Label-noise vs dataset-size sweep launch |
+| **UNCERTAINTY_PERSPECTIVES** | `uqlab_core/uncertainty/` | Label-noise vs dataset-size sweep launch |
 | **ModelRegistry** | `models/architectures.py` | `model_architecture` YAML → backbone |
 
 Full METRICS table: [features/registries.md](features/registries.md).
