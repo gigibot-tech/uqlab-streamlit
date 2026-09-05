@@ -31,11 +31,14 @@ API documentation, endpoints, and schemas:
 
 ### 🚀 [Deployment](./deployment/)
 Deployment guides, CI/CD, and infrastructure:
-- *Coming soon*
+- [Code Engine Deployment](./deployment/ce-deployment.md) - IBM Code Engine serverless deployment
+- [OpenShift Deployment](./deployment/oc-deployment.md) - OpenShift automated deployment
 
 ### 💻 [Development](./development/)
 Development workflows and contributing guides:
-- *Coming soon*
+- [Development Guide](./development/development.md) - Local development with Docker Compose
+- [Maintenance Guide](./development/maintenance.md) - Project maintenance tasks
+- [Release Notes](./development/release-notes.md) - Version history and release notes
 
 ## 🔍 Quick Navigation
 
@@ -44,6 +47,8 @@ Development workflows and contributing guides:
 **Storage & Infrastructure**
 - [MinIO Setup](./setup/minio.md)
 - [MinIO Implementation](./architecture/minio-storage.md)
+- [Code Engine Deployment](./deployment/ce-deployment.md)
+- [OpenShift Deployment](./deployment/oc-deployment.md)
 
 **Machine Learning**
 - [ResNet Feature Extractor Fix](./troubleshooting/resnet-feature-extractor.md)
@@ -55,16 +60,24 @@ Development workflows and contributing guides:
 
 **Development Tools**
 - [UV & Ruff Setup](./setup/uv-ruff.md)
+- [Development Guide](./development/development.md)
+- [Maintenance Guide](./development/maintenance.md)
+- [Release Notes](./development/release-notes.md)
 
 ### By Date (Most Recent First)
 
-1. [Startup Issues](./troubleshooting/startup-issues.md)
-2. [Progressive UI Fixes](./troubleshooting/progressive-ui.md)
-3. [Sweep Grouping](./features/sweep-grouping.md)
-4. [ResNet Feature Extractor Fix](./troubleshooting/resnet-feature-extractor.md)
-5. [MinIO Implementation](./architecture/minio-storage.md)
-6. [MinIO Setup](./setup/minio.md)
-7. [UV & Ruff Setup](./setup/uv-ruff.md)
+1. [Release Notes](./development/release-notes.md)
+2. [Maintenance Guide](./development/maintenance.md)
+3. [Development Guide](./development/development.md)
+4. [OpenShift Deployment](./deployment/oc-deployment.md)
+5. [Code Engine Deployment](./deployment/ce-deployment.md)
+6. [Startup Issues](./troubleshooting/startup-issues.md)
+7. [Progressive UI Fixes](./troubleshooting/progressive-ui.md)
+8. [Sweep Grouping](./features/sweep-grouping.md)
+9. [ResNet Feature Extractor Fix](./troubleshooting/resnet-feature-extractor.md)
+10. [MinIO Implementation](./architecture/minio-storage.md)
+11. [MinIO Setup](./setup/minio.md)
+12. [UV & Ruff Setup](./setup/uv-ruff.md)
 
 ## 📝 Documentation Guidelines
 
