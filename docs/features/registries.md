@@ -33,7 +33,7 @@ Detail: [`signal-registry.md`](signal-registry.md)
 
 ## `UNCERTAINTY_PERSPECTIVES` — sweep types (UI / launch)
 
-**Package:** [`src/uqlab_orchestrator/uncertainty/`](../../src/uqlab_orchestrator/uncertainty/)
+**Package:** [`src/uqlab_core/uncertainty/`](../../src/uqlab_core/uncertainty/)
 
 Drives Step 5 launch buttons: label-noise (aleatoric axis) vs under-train / dataset size (epistemic axis). `resolve_launch_actions` builds primary + mirror sweep arms.
 
