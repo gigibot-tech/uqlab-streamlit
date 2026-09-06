@@ -46,8 +46,8 @@ uqlab-streamlit/
 
 **Dependency direction:** `ui_components` → `uqlab_orchestrator` → `uqlab` (ML core).
 
-Full flow diagram and FAQ: [`EXECUTION_FLOW_AND_CONFIG_GUIDE.md`](EXECUTION_FLOW_AND_CONFIG_GUIDE.md).  
-Package boundaries: [`ARCHITECTURE_CLARIFICATION.md`](ARCHITECTURE_CLARIFICATION.md).
+Full flow diagram and FAQ: [`docs/user-guides/EXECUTION_FLOW_AND_CONFIG_GUIDE.md`](docs/user-guides/EXECUTION_FLOW_AND_CONFIG_GUIDE.md).<br>
+Package boundaries: [`docs/architecture/ARCHITECTURE_CLARIFICATION.md`](docs/architecture/ARCHITECTURE_CLARIFICATION.md).
 
 **Scripts:** `scripts/runners/` trains via `ExperimentConfig` → `run_from_yaml`; `scripts/analysis/` scores finished runs (disentanglement, four-region validation, paper CSVs).
 
@@ -112,7 +112,7 @@ streamlit run streamlit_app_progressive.py
 # or: make run-frontend
 ```
 
-See `START_HERE.md` for the full run flow. The legacy `streamlit_app.py` is deprecated and archived under `dead_code/`.
+See [`docs/user-guides/START_HERE.md`](docs/user-guides/START_HERE.md) for the full run flow. The legacy `streamlit_app.py` is deprecated and archived under `dead_code/`.
 
 The app will open in your browser at `http://localhost:8501`
 
