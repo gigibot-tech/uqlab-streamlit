@@ -446,7 +446,7 @@ def create_feature_extractor(
         ...     model=cnn_model,
         ... )
     """
-    from uqlab_core.models.scope.architecture import normalize_architecture, normalize_dinov2_model
+    from uqlab_core.models.scope import normalize_architecture, normalize_dinov2_model
 
     arch = normalize_architecture(config.architecture)
     if arch == "dinov2_mlp":
