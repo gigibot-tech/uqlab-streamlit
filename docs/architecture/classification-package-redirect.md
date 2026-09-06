@@ -19,4 +19,4 @@ misplaced training/data code.
 | `uqlab.api` REST routers | `backend/app/api/routes/` (archived copies in `dead_code/api/`) |
 | `hydra_wrapper` | `dead_code/evaluation/hydra_wrapper.py` (optional) |
 
-See [IMPORT_GUIDE.md](../../../IMPORT_GUIDE.md) for the full map.
+See [IMPORT_GUIDE.md](../user-guides/IMPORT_GUIDE.md) for the full map.
