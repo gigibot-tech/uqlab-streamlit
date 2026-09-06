@@ -267,7 +267,7 @@ def extract_features_for_indices(
             - is_noisy: Boolean mask [N]
             - original_indices: Original dataset indices [N]
     """
-    from uqlab_core.models.scope.architecture import normalize_dinov2_model
+    from uqlab_core.models.scope import normalize_dinov2_model
 
     if not use_untrained_resnet:
         dinov2_model = normalize_dinov2_model(dinov2_model)
@@ -397,7 +397,7 @@ def build_feature_cache_path(
     if use_untrained_resnet:
         model_name = "resnet50_untrained"
     else:
-        from uqlab_core.models.scope.architecture import normalize_dinov2_model
+        from uqlab_core.models.scope import normalize_dinov2_model
 
         model_name = normalize_dinov2_model(dinov2_model)
 
@@ -540,7 +540,7 @@ class EmbeddingOrganizer:
         self.split_spec = split_spec
         self.feature_cache_dir = feature_cache_dir
         self.noise_type = noise_type
-        from uqlab_core.models.scope.architecture import normalize_dinov2_model
+        from uqlab_core.models.scope import normalize_dinov2_model
 
         self.dinov2_model = normalize_dinov2_model(dinov2_model)
         self.batch_size = batch_size
