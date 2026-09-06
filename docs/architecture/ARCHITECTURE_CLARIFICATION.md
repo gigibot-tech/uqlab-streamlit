@@ -70,8 +70,8 @@
 
 **Sweep expansion** happens in the bridge:
 
-- [`run_spec.generate_sweep_runs`](src/uqlab_orchestrator/run_spec.py) reads `workflow["uncertainty_config"]` and produces N YAML-shaped run configs (including per-class and four-region modes).
-- [`experiment_launcher.launch_workflow_experiments`](src/uqlab_orchestrator/experiment_launcher.py) calls `generate_sweep_runs`, then POSTs each config to the backend API.
+- [`run_spec.generate_sweep_runs`](../../src/uqlab_orchestrator/run_spec.py) reads `workflow["uncertainty_config"]` and produces N YAML-shaped run configs (including per-class and four-region modes).
+- [`experiment_launcher.launch_workflow_experiments`](../../src/uqlab_orchestrator/experiment_launcher.py) calls `generate_sweep_runs`, then POSTs each config to the backend API.
 
 Frontend collects sweep parameters; bridge generates concrete configs. That split is intentional — the UI should not duplicate sweep logic from `run_spec.py`.
 
@@ -91,7 +91,7 @@ Frontend collects sweep parameters; bridge generates concrete configs. That spli
 
 | Class | Status | Behavior |
 |-------|--------|----------|
-| [`DirectExecutor`](backend/app/services/executors/direct_executor.py) | **Production** | Calls `uqlab.runner.execute.run_from_yaml` **in-process** (thread pool) |
+| [`DirectExecutor`](../../backend/app/services/executors/direct_executor.py) | **Production** | Calls `uqlab.runner.execute.run_from_yaml` **in-process** (thread pool) |
 
 `SubprocessExecutor` was removed (2026-06-24). The `TrainingExecutor` ABC remains as the DI seam for future executors (Docker, Celery, etc.).
 
@@ -113,7 +113,7 @@ Inside `uqlab`:
 1. **`pipeline.run`** — load/validate `ExperimentConfig`, call core
 2. **`experiment_core.run_experiment_core`** — data setup, train, signal eval, artifacts
 
-See also [`docs/architecture/evaluation-pipeline.md`](docs/architecture/evaluation-pipeline.md) for the evaluation phase breakdown.
+See also [`evaluation-pipeline.md`](evaluation-pipeline.md) for the evaluation phase breakdown.
 
 ---
 
@@ -140,8 +140,8 @@ That inverted the dependency graph (bridge → UI).
 
 **Fix:**
 
-1. Moved [`experiment_registry.py`](src/uqlab_orchestrator/experiment_registry.py) into `uqlab_orchestrator/` (pure disk/config logic; uses `uqlab.runtime_paths.experiments_root`).
-2. Replaced `launch_preflight`'s lazy `campaign_groups` import with `group_experiments_intelligently` from [`sweep_groups.py`](src/uqlab_orchestrator/sweep_groups.py) for resume-offer grouping.
+1. Moved [`experiment_registry.py`](../../src/uqlab_orchestrator/experiment_registry.py) into `uqlab_orchestrator/` (pure disk/config logic; uses `uqlab.runtime_paths.experiments_root`).
+2. Replaced `launch_preflight`'s lazy `campaign_groups` import with `group_experiments_intelligently` from [`sweep_groups.py`](../../src/uqlab_orchestrator/sweep_groups.py) for resume-offer grouping.
 
 UI modules now import `uqlab_orchestrator.experiment_registry` — the correct direction.
 
@@ -162,9 +162,9 @@ Renames are low priority; documentation accuracy matters more than package renam
 
 | Doc | Focus |
 |-----|-------|
-| [`docs/UQLAB_FLOW.md`](docs/UQLAB_FLOW.md) | System overview + artifacts |
-| [`docs/architecture/evaluation-pipeline.md`](docs/architecture/evaluation-pipeline.md) | Evaluation pipeline structure |
-| [`docs/archive/STEP3_FLOW_ANALYSIS.md`](docs/archive/STEP3_FLOW_ANALYSIS.md) | Historical UI → runner notes |
+| [`UQLAB_FLOW.md`](../UQLAB_FLOW.md) | System overview + artifacts |
+| [`evaluation-pipeline.md`](evaluation-pipeline.md) | Evaluation pipeline structure |
+| [`archive/STEP3_FLOW_ANALYSIS.md`](../archive/STEP3_FLOW_ANALYSIS.md) | Historical UI → runner notes |
 
 ---
 
