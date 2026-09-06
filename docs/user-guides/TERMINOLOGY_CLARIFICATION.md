@@ -1,6 +1,6 @@
 # Terminology Clarification: runners vs runner
 
-> **Superseded (2026-06):** Module names below predate `runner/execute.py`, `runner/experiment_core.py`, and the evaluation package split. See [`docs/architecture/PACKAGE_REDESIGN.md`](docs/architecture/PACKAGE_REDESIGN.md) and [`START_HERE.md`](START_HERE.md).
+> **Superseded (2026-06):** Module names below predate `runner/execute.py`, `runner/experiment_core.py`, and the evaluation package split. See [`docs/architecture/PACKAGE_REDESIGN.md`](../architecture/PACKAGE_REDESIGN.md) and [`START_HERE.md`](START_HERE.md).
 
 **Date**: 2026-06-24  
 **Question**: "so technically the runners and runner are the same right?"
@@ -266,7 +266,7 @@ CLI Layer:     scripts/runners/run_fast_*.py
 Engine Layer:  uqlab/runner/pipeline.py → fast_pilot_core.py
 ```
 
-**Proposed fix**: Move `scripts/runners/` → `src/uqlab/cli/` (see FINAL_ARCHITECTURE_DECISION.md)
+**Proposed fix**: Move `scripts/runners/` → `src/uqlab/cli/` (see [FINAL_ARCHITECTURE_DECISION.md](../architecture/FINAL_ARCHITECTURE_DECISION.md))
 
 ---
 

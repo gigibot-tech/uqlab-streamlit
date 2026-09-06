@@ -163,5 +163,5 @@ Defined in [`validation_config.py`](../../src/uqlab_orchestrator/config/validati
 
 ## Related
 
-- [`START_HERE.md`](../../START_HERE.md)
+- [`START_HERE.md`](../../docs/user-guides/START_HERE.md)
 - [`src/uqlab/runner/README.md`](../../src/uqlab/runner/README.md)
