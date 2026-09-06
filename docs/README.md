@@ -12,6 +12,12 @@ Installation, configuration, and environment setup guides:
 ### 🏗️ [Architecture](./architecture/)
 System design, patterns, and technical decisions:
 - **[UQLab flow](./UQLAB_FLOW.md)** — canonical: experiments, fit/predict, signal_table, disentanglement
+- [Architecture Clarification](./architecture/ARCHITECTURE_CLARIFICATION.md) — package boundaries and responsibilities
+- [Execution Flow & Config Guide](./architecture/EXECUTION_FLOW_AND_CONFIG_GUIDE.md) — full flow diagram and FAQ
+- [Dependency Analysis & Final Recommendation](./architecture/DEPENDENCY_ANALYSIS_AND_FINAL_RECOMMENDATION.md) — dependency audit and recommendations
+- [Terminology Clarification](./architecture/TERMINOLOGY_CLARIFICATION.md) — naming conventions and layer definitions
+- [Package Reorganization Proposal](./architecture/PACKAGE_REORGANIZATION_PROPOSAL.md) — proposed package structure
+- [Final Architecture Decision](./architecture/FINAL_ARCHITECTURE_DECISION.md) — selected architecture decisions
 - [uq-flow.md](./architecture/uq-flow.md) — redirect only
 - [MinIO Storage Implementation](./architecture/minio-storage.md) - Object storage architecture
 
