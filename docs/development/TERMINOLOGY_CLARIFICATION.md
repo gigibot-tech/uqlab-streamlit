@@ -266,7 +266,7 @@ CLI Layer:     scripts/runners/run_fast_*.py
 Engine Layer:  uqlab/runner/pipeline.py → fast_pilot_core.py
 ```
 
-**Proposed fix**: Move `scripts/runners/` → `src/uqlab/cli/` (see FINAL_ARCHITECTURE_DECISION.md)
+**Proposed fix**: Move `scripts/runners/` → `src/uqlab/cli/` (see [`../architecture/FINAL_ARCHITECTURE_DECISION.md`](../architecture/FINAL_ARCHITECTURE_DECISION.md))
 
 ---
 
