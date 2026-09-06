@@ -15,7 +15,7 @@
 | **Launch** | `experiment_launcher` | POST configs to backend API |
 | **Execution** | `DirectExecutor` → `run_from_yaml` | In-process ML (executor wraps runner) |
 
-**One datamodel at execution time:** [`ExperimentConfig`](src/uqlab/shared/config/classification.py)  
+**One datamodel at execution time:** [`ExperimentConfig`](../../src/uqlab/shared/config/classification.py)  
 **One on-disk format:** YAML (`config.yaml` per experiment)  
 **One execution API:** `uqlab.runner.execute.run_from_yaml(config_path, output_dir)`
 
@@ -62,7 +62,7 @@ The executor does **not** replace the runner. It is a thin wrapper so the FastAP
 
 CLI dev path (no backend): `scripts/runners/run_fast_uncertainty_classification.py` → `run_from_yaml` directly.
 
-Default CLI config: [`configs/experiment/four_region.yaml`](configs/experiment/four_region.yaml) (`partition_mode: four_region`).
+Default CLI config: [`configs/experiment/four_region.yaml`](../../configs/experiment/four_region.yaml) (`partition_mode: four_region`).
 
 ### Runners vs analysis scripts
 
@@ -106,8 +106,8 @@ Loaded only inside `run_from_yaml` (or `run_from_python_config` for tests). Ther
 
 | Function | File | Input → Output |
 |----------|------|----------------|
-| `build_run_yaml(workflow)` | [`run_spec.py`](src/uqlab_orchestrator/run_spec.py) | workflow dict → one YAML-shaped dict |
-| `generate_sweep_runs(workflow)` | [`run_spec.py`](src/uqlab_orchestrator/run_spec.py) | workflow dict → list of `(sweep_kind, workflow_variant)` for per-class, four-region, legacy, and sweep modes |
+| `build_run_yaml(workflow)` | [`run_spec.py`](../../src/uqlab_orchestrator/run_spec.py) | workflow dict → one YAML-shaped dict |
+| `generate_sweep_runs(workflow)` | [`run_spec.py`](../../src/uqlab_orchestrator/run_spec.py) | workflow dict → list of `(sweep_kind, workflow_variant)` for per-class, four-region, legacy, and sweep modes |
 
 ```
 workflow dict  →  build_run_yaml()  →  { data, model, training, evaluation, paths }
@@ -221,8 +221,8 @@ uqlab/                  ML core: data, models, runner, evaluation
 | Doc | Focus |
 |-----|-------|
 | [`ARCHITECTURE_CLARIFICATION.md`](ARCHITECTURE_CLARIFICATION.md) | Package boundaries |
-| [`docs/architecture/evaluation-pipeline.md`](docs/architecture/evaluation-pipeline.md) | Evaluation phases inside `run_experiment_core` |
-| [`docs/UQLAB_FLOW.md`](docs/UQLAB_FLOW.md) | System overview + artifact contract |
+| [`evaluation-pipeline.md`](evaluation-pipeline.md) | Evaluation phases inside `run_experiment_core` |
+| [`UQLAB_FLOW.md`](../UQLAB_FLOW.md) | System overview + artifact contract |
 
 ---
 
