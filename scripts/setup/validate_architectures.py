@@ -6,9 +6,18 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Make uqlab_core importable when running this script directly from repo root.
+_SCRIPT_DIR = Path(__file__).resolve().parent
+_SRC_DIR = _SCRIPT_DIR.parents[1] / "src"
+if str(_SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(_SRC_DIR))
+
+from uqlab_core.runtime_paths import configs_dir
+
+
 def run_test(config_name: str) -> bool:
     """Run single architecture test"""
-    config_path = f"configs/test/{config_name}.yaml"
+    config_path = str(configs_dir() / "test" / f"{config_name}.yaml")
     output_dir = f"/tmp/test_{config_name}"
     
     print(f"\n{'='*60}")
@@ -16,8 +25,9 @@ def run_test(config_name: str) -> bool:
     print(f"{'='*60}\n")
     
     cmd = [
-        "python", "scripts/run_fast_uncertainty_classification.py",
-        config_path, output_dir
+        "python", "scripts/runners/run_fast_uncertainty_classification.py",
+        "--config", config_path,
+        "--output_dir", output_dir,
     ]
     
     try:
