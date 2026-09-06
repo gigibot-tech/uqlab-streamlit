@@ -47,7 +47,7 @@ Moved S3 dependencies from optional to required:
 These are now installed by default since S3 is the default backend.
 
 ### 5. Startup Script ✅
-**File**: `start-with-minio.sh` (executable)
+**File**: `scripts/deployment/start-with-minio.sh` (executable)
 
 Convenience script that:
 1. Starts MinIO via docker-compose
@@ -99,7 +99,7 @@ Complete guide covering:
 ### Quick Start (Recommended)
 ```bash
 cd uqlab-streamlit
-./start-with-minio.sh
+../../scripts/deployment/start-with-minio.sh
 ```
 
 ### Manual Start
@@ -133,13 +133,13 @@ To verify the implementation works:
 - [ ] Start backend: `cd backend && uvicorn app.main:app --reload`
 - [ ] Check logs: Should see "Storage backend: s3 (local MinIO at http://localhost:9000)"
 - [ ] Test fallback: Stop MinIO, restart backend, should see "Storage backend: filesystem"
-- [ ] Test script: `./start-with-minio.sh` should start both services
+- [ ] Test script: `../../scripts/deployment/start-with-minio.sh` should start both services
 
 ## Files Created/Modified
 
 ### Created
 1. `docker-compose.yml` - MinIO service configuration
-2. `start-with-minio.sh` - Convenience startup script
+2. `scripts/deployment/start-with-minio.sh` - Convenience startup script
 3. `MINIO_SETUP.md` - Complete documentation
 4. `MINIO_IMPLEMENTATION_SUMMARY.md` - This file
 
@@ -201,7 +201,7 @@ To start using the new setup:
 2. **Start MinIO and backend**:
    ```bash
    cd ..
-   ./start-with-minio.sh
+   ../../scripts/deployment/start-with-minio.sh
    ```
 
 3. **Verify it works**:
