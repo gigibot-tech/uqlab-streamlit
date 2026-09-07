@@ -276,7 +276,7 @@ The README describes this as a "new package for uncertainty quantification bench
 **Problem:** Developers may not realize that `evaluation/classification/config.py` is just a shim.
 
 **Action:**
-- Create `IMPORT_GUIDE.md` documenting:
+- Create `../architecture/IMPORT_GUIDE.md` documenting:
   - Which imports are shims vs real implementations
   - Where actual code lives
   - Recommended import paths for new code
@@ -330,7 +330,7 @@ The README describes this as a "new package for uncertainty quantification bench
 
 #### New Files:
 1. **CODEBASE_STRUCTURE_AUDIT.md** (this file)
-2. **IMPORT_GUIDE.md** - Guide to import paths and shims
+2. **../architecture/IMPORT_GUIDE.md** - Guide to import paths and shims
 3. **ARCHITECTURE.md** - Overall architecture documentation
 4. **backend/BACKEND_ARCHITECTURE.md** - DDD structure documentation
 
@@ -417,7 +417,7 @@ backend/app/
 
 1. **Create Documentation**
    - ✅ CODEBASE_STRUCTURE_AUDIT.md (this file)
-   - 📝 Create IMPORT_GUIDE.md
+   - 📝 Create ../architecture/IMPORT_GUIDE.md
    - 📝 Create ARCHITECTURE.md
    - 📝 Create backend/BACKEND_ARCHITECTURE.md
 
