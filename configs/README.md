@@ -4,13 +4,13 @@ Runnable experiment configs for CLI, notebooks, and validation scripts.
 
 ```
 configs/
-├── experiment/          # Primary experiment presets
+├── experiment/          # Primary experiment presets + architecture examples
 │   ├── default.yaml
 │   ├── fast_pilot.yaml
-│   └── four_region.yaml   ← CLI default (run_fast_uncertainty_classification.py)
-├── test/                # Architecture smoke configs (validate_architectures.py)
-├── example_cnn_mcdropout.yaml
-└── example_resnet18_mcdropout.yaml
+│   ├── four_region.yaml   ← CLI default (run_fast_uncertainty_classification.py)
+│   ├── example_cnn_mcdropout.yaml
+│   └── example_resnet18_mcdropout.yaml
+└── test/                # Architecture smoke configs (validate_architectures.py)
 ```
 
 Load in Python:
