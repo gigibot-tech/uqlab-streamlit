@@ -1,8 +1,15 @@
 import os
 from collections import defaultdict
+from pathlib import Path
 
-# Get all .md files
-md_files = [f for f in os.listdir('.') if f.endswith('.md')]
+# Find repo root by locating .git or pyproject.toml, starting from this script.
+script_dir = Path(__file__).resolve().parent
+repo_root = script_dir
+while repo_root != repo_root.parent and not (repo_root / ".git").exists():
+    repo_root = repo_root.parent
+
+# Get all .md files in the repo root
+md_files = [f for f in os.listdir(repo_root) if f.endswith('.md')]
 
 # Define categories based on keywords
 categories = {

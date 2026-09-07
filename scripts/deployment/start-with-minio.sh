@@ -6,6 +6,11 @@
 
 set -e
 
+# Run from the repo root so docker-compose.yml is found and paths resolve correctly.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+cd "$REPO_ROOT"
+
 # Colors for output
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
