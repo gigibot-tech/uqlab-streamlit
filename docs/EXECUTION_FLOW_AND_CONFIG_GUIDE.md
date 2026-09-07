@@ -220,9 +220,9 @@ uqlab/                  ML core: data, models, runner, evaluation
 
 | Doc | Focus |
 |-----|-------|
-| [`ARCHITECTURE_CLARIFICATION.md`](ARCHITECTURE_CLARIFICATION.md) | Package boundaries |
-| [`docs/architecture/evaluation-pipeline.md`](docs/architecture/evaluation-pipeline.md) | Evaluation phases inside `run_experiment_core` |
-| [`docs/UQLAB_FLOW.md`](docs/UQLAB_FLOW.md) | System overview + artifact contract |
+| [`docs/architecture/ARCHITECTURE_CLARIFICATION.md`](architecture/ARCHITECTURE_CLARIFICATION.md) | Package boundaries |
+| [`docs/architecture/evaluation-pipeline.md`](architecture/evaluation-pipeline.md) | Evaluation phases inside `run_experiment_core` |
+| [`docs/UQLAB_FLOW.md`](UQLAB_FLOW.md) | System overview + artifact contract |
 
 ---
 

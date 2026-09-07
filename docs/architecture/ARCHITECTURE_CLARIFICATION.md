@@ -113,7 +113,7 @@ Inside `uqlab`:
 1. **`pipeline.run`** — load/validate `ExperimentConfig`, call core
 2. **`experiment_core.run_experiment_core`** — data setup, train, signal eval, artifacts
 
-See also [`docs/architecture/evaluation-pipeline.md`](docs/architecture/evaluation-pipeline.md) for the evaluation phase breakdown.
+See also [`docs/architecture/evaluation-pipeline.md`](evaluation-pipeline.md) for the evaluation phase breakdown.
 
 ---
 
@@ -162,9 +162,9 @@ Renames are low priority; documentation accuracy matters more than package renam
 
 | Doc | Focus |
 |-----|-------|
-| [`docs/UQLAB_FLOW.md`](docs/UQLAB_FLOW.md) | System overview + artifacts |
-| [`docs/architecture/evaluation-pipeline.md`](docs/architecture/evaluation-pipeline.md) | Evaluation pipeline structure |
-| [`docs/archive/STEP3_FLOW_ANALYSIS.md`](docs/archive/STEP3_FLOW_ANALYSIS.md) | Historical UI → runner notes |
+| [`docs/UQLAB_FLOW.md`](../UQLAB_FLOW.md) | System overview + artifacts |
+| [`docs/architecture/evaluation-pipeline.md`](evaluation-pipeline.md) | Evaluation pipeline structure |
+| [`docs/archive/STEP3_FLOW_ANALYSIS.md`](../archive/STEP3_FLOW_ANALYSIS.md) | Historical UI → runner notes |
 
 ---
 
