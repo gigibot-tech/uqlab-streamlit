@@ -1,169 +1,111 @@
 # Root Level Cleanup Analysis
 
-## Files at Root Level of `uqlab-streamlit/`
+This document records the current state of root-level files and the cleanup performed to keep the repository root focused on essential entry points and configuration.
 
-### ✅ KEEP - Active/Important Files
+## Current Root Files
 
-#### Entry Points (KEEP)
-- `run_fast.py` - Main CLI entry point for experiments
-- `streamlit_app.py` - Main Streamlit dashboard
-- `streamlit_app_progressive.py` - Progressive disclosure Streamlit app
+After cleanup, the root contains only files that must live at the repository root:
 
-#### Configuration (KEEP)
-- `.env`, `.env.example` - Environment configuration
-- `.env.production`, `.env.production.example` - Production config
-- `docker-compose.yml` - Docker setup
-- `pyproject.toml` - Python project config
-- `pytest.ini` - Test configuration
-- `mypy.ini` - Type checking config
-- `.gitignore` - Git ignore rules
-- `.bobignore` - Bob ignore rules
+| File | Purpose |
+|------|---------|
+| `README.md` | Project overview and quick start |
+| `Makefile` | Development tasks |
+| `pyproject.toml` | Python project configuration |
+| `pytest.ini` | Pytest configuration |
+| `mypy.ini` | Mypy configuration |
+| `docker-compose.yml` | Docker services |
+| `.env.example` / `.env.production.example` | Environment templates |
+| `.gitignore` / `.gitignore_parent` | Git ignore rules |
+| `.bobignore` / `.ruffignore` | Tool ignore rules |
+| `.python-version` | Python version pin |
+| `.gitmodules` | Git submodule configuration |
+| `streamlit_requirements.txt` | Legacy Streamlit requirements note |
+| `COMPLETE_SYSTEM_FLOW.md` | Top-level end-to-end system flow overview |
+| `IMPORT_GUIDE.md` | Top-level import/shim guide |
+| `streamlit_app_progressive.py` | Primary Streamlit application entry point |
+| `2408.12175v3.pdf` | Reference paper |
+| `three_axioms_demonstration.png` | Reference diagram |
+| `uv.lock` | Locked dependency snapshot |
+| `dependencies.json` | Dependency analysis output |
 
-#### Documentation (KEEP - But could move to docs/)
-- `README.md` - Main project README
-- `AGENTS.md` - Agent documentation
+## Files Moved (≤300 lines)
 
-### ⚠️ ARCHIVE - Old/Redundant Files
+### Documentation moved to `docs/`
 
-#### Old Documentation (MOVE TO archive/docs/)
-- `MLOPS_REFACTORED_STRUCTURE.md`
-- `MLOPS_REFACTORING_FINAL_STATUS.md`
-- `MLOPS_REFACTORING_IMPLEMENTATION_PLAN.md`
-- `MLOPS_REFACTORING_PROGRESS.md`
-- `COMPLETE_CODEBASE_CONSOLIDATION_PLAN.md`
-- `CODEBASE_CONSOLIDATION_COMPLETE.md`
-- `CONSOLIDATION_COMPLETE.md`
-- `FINAL_CONSOLIDATION_PLAN.md`
-- `UI_COMPONENTS_CONSOLIDATION_PLAN.md`
-- `STREAMLIT_REDESIGN_PLAN.md`
-- `STREAMLIT_PROGRESSIVE_UX_SPEC.md`
-- `EXPERIMENT_TRACKER_INTEGRATION_PLAN.md`
-- `DEPENDENCY_ANALYSIS_README.md`
+| File | Old Location | New Location |
+|------|--------------|--------------|
+| `START_HERE.md` | root | `docs/START_HERE.md` |
+| `ARCHITECTURE_CLARIFICATION.md` | root | `docs/architecture/ARCHITECTURE_CLARIFICATION.md` |
+| `EXECUTION_FLOW_AND_CONFIG_GUIDE.md` | root | `docs/architecture/EXECUTION_FLOW_AND_CONFIG_GUIDE.md` |
+| `TERMINOLOGY_CLARIFICATION.md` | root | `docs/architecture/TERMINOLOGY_CLARIFICATION.md` |
+| `FINAL_ARCHITECTURE_DECISION.md` | root | `docs/architecture/FINAL_ARCHITECTURE_DECISION.md` |
+| `DEPENDENCY_ANALYSIS_AND_FINAL_RECOMMENDATION.md` | root | `docs/development/DEPENDENCY_ANALYSIS_AND_FINAL_RECOMMENDATION.md` |
+| `PACKAGE_REORGANIZATION_PROPOSAL.md` | root | `docs/development/PACKAGE_REORGANIZATION_PROPOSAL.md` |
 
-#### Utility Scripts (MOVE TO scripts/utils/)
-- `analyze_dependencies.py`
-- `dependency_visualizer.py`
-- `visualize_7x2_structure.py`
-- `run_dependency_analysis.sh`
+### Scripts and utilities moved to `scripts/`
 
-#### Old/Duplicate Files (DELETE or ARCHIVE)
-- `ui_components_old.py` - Old backup
-- `ui_components_backup_20260604_205217.tar.gz` - Backup archive
-- `uncertainty_visualization_demo copy.ipynb` - Duplicate notebook
-- `watsonx_deployment_experiment copy.ipynb` - Duplicate notebook
+| File | Old Location | New Location | Notes |
+|------|--------------|--------------|-------|
+| `start.sh` | root | `scripts/runners/start.sh` | Updated `SCRIPT_DIR` to resolve project root from new location |
+| `start-with-minio.sh` | root | `scripts/deployment/start-with-minio.sh` | Updated to `cd` to project root first; backend path remains relative |
+| `analyze_md_files.py` | root | `scripts/analysis/analyze_md_files.py` | Markdown categorization utility |
+| `organize_root_scripts.sh` | root | `scripts/maintenance/organize_root_scripts.sh` | Historical cleanup script |
 
-#### Consolidation Scripts (MOVE TO archive/scripts/)
-- `consolidate_codebase.sh` - Already executed
-- `rename_to_uqlab.sh` - Will be executed once
+### Data/validation artifacts moved to `docs/validation/`
 
-### 📊 MOVE - Notebooks (to notebooks/)
-- `resnet_baseline_experiment.ipynb`
-- `uncertainty_visualization_demo.ipynb`
-- `uncertainty_viz_3class.ipynb`
-- `watsonx_deployment_experiment.ipynb`
+| File | Old Location | New Location |
+|------|--------------|--------------|
+| `analysis_results.txt` | root | `docs/validation/analysis_results.txt` |
 
-### 🔧 KEEP - Utility Scripts (But could move to scripts/)
-- `run_streamlit.sh`
-- `run_streamlit_modular.sh`
-- `test_api.sh`
+### Removed items
 
-### 📄 KEEP - Reference Documents
-- `2408.12175v3.pdf` - Research paper
-- `three_axioms_demonstration.png` - Diagram
-- `CONFIG_AND_IMPORTS_STATUS.md` - Current status
-- `RENAME_TO_UQLAB.md` - Rename plan
+| Item | Action | Reason |
+|------|--------|--------|
+| `uq_benchmarks` | `git rm` | Broken symlink to removed `src/uqlab/4_evaluation/benchmarks` |
+| `uq_classification` | `git rm` | Broken symlink to removed `src/uqlab/classification` |
+| `notebooks/validation/notebook_support` | `git rm` | Broken symlink to removed `src/walaris/notebook_support` |
+| `.DS_Store` | `git rm` | macOS metadata file, already listed in `.gitignore` |
+| `package-lock.json` | `git rm` | Generated lockfile, already listed in `.gitignore` |
 
-## Recommended Actions
+## References Updated
 
-### Phase 1: Archive Old Documentation
+The following files were updated to point to the new locations:
+
+- `README.md` — links to `START_HERE.md`, `ARCHITECTURE_CLARIFICATION.md`, and `EXECUTION_FLOW_AND_CONFIG_GUIDE.md`.
+- `streamlit_app_progressive.py` — docstring and UI caption references to `START_HERE.md`.
+- `COMPLETE_SYSTEM_FLOW.md` — link to `ARCHITECTURE_CLARIFICATION.md`.
+- `docs/features/workflow-config.md` — link to `START_HERE.md`.
+- `docs/architecture/TERMINOLOGY_CLARIFICATION.md` — links to `START_HERE.md` and `FINAL_ARCHITECTURE_DECISION.md`.
+- `docs/development/DEPENDENCY_ANALYSIS_AND_FINAL_RECOMMENDATION.md` — link to `PACKAGE_REORGANIZATION_PROPOSAL.md`.
+- `docs/architecture/minio-storage.md` — references to `start-with-minio.sh`.
+- `docs/setup/minio.md` — command references to `start-with-minio.sh`.
+- `streamlit_requirements.txt` — comment reference to `start.sh`.
+- `scripts/runners/start.sh` — `SCRIPT_DIR` resolution.
+- `scripts/deployment/start-with-minio.sh` — added `SCRIPT_DIR` and `cd` to project root.
+
+## Verification
+
+After the moves, run these checks to confirm the root is clean and links are intact:
+
 ```bash
-mkdir -p archive/old_docs
-mv MLOPS_*.md archive/old_docs/
-mv COMPLETE_CODEBASE_*.md archive/old_docs/
-mv CODEBASE_CONSOLIDATION_*.md archive/old_docs/
-mv CONSOLIDATION_*.md archive/old_docs/
-mv FINAL_CONSOLIDATION_*.md archive/old_docs/
-mv UI_COMPONENTS_*.md archive/old_docs/
-mv STREAMLIT_REDESIGN_*.md archive/old_docs/
-mv STREAMLIT_PROGRESSIVE_*.md archive/old_docs/
-mv EXPERIMENT_TRACKER_*.md archive/old_docs/
-mv DEPENDENCY_ANALYSIS_*.md archive/old_docs/
+# List remaining root files with line counts
+find . -maxdepth 1 -type f | xargs wc -l | sort -n
+
+# Confirm no broken symlinks in root
+find . -maxdepth 1 -xtype l
+
+# Confirm tracked files that are also gitignored are gone
+git ls-files | xargs git check-ignore --stdin
 ```
 
-### Phase 2: Move Notebooks
-```bash
-# Already have notebooks/ directory
-mv resnet_baseline_experiment.ipynb notebooks/
-mv uncertainty_visualization_demo.ipynb notebooks/
-mv uncertainty_viz_3class.ipynb notebooks/
-mv watsonx_deployment_experiment.ipynb notebooks/
-```
+## Remaining Root-Level Files Over 300 Lines
 
-### Phase 3: Move Utility Scripts
-```bash
-mkdir -p scripts/utils
-mv analyze_dependencies.py scripts/utils/
-mv dependency_visualizer.py scripts/utils/
-mv visualize_7x2_structure.py scripts/utils/
-mv run_dependency_analysis.sh scripts/utils/
-```
+These were intentionally kept in the root because they are top-level guides or primary entry points:
 
-### Phase 4: Delete Duplicates/Old Files
-```bash
-rm "uncertainty_visualization_demo copy.ipynb"
-rm "watsonx_deployment_experiment copy.ipynb"
-rm ui_components_old.py
-rm ui_components_backup_20260604_205217.tar.gz
-```
+- `COMPLETE_SYSTEM_FLOW.md` (~498 lines)
+- `IMPORT_GUIDE.md` (~491 lines)
+- `README.md` (~366 lines)
+- `streamlit_app_progressive.py` (~370 lines)
+- `ARCHITECTURE_IMPROVEMENT_PROPOSAL.md` (~416 lines)
 
-### Phase 5: Archive Consolidation Scripts
-```bash
-mkdir -p archive/consolidation_scripts
-mv consolidate_codebase.sh archive/consolidation_scripts/
-# Keep rename_to_uqlab.sh until rename is complete
-```
-
-### Phase 6: Move Shell Scripts (Optional)
-```bash
-mkdir -p scripts/shell
-mv run_streamlit.sh scripts/shell/
-mv run_streamlit_modular.sh scripts/shell/
-mv test_api.sh scripts/shell/
-```
-
-## Final Root Level Structure
-
-After cleanup, root should only have:
-```
-uqlab-streamlit/
-├── .env, .env.example          # Config
-├── .gitignore, .bobignore      # Git/Bob config
-├── docker-compose.yml          # Docker
-├── pyproject.toml              # Python project
-├── pytest.ini, mypy.ini        # Testing/typing
-├── README.md, AGENTS.md        # Main docs
-├── run_fast.py                 # Main entry point
-├── streamlit_app.py            # Streamlit entry
-├── streamlit_app_progressive.py # Progressive Streamlit
-├── 2408.12175v3.pdf            # Reference paper
-├── three_axioms_demonstration.png # Diagram
-├── CONFIG_AND_IMPORTS_STATUS.md # Current status
-├── RENAME_TO_UQLAB.md          # Rename plan
-├── archive/                    # Old files
-├── backend/                    # FastAPI backend
-├── configs/                    # YAML configs
-├── docs/                       # Documentation
-├── frontend/                   # React frontend
-├── notebooks/                  # Jupyter notebooks
-├── scripts/                    # Utility scripts
-├── src/                        # Main source code
-│   └── uqlab/                  # Main package
-└── tests/                      # Test files
-```
-
-## Benefits
-
-✅ **Cleaner root** - Only essential files  
-✅ **Better organization** - Files in appropriate folders  
-✅ **Easier navigation** - Less clutter  
-✅ **Preserved history** - Old files archived, not deleted  
+If the root needs to become even smaller, consider archiving the historical proposal documents and moving the top-level flow guides under `docs/` while updating `README.md` links.
