@@ -1,8 +1,13 @@
-import os
-from collections import defaultdict
+"""Categorize root-level markdown files by topic."""
 
-# Get all .md files
-md_files = [f for f in os.listdir('.') if f.endswith('.md')]
+from collections import defaultdict
+from pathlib import Path
+
+# Resolve repository root from scripts/maintenance/.
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+
+# Get all .md files at the repository root
+md_files = [f.name for f in REPO_ROOT.glob("*.md")]
 
 # Define categories based on keywords
 categories = {
@@ -25,13 +30,13 @@ uncategorized = []
 for file in sorted(md_files):
     file_upper = file.upper()
     matched = False
-    
+
     for category, keywords in categories.items():
         if any(keyword in file_upper for keyword in keywords):
             categorized[category].append(file)
             matched = True
             break
-    
+
     if not matched:
         uncategorized.append(file)
 
@@ -54,7 +59,7 @@ if uncategorized:
         print(f"  • {f}")
 
 print("\n" + "=" * 80)
-print(f"\nSummary:")
+print("\nSummary:")
 for category in sorted(categories.keys()):
     count = len(categorized[category])
     if count > 0:
