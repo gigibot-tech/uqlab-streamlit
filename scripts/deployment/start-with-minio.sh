@@ -6,6 +6,9 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$SCRIPT_DIR"
+
 # Colors for output
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
