@@ -166,4 +166,36 @@ uqlab-streamlit/
 ✅ **Cleaner root** - Only essential files  
 ✅ **Better organization** - Files in appropriate folders  
 ✅ **Easier navigation** - Less clutter  
-✅ **Preserved history** - Old files archived, not deleted  
+✅ **Preserved history** - Old files archived, not deleted
+
+---
+
+## 2026-09-07 Cleanup Update
+
+The following small root files (< 300 LoC) were moved to better locations:
+
+| Original Location | New Location | Reason |
+|---|---|---|
+| `DEPENDENCY_ANALYSIS_AND_FINAL_RECOMMENDATION.md` | `docs/development/DEPENDENCY_ANALYSIS_AND_FINAL_RECOMMENDATION.md` | Development analysis doc |
+| `TERMINOLOGY_CLARIFICATION.md` | `docs/development/TERMINOLOGY_CLARIFICATION.md` | Development terminology doc |
+| `PACKAGE_REORGANIZATION_PROPOSAL.md` | `docs/development/PACKAGE_REORGANIZATION_PROPOSAL.md` | Development/proposal doc |
+| `FINAL_ARCHITECTURE_DECISION.md` | `docs/development/FINAL_ARCHITECTURE_DECISION.md` | Architecture decision doc |
+| `analyze_md_files.py` | `scripts/analysis/analyze_md_files.py` | Analysis utility script |
+| `organize_root_scripts.sh` | `scripts/maintenance/organize_root_scripts.sh` | Maintenance script |
+| `analysis_results.txt` | `docs/validation/analysis_results.txt` | Generated validation results |
+
+### Updated References
+
+- `docs/development/TERMINOLOGY_CLARIFICATION.md` link to `START_HERE.md` updated to `../../START_HERE.md`.
+- `docs/validation/HYPOTHESIS_VERIFICATION_RESULTS.md` link to `analysis_results.txt` updated to relative path `./analysis_results.txt`.
+
+### Remaining Small Root Files (Still Under Review)
+
+These files are still at root and could be candidates for future cleanup, but they have active references or serve as entry points:
+
+- `START_HERE.md` (97 LoC) — main entry point, referenced by `README.md`, `streamlit_app_progressive.py`, and docs.
+- `ARCHITECTURE_CLARIFICATION.md` (171 LoC) — referenced by `README.md` and `COMPLETE_SYSTEM_FLOW.md`.
+- `EXECUTION_FLOW_AND_CONFIG_GUIDE.md` (229 LoC) — referenced by `README.md`.
+- `streamlit_requirements.txt` (10 LoC) — referenced by startup scripts and Streamlit docs.
+- `Makefile` (119 LoC) — build orchestration, should stay at root.
+- `start.sh` / `start-with-minio.sh` — entry-point shell scripts referenced by docs.  
