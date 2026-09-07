@@ -3,7 +3,7 @@
 **Purpose:** Help developers understand import patterns and where implementations live.
 
 > **2026 update:** `uqlab.evaluation.classification` shims were removed. See
-> [docs/architecture/classification-package-redirect.md](docs/architecture/classification-package-redirect.md).
+> [docs/architecture/classification-package-redirect.md](classification-package-redirect.md).
 
 ---
 
