@@ -162,7 +162,7 @@ Renames are low priority; documentation accuracy matters more than package renam
 
 | Doc | Focus |
 |-----|-------|
-| [`docs/UQLAB_FLOW.md`](docs/UQLAB_FLOW.md) | System overview + artifacts |
+| [`docs/UQLAB_FLOW.md`](../UQLAB_FLOW.md) | System overview + artifacts |
 | [`docs/architecture/evaluation-pipeline.md`](docs/architecture/evaluation-pipeline.md) | Evaluation pipeline structure |
 | [`docs/archive/STEP3_FLOW_ANALYSIS.md`](docs/archive/STEP3_FLOW_ANALYSIS.md) | Historical UI → runner notes |
 
