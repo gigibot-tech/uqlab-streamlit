@@ -7,7 +7,7 @@ import re
 import shutil
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "src"
 UQLAB = SRC / "uqlab"
 CORE = SRC / "uqlab_core"
