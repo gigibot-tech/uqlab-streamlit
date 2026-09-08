@@ -2,7 +2,7 @@
 
 Single map for experiments, uncertainty, and the paper disentanglement benchmark.
 
-**Detail elsewhere (only when needed):** [signal plug-ins](features/signal-registry.md) · [benchmark launch](features/disentanglement-benchmark.md) · [wizard → YAML](features/workflow-config.md)
+**Detail elsewhere (only when needed):** [signal plug-ins](signals/signal-registry.md) · [benchmark launch](validation/disentanglement-benchmark.md) · [wizard → YAML](streamlit/workflow-config.md)
 
 ---
 
@@ -250,7 +250,7 @@ Entropy math in [`evaluation/signals/mc_dropout.py`](../src/uqlab/evaluation/sig
 | **UNCERTAINTY_PERSPECTIVES** | `uqlab_orchestrator/uncertainty/` | Label-noise vs dataset-size sweep launch |
 | **ModelRegistry** | `models/architectures.py` | `model_architecture` YAML → backbone |
 
-Full METRICS table: [features/registries.md](features/registries.md).
+Full METRICS table: [signals/registries.md](signals/registries.md).
 
 ---
 

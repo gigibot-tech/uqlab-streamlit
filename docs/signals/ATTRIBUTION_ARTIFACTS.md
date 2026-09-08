@@ -3,7 +3,7 @@
 Full eval×train influence matrices and aggregated attribution scalars written during
 `collect_uncertainty_signals`.
 
-See also: [`evaluation-protocol.md`](evaluation-protocol.md), [`PAPER_FLOW.md`](PAPER_FLOW.md).
+See also: [`evaluation-protocol.md`](../validation/evaluation-protocol.md), [`PAPER_FLOW.md`](../user-guides/PAPER_FLOW.md).
 
 ---
 

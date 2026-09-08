@@ -57,6 +57,6 @@ Details: [`validation-sweeps.md`](validation-sweeps.md).
 
 ## Related
 
-- [`data-pipeline.md`](data-pipeline.md) — `build_run_data` walkthrough
+- [`data-pipeline.md`](../user-guides/data-pipeline.md) — `build_run_data` walkthrough
 - [`src/uqlab_core/data/README.md`](../../src/uqlab_core/data/README.md) — module README with mermaid
 - [`evaluation-protocol.md`](evaluation-protocol.md) — how four-region reuses the same eval stack

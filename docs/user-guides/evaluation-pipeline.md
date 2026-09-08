@@ -51,7 +51,7 @@ ctx = setup_notebook(seed=42)
 # Steps 2–5 mirror experiment_core: build_run_data → train → collect → score
 ```
 
-Four-region walkthrough: [`four-region-notebook.md`](four-region-notebook.md).
+Four-region walkthrough: [`four-region-notebook.md`](../validation/four-region-notebook.md).
 
 ## Artifacts
 
@@ -65,5 +65,5 @@ Four-region walkthrough: [`four-region-notebook.md`](four-region-notebook.md).
 ## Related
 
 - [`signals/README.md`](../../src/uqlab_core/evaluation/signals/README.md) — catalog, registry, vectors
-- [`ATTRIBUTION_ARTIFACTS.md`](ATTRIBUTION_ARTIFACTS.md) — zwischen layout
-- [`validation-sweeps.md`](validation-sweeps.md) — sweep → metrics path
+- [`ATTRIBUTION_ARTIFACTS.md`](../signals/ATTRIBUTION_ARTIFACTS.md) — zwischen layout
+- [`validation-sweeps.md`](../validation/validation-sweeps.md) — sweep → metrics path

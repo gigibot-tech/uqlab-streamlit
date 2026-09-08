@@ -123,7 +123,7 @@ Every class `0 … num_classes-1` must appear in exactly one region (`validate_c
 
 ## Further reading
 
-- [`docs/features/data-pipeline.md`](../../../docs/features/data-pipeline.md) — YAML → artifacts walkthrough
-- [`docs/features/four-region-notebook.md`](../../../docs/features/four-region-notebook.md) — notebook benchmark flow
-- [`docs/features/dataset-plugin.md`](../../../docs/features/dataset-plugin.md) — adding datasets via registry
-- [`docs/features/PAPER_FLOW.md`](../../../docs/features/PAPER_FLOW.md) — full run API map
+- [`docs/user-guides/data-pipeline.md`](../../../docs/user-guides/data-pipeline.md) — YAML → artifacts walkthrough
+- [`docs/validation/four-region-notebook.md`](../../../docs/validation/four-region-notebook.md) — notebook benchmark flow
+- [`docs/user-guides/dataset-plugin.md`](../../../docs/user-guides/dataset-plugin.md) — adding datasets via registry
+- [`docs/user-guides/PAPER_FLOW.md`](../../../docs/user-guides/PAPER_FLOW.md) — full run API map

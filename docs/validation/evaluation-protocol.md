@@ -7,9 +7,9 @@ Canonical summary of how fast-pilot **train / eval / scoring / plots** work toda
 For deeper detail see:
 
 - [`docs/signals/UNCERTAINTY_SUBSET_LOGIC.md`](../signals/UNCERTAINTY_SUBSET_LOGIC.md) — training subset + eval pool selection
-- [`docs/features/disentanglement-benchmark.md`](disentanglement-benchmark.md) — paper metric vs pool-filtered sweep plots
-- [`docs/features/sweep-grouping.md`](sweep-grouping.md) — campaign grouping + eval pool plot semantics
-- [`docs/features/ATTRIBUTION_ARTIFACTS.md`](ATTRIBUTION_ARTIFACTS.md) — `zwischen/` influence matrices + assignment notebook/YAML mapping
+- [`docs/validation/disentanglement-benchmark.md`](disentanglement-benchmark.md) — paper metric vs pool-filtered sweep plots
+- [`docs/user-guides/sweep-grouping.md`](../user-guides/sweep-grouping.md) — campaign grouping + eval pool plot semantics
+- [`docs/signals/ATTRIBUTION_ARTIFACTS.md`](../signals/ATTRIBUTION_ARTIFACTS.md) — `zwischen/` influence matrices + assignment notebook/YAML mapping
 
 Reference paper: [`src/uqlab/2408.12175v3.pdf`](../../src/uqlab/2408.12175v3.pdf)
 

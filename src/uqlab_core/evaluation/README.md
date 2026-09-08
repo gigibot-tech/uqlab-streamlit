@@ -98,7 +98,7 @@ Only DualXDA populates distribution primitives today.
 | Inverse structure | `inverse_coherence_dualxda`, `inverse_mass_ek_fak`, … | attribution backends |
 | Distribution (full vector) | `attribution_entropy_dualxda`, `attribution_signed_split_dualxda`, … | DualXDA row stats |
 
-See [`docs/features/signal-registry.md`](../../../docs/features/signal-registry.md) for enabling metrics in YAML.
+See [`docs/signals/signal-registry.md`](../../../docs/signals/signal-registry.md) for enabling metrics in YAML.
 
 ## Scoring axes
 
@@ -139,7 +139,7 @@ The four-region notebook adds **custom pairwise contrasts** (mean diff + AUROC) 
 
 ## Further reading
 
-- [`docs/features/evaluation-pipeline.md`](../../../docs/features/evaluation-pipeline.md)
-- [`docs/features/evaluation-protocol.md`](../../../docs/features/evaluation-protocol.md)
-- [`docs/features/ATTRIBUTION_ARTIFACTS.md`](../../../docs/features/ATTRIBUTION_ARTIFACTS.md)
-- [`docs/features/four-region-notebook.md`](../../../docs/features/four-region-notebook.md)
+- [`docs/user-guides/evaluation-pipeline.md`](../../../docs/user-guides/evaluation-pipeline.md)
+- [`docs/validation/evaluation-protocol.md`](../../../docs/validation/evaluation-protocol.md)
+- [`docs/signals/ATTRIBUTION_ARTIFACTS.md`](../../../docs/signals/ATTRIBUTION_ARTIFACTS.md)
+- [`docs/validation/four-region-notebook.md`](../../../docs/validation/four-region-notebook.md)

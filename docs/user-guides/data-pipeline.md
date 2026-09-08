@@ -66,7 +66,7 @@ When `partition_mode: four_region`, class blocks and train/noise policies are de
 
 `build_run_data` forces global aleatoric noise off for four-region mode and applies flips only inside the noisy region.
 
-Full bridge doc: [`four-region-partition.md`](four-region-partition.md).
+Full bridge doc: [`four-region-partition.md`](../validation/four-region-partition.md).
 
 ## Dataset access
 
@@ -85,6 +85,6 @@ Never import `uqlab.data.datasets.loaders.*` in application code.
 ## Related
 
 - [`dataset-plugin.md`](dataset-plugin.md) — adding a new dataset via registry
-- [`four-region-partition.md`](four-region-partition.md) — split → group → metrics
-- [`validation-sweeps.md`](validation-sweeps.md) — noise/sparsity grids
+- [`four-region-partition.md`](../validation/four-region-partition.md) — split → group → metrics
+- [`validation-sweeps.md`](../validation/validation-sweeps.md) — noise/sparsity grids
 - [`PAPER_FLOW.md`](PAPER_FLOW.md) — full paper API map

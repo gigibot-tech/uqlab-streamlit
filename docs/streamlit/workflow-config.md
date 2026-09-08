@@ -133,7 +133,7 @@ After launch, experiments are grouped by:
 
 When a campaign has both `fast_alea_*` and `fast_epis_*` runs, Results §2 offers **Noise sweep** | **Under-train sweep** tabs.
 
-See [`sweep-grouping.md`](sweep-grouping.md) and [`sweep_groups.py`](../../src/uqlab_orchestrator/sweep_groups.py).
+See [`sweep-grouping.md`](../user-guides/sweep-grouping.md) and [`sweep_groups.py`](../../src/uqlab_orchestrator/sweep_groups.py).
 
 ## Plot probe (duplicate-gated redo)
 
