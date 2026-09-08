@@ -759,7 +759,7 @@ def test_load_config_from_checkpoint():
 
 #### Task 4.1: User Documentation
 
-**File:** `docs/features/checkpoint_arsenal.md` (NEW)
+**File:** `docs/troubleshooting/checkpoint-arsenal.md` (moved from `docs/features/`)
 
 ```markdown
 # Checkpoint Arsenal

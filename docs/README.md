@@ -15,9 +15,13 @@ System design, patterns, and technical decisions:
 - [uq-flow.md](./architecture/uq-flow.md) — redirect only
 - [MinIO Storage Implementation](./architecture/minio-storage.md) - Object storage architecture
 
-### ✨ [Features](./features/)
-Feature documentation and user guides:
-- [Sweep Grouping](./features/sweep-grouping.md) - Experiment sweep grouping functionality
+### ✨ Features (reorganized into topic folders)
+Feature docs are now grouped by domain under the folders below:
+- **[Validation](./validation/)** — sweeps, four-region partition, evaluation protocol, disentanglement benchmark
+- **[Signals](./signals/)** — signal registry, attribution artifacts, METRICS / registries overview
+- **[Troubleshooting](./troubleshooting/)** — failed-run recovery, checkpoint arsenal
+- **[Streamlit](./streamlit/)** — UI debug toggles, wizard → YAML mapping
+- **[User Guides](./user-guides/)** — data/evaluation pipeline, dataset plugin, sweep grouping, paper API map
 
 ### 🔍 [Troubleshooting](./troubleshooting/)
 Bug fixes, issues, and debugging guides:
@@ -47,7 +51,7 @@ Development workflows and contributing guides:
 
 **Machine Learning**
 - [ResNet Feature Extractor Fix](./troubleshooting/resnet-feature-extractor.md)
-- [Sweep Grouping](./features/sweep-grouping.md)
+- [Sweep Grouping](./user-guides/sweep-grouping.md)
 
 **UI & Frontend**
 - [Progressive UI Fixes](./troubleshooting/progressive-ui.md)
@@ -60,7 +64,7 @@ Development workflows and contributing guides:
 
 1. [Startup Issues](./troubleshooting/startup-issues.md)
 2. [Progressive UI Fixes](./troubleshooting/progressive-ui.md)
-3. [Sweep Grouping](./features/sweep-grouping.md)
+3. [Sweep Grouping](./user-guides/sweep-grouping.md)
 4. [ResNet Feature Extractor Fix](./troubleshooting/resnet-feature-extractor.md)
 5. [MinIO Implementation](./architecture/minio-storage.md)
 6. [MinIO Setup](./setup/minio.md)
@@ -75,8 +79,11 @@ When adding new documentation:
 1. **Choose the right category**:
    - `setup/` - Installation and configuration
    - `architecture/` - Design and technical decisions
-   - `features/` - User-facing functionality
-   - `troubleshooting/` - Bug fixes and issues
+   - `validation/` - Sweeps, benchmarks, and evaluation protocols
+   - `signals/` - Uncertainty signals, registries, and attribution artifacts
+   - `troubleshooting/` - Bug fixes, recovery, and debugging guides
+   - `streamlit/` - Progressive UI and workflow docs
+   - `user-guides/` - End-to-end pipelines, plugins, and API maps
    - `api/` - API reference
    - `deployment/` - Deployment and infrastructure
    - `development/` - Development workflows

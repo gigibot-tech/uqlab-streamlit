@@ -58,5 +58,5 @@ build_run_data (split + noise per YAML)
 ## Related
 
 - [`four-region-partition.md`](four-region-partition.md) — where split/noise happen in `/data`
-- [`evaluation-pipeline.md`](evaluation-pipeline.md) — collect vs score
+- [`evaluation-pipeline.md`](../user-guides/evaluation-pipeline.md) — collect vs score
 - [`disentanglement-benchmark.md`](disentanglement-benchmark.md) — paper Fig 3/4 interpretation
