@@ -12,6 +12,10 @@ Installation, configuration, and environment setup guides:
 ### 🏗️ [Architecture](./architecture/)
 System design, patterns, and technical decisions:
 - **[UQLab flow](./UQLAB_FLOW.md)** — canonical: experiments, fit/predict, signal_table, disentanglement
+- [Architecture clarification](./architecture/ARCHITECTURE_CLARIFICATION.md) — package boundaries and responsibilities
+- [Execution flow & config guide](./architecture/EXECUTION_FLOW_AND_CONFIG_GUIDE.md) — datamodels, config transformation, and execution paths
+- [Final architecture decision](./architecture/FINAL_ARCHITECTURE_DECISION.md) — frontend/backend/orchestrator responsibilities
+- [Package reorganization proposal](./architecture/PACKAGE_REORGANIZATION_PROPOSAL.md) — moving UI out of the ML core package
 - [uq-flow.md](./architecture/uq-flow.md) — redirect only
 - [MinIO Storage Implementation](./architecture/minio-storage.md) - Object storage architecture
 
