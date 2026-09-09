@@ -31,11 +31,14 @@ API documentation, endpoints, and schemas:
 
 ### 🚀 [Deployment](./deployment/)
 Deployment guides, CI/CD, and infrastructure:
-- *Coming soon*
+- [Code Engine Deployment](./deployment/ce-deployment.md) - IBM Code Engine deployment
+- [OpenShift Deployment](./deployment/oc-deployment.md) - OpenShift deployment with OAuth/PostgreSQL
 
 ### 💻 [Development](./development/)
 Development workflows and contributing guides:
-- *Coming soon*
+- [Backend Development](./development/backend-development.md) - Docker Compose and backend setup
+- [Branch Maintenance](./development/branch-maintenance.md) - Branch and release maintenance
+- [Release Notes](./development/release-notes.md) - Release notes and changelog
 
 ## 🔍 Quick Navigation
 
