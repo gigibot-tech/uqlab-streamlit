@@ -6,9 +6,17 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Allow importing uqlab_core when this script is run directly.
+REPO_ROOT = Path(__file__).resolve().parents[2]
+SRC = REPO_ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+from uqlab_core.runtime_paths import configs_dir
+
 def run_test(config_name: str) -> bool:
     """Run single architecture test"""
-    config_path = f"configs/test/{config_name}.yaml"
+    config_path = str(configs_dir() / "test" / f"{config_name}.yaml")
     output_dir = f"/tmp/test_{config_name}"
     
     print(f"\n{'='*60}")
