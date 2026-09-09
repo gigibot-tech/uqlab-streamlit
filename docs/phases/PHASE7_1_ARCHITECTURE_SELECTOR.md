@@ -226,8 +226,8 @@ This configuration update enables:
 - `uqlab-streamlit/uq_classification/config.py`: Main configuration file
 
 ### Files Created
-- `uqlab-streamlit/configs/example_cnn_mcdropout.yaml`: Example CNN config
-- `uqlab-streamlit/configs/example_resnet18_mcdropout.yaml`: Example ResNet18 config
+- `uqlab-streamlit/src/uqlab_core/configs/example_cnn_mcdropout.yaml`: Example CNN config
+- `uqlab-streamlit/src/uqlab_core/configs/example_resnet18_mcdropout.yaml`: Example ResNet18 config
 - `uqlab-streamlit/validate_config_changes.py`: Validation script
 - `uqlab-streamlit/PHASE7_1_ARCHITECTURE_SELECTOR.md`: This documentation
 
