@@ -1,4 +1,6 @@
-# UQLab Flask UI
+# UQLab Flask UI (ARCHIVED)
+
+> **Status:** archived at `archive/uqlab-flask/`. The module imports reference `uqlab_orchestrator.run_spec`, `uqlab.runner.execute`, and `uqlab.evaluation.reporting.sweep_line_plot`, which no longer exist in the current codebase. Use the progressive Streamlit UI (`streamlit_app_progressive.py`) and the FastAPI backend instead.
 
 Lean Flask shell over the existing uqlab runner (`uqlab.runner.execute.run_from_yaml`).
 
