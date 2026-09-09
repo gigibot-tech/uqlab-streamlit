@@ -107,6 +107,9 @@ site/
 .coverage
 htmlcov/
 .tox/
+
+# Generated analysis artifacts
+analysis_results.txt
 .nox/
 coverage.xml
 *.cover
