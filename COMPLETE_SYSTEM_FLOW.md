@@ -3,7 +3,7 @@
 **Date**: 2026-06-24
 **Purpose**: End-to-end flow from Streamlit UI through evaluation
 
-> **📖 Architecture Questions?** See [`ARCHITECTURE_CLARIFICATION.md`](ARCHITECTURE_CLARIFICATION.md) for package boundaries and responsibilities.
+> **📖 Architecture Questions?** See [`ARCHITECTURE_CLARIFICATION.md`](docs/architecture/ARCHITECTURE_CLARIFICATION.md) for package boundaries and responsibilities.
 
 ---
 

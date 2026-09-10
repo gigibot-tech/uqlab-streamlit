@@ -34,7 +34,7 @@ cd uqlab-streamlit
 uv pip install -r backend/requirements.txt
 
 # Install streamlit dependencies
-uv pip install -r streamlit_requirements.txt
+uv pip install -r scripts/deployment/streamlit_requirements.txt
 
 # Install project in editable mode
 uv pip install -e .
@@ -75,7 +75,7 @@ uv venv --python 3.12
 source .venv/bin/activate
 cd uqlab-streamlit
 uv pip install -r backend/requirements.txt
-uv pip install -r streamlit_requirements.txt
+uv pip install -r scripts/deployment/streamlit_requirements.txt
 uv pip install -e .
 ```
 
@@ -114,7 +114,7 @@ Should start without the SQLAlchemy error.
 ## One-Line Fix
 
 ```bash
-cd /Users/andrearachetta/Documents/old_pilots && rm -rf .venv && uv venv --python 3.12 && source .venv/bin/activate && cd uqlab-streamlit && uv pip install -r backend/requirements.txt && uv pip install -r streamlit_requirements.txt && uv pip install -e .
+cd /Users/andrearachetta/Documents/old_pilots && rm -rf .venv && uv venv --python 3.12 && source .venv/bin/activate && cd uqlab-streamlit && uv pip install -r backend/requirements.txt && uv pip install -r scripts/deployment/streamlit_requirements.txt && uv pip install -e .
 ```
 
 Then start backend:
@@ -145,7 +145,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 ```bash
 # Try with pip instead
 pip install -r backend/requirements.txt
-pip install -r streamlit_requirements.txt
+pip install -r scripts/deployment/streamlit_requirements.txt
 pip install -e .
 ```
 
