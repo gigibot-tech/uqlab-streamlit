@@ -3,6 +3,10 @@
 
 set -e
 
+# Run from repository root regardless of where the script is invoked
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || cd "$(dirname "$0")/../.." && pwd)"
+cd "$REPO_ROOT"
+
 echo "🗂️  Organizing root-level scripts..."
 
 # Create scripts directory if it doesn't exist

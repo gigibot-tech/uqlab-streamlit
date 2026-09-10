@@ -69,7 +69,7 @@
 
 ### 📄 KEEP - Reference Documents
 - `2408.12175v3.pdf` - Research paper
-- `three_axioms_demonstration.png` - Diagram
+- `docs/three_axioms_demonstration.png` - Diagram
 - `CONFIG_AND_IMPORTS_STATUS.md` - Current status
 - `RENAME_TO_UQLAB.md` - Rename plan
 
@@ -146,7 +146,7 @@ uqlab-streamlit/
 ├── streamlit_app.py            # Streamlit entry
 ├── streamlit_app_progressive.py # Progressive Streamlit
 ├── 2408.12175v3.pdf            # Reference paper
-├── three_axioms_demonstration.png # Diagram
+├── docs/three_axioms_demonstration.png # Diagram
 ├── CONFIG_AND_IMPORTS_STATUS.md # Current status
 ├── RENAME_TO_UQLAB.md          # Rename plan
 ├── archive/                    # Old files
