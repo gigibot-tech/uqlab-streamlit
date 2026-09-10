@@ -10,13 +10,14 @@ RED='\033[0;31m'
 NC='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VENV="$SCRIPT_DIR/.venv"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+VENV="$PROJECT_ROOT/.venv"
 FRONTEND_PORT="${FRONTEND_PORT:-8501}"
 
 echo -e "${GREEN}🚀 Starting UQLab-Streamlit (progressive app)…${NC}"
 echo ""
 
-cd "$SCRIPT_DIR"
+cd "$PROJECT_ROOT"
 
 if ! command -v uv >/dev/null 2>&1; then
     echo -e "${RED}❌ uv not found${NC}"
@@ -47,11 +48,11 @@ print('deps ok: torch', torch.__version__, '| streamlit', streamlit.__version__)
     exit 1
 fi
 
-export PYTHONPATH="$SCRIPT_DIR/src${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONPATH="$PROJECT_ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
 
 echo ""
 echo -e "${YELLOW}🔧 http://localhost:${FRONTEND_PORT}${NC}"
-echo -e "${YELLOW}   PYTHONPATH=$SCRIPT_DIR/src${NC}"
+echo -e "${YELLOW}   PYTHONPATH=$PROJECT_ROOT/src${NC}"
 echo ""
 echo -e "${YELLOW}▶ streamlit run streamlit_app_progressive.py${NC}"
 echo -e "${YELLOW}Press Ctrl+C to stop.${NC}"
