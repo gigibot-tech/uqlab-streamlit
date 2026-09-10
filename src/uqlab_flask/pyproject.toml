@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "uqlab-flask"
+version = "0.1.0"
+description = "Lean Flask wizard UI for UQLab uncertainty experiments"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "flask>=3.0",
+    "pyyaml>=6.0",
+    "uqlab",
+    "uqlab-core",
+]
+
+[tool.setuptools.package-dir]
+"uqlab_flask" = "."
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["uqlab_flask*"]
