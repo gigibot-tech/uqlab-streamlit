@@ -10,6 +10,7 @@ from typing import List, Literal, Optional, Sequence, Union, Dict, Any
 import yaml
 from pydantic import BaseModel, field_validator, model_validator
 
+from uqlab_core.runtime_paths import configs_dir
 from uqlab_core.shared.config.signals import DEFAULT_SIGNALS, normalize_evaluation_signals
 
 
@@ -525,7 +526,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--config",
         type=str,
-        default="configs/fast_uq_classification.yaml",
+        default=str(configs_dir() / "experiment" / "four_region.yaml"),
         help="Path to YAML configuration file"
     )
     parser.add_argument(

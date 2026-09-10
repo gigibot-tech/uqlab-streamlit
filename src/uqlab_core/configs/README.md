@@ -1,9 +1,11 @@
 # Experiment YAML configs
 
 Runnable experiment configs for CLI, notebooks, and validation scripts.
+These configs live inside the `uqlab_core` package so they ship with the code
+instead of occupying a separate root-level directory.
 
 ```
-configs/
+src/uqlab_core/configs/
 ├── experiment/          # Primary experiment presets
 │   ├── default.yaml
 │   ├── fast_pilot.yaml
