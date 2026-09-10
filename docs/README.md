@@ -31,11 +31,14 @@ API documentation, endpoints, and schemas:
 
 ### 🚀 [Deployment](./deployment/)
 Deployment guides, CI/CD, and infrastructure:
-- *Coming soon*
+- [OpenShift Deployment](./deployment/oc-deployment.md) - Deploy to OpenShift with automated scripts
+- [IBM Code Engine Deployment](./deployment/ce-deployment.md) - Serverless deployment on IBM Code Engine
 
 ### 💻 [Development](./development/)
 Development workflows and contributing guides:
-- *Coming soon*
+- [FastAPI Project Development](./development/development.md) - Local development with Docker Compose, uv, and Node
+- [Template Maintenance](./development/maintenance.md) - Updating the project template across branches
+- [Release Notes](./development/release-notes.md) - Latest changes and version highlights
 
 ## 🔍 Quick Navigation
 
