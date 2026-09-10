@@ -6,9 +6,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+
 def run_test(config_name: str) -> bool:
     """Run single architecture test"""
-    config_path = f"configs/test/{config_name}.yaml"
+    from uqlab.runtime_paths import configs_dir
+
+    config_path = str(configs_dir() / "test" / f"{config_name}.yaml")
     output_dir = f"/tmp/test_{config_name}"
     
     print(f"\n{'='*60}")
