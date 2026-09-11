@@ -1,8 +1,13 @@
 import os
 from collections import defaultdict
+from pathlib import Path
 
-# Get all .md files
-md_files = [f for f in os.listdir('.') if f.endswith('.md')]
+# Resolve repository root from the script location (scripts/utils/ -> repo root)
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+# Get all .md files from the repository root
+md_files = [f for f in REPO_ROOT.iterdir() if f.is_file() and f.suffix == '.md']
+md_files = [f.name for f in md_files]
 
 # Define categories based on keywords
 categories = {

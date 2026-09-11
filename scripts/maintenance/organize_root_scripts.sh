@@ -3,6 +3,9 @@
 
 set -e
 
+# Resolve repository root from the script location (scripts/maintenance/ -> repo root)
+cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
 echo "🗂️  Organizing root-level scripts..."
 
 # Create scripts directory if it doesn't exist
