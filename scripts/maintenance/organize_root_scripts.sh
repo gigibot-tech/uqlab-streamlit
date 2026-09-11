@@ -3,6 +3,9 @@
 
 set -e
 
+# Resolve repository root from script location (repo-root/scripts/maintenance/this.sh)
+cd "$(dirname "$0")/../.."
+
 echo "🗂️  Organizing root-level scripts..."
 
 # Create scripts directory if it doesn't exist
