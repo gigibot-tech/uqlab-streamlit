@@ -10,8 +10,9 @@ After codebase consolidation, here's the current state of configs and imports in
 Located in [`configs/`](configs:1):
 ```
 configs/
-├── example_cnn_mcdropout.yaml
-├── example_resnet18_mcdropout.yaml
+├── examples/
+│   ├── example_cnn_mcdropout.yaml
+│   └── example_resnet18_mcdropout.yaml
 ├── experiment/
 │   ├── default.yaml
 │   └── fast_pilot.yaml
