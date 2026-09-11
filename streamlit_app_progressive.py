@@ -2,7 +2,7 @@
 Progressive Disclosure Streamlit App for Uncertainty Quantification.
 
 Thin shell: workflow steps + orchestrator launch + results panel.
-See START_HERE.md for architecture.
+See docs/START_HERE.md for architecture.
 """
 
 from __future__ import annotations
@@ -155,7 +155,7 @@ def main() -> None:
         st.title("🔬 Uncertainty Quantification Experiment Builder")
         st.caption(
             "Configure Steps 1–4, **launch in Step 5** (or sidebar quick launch), "
-            "then scroll to **Results** below. See **START_HERE.md**."
+            "then scroll to **Results** below. See **docs/START_HERE.md**."
         )
 
     app_mode = "Experiment builder"
