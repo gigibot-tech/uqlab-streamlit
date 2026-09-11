@@ -89,16 +89,34 @@ indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
 
-# Pytest Configuration
+# Pytest Configuration (consolidated from pytest.ini)
 [tool.pytest.ini_options]
 testpaths = ["tests", "src/uqlab/tests"]
 pythonpath = ["src", ".", "backend"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
 norecursedirs = ["tests/legacy", "src/walaris/classification/archive"]
-addopts = "--cov=uqlab --cov=app --cov-report=html --cov-report=term-missing"
+addopts = "-v --showlocals -ra --strict-markers --cov=uqlab --cov=app --cov-report=html --cov-report=term-missing"
+markers = [
+    "unit: Unit tests (fast, no external dependencies)",
+    "integration: Integration tests (may require data files)",
+    "slow: Slow tests (feature extraction, training)",
+    "gpu: Tests requiring GPU",
+    "optional: Tests for optional features (can be skipped)",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+minversion = "3.9"
 
-# MyPy Configuration
+# MyPy Configuration (consolidated from mypy.ini)
 [tool.mypy]
 python_version = "3.10"
+mypy_path = ["src", "."]
+namespace_packages = true
+explicit_package_bases = true
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
@@ -108,6 +126,30 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 strict_equality = true
 exclude = ["venv", ".venv", "alembic", "migrations"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = "uqlab.config_schema"
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "torch.*",
+    "torchvision.*",
+    "transformers.*",
+    "sklearn.*",
+    "yaml.*",
+    "streamlit.*",
+    "plotly.*",
+    "PIL.*",
+    "cv2.*",
+    "pytest.*",
+]
+ignore_missing_imports = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
