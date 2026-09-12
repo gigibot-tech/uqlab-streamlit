@@ -13,12 +13,12 @@ Expected Patterns:
 
 Usage:
     # Validate a campaign and export results
-    PYTHONPATH=src python3 scripts/validate_per_class_campaign.py \\
+    PYTHONPATH=src python3 scripts/analysis/validate_per_class_campaign.py \\
         --run-ids uuid1,uuid2,uuid3 \\
         --output validation_report.json
 
     # Validate with specific thresholds
-    PYTHONPATH=src python3 scripts/validate_per_class_campaign.py \\
+    PYTHONPATH=src python3 scripts/analysis/validate_per_class_campaign.py \\
         --run-ids uuid1,uuid2,uuid3 \\
         --ood-threshold 0.8 \\
         --sparse-threshold 0.6 \\
