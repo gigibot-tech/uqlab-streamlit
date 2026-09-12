@@ -76,7 +76,7 @@ configs/
 └── config.yaml            # (optional) Main config
 ```
 
-### Default Config (`configs/experiment/default.yaml`)
+### Default Config (`src/uqlab_core/configs/experiment/default.yaml`)
 
 ```yaml
 seed: 42
@@ -105,7 +105,7 @@ evaluation:
   top_k: 10
 ```
 
-### Fast Pilot Config (`configs/experiment/fast_pilot.yaml`)
+### Fast Pilot Config (`src/uqlab_core/configs/experiment/fast_pilot.yaml`)
 
 ```yaml
 defaults:
