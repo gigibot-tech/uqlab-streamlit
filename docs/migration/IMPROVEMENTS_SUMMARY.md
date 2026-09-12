@@ -31,7 +31,7 @@ config_dict = yaml.safe_load(open("config.yaml"))
 ### 2. Unit Tests ✅
 
 **Files**:
-- `pytest.ini` - Test configuration
+- `pyproject.toml` - Project/test/type configuration
 - `tests/__init__.py` - Test package
 - `tests/test_config_schema.py` - Config validation tests (200 lines)
 - `tests/test_evaluation.py` - Metrics tests (149 lines)
@@ -57,7 +57,7 @@ pytest --cov=uq_classification
 
 ### 3. Type Checking ✅
 
-**File**: `mypy.ini` (78 lines)
+**Section**: `[tool.mypy]` in `pyproject.toml`
 
 **Features**:
 - Optional static type checking with mypy
@@ -162,8 +162,7 @@ uqlab-streamlit/
 │   ├── test_config_schema.py (200 lines)
 │   ├── test_evaluation.py (149 lines)
 │   └── README.md (107 lines)
-├── pytest.ini (NEW - 42 lines)
-├── mypy.ini (NEW - 78 lines)
+├── pyproject.toml (updated with [tool.pytest.ini_options] and [tool.mypy])
 ├── IMPROVEMENTS_GUIDE.md (NEW - 363 lines)
 ├── IMPROVEMENTS_SUMMARY.md (NEW - this file)
 └── ... (existing files unchanged)

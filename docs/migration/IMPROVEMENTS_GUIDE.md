@@ -156,7 +156,7 @@ def test_binary_auroc_perfect_separation():
 
 ### What Was Added
 
-A `mypy.ini` configuration file for optional static type checking.
+A `[tool.mypy]` section in `pyproject.toml` for optional static type checking.
 
 ### Benefits
 
@@ -183,7 +183,7 @@ mypy --strict uq_classification/config_schema.py
 
 ### Configuration
 
-The `mypy.ini` file is configured for **gradual typing**:
+The `[tool.mypy]` section is configured for **gradual typing**:
 
 - Lenient by default (won't break existing code)
 - Strict checking for new modules (like `config_schema.py`)

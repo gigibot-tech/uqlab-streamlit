@@ -94,7 +94,18 @@ line-ending = "auto"
 testpaths = ["tests", "src/uqlab/tests"]
 pythonpath = ["src", ".", "backend"]
 norecursedirs = ["tests/legacy", "src/walaris/classification/archive"]
-addopts = "--cov=uqlab --cov=app --cov-report=html --cov-report=term-missing"
+addopts = "--cov=uqlab --cov=app --cov-report=html --cov-report=term-missing -v --showlocals -ra --strict-markers"
+markers = [
+    "unit: Unit tests (fast, no external dependencies)",
+    "integration: Integration tests (may require data files)",
+    "slow: Slow tests (feature extraction, training)",
+    "gpu: Tests requiring GPU",
+    "optional: Tests for optional features (can be skipped)",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
 
 # MyPy Configuration
 [tool.mypy]
@@ -108,6 +119,32 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 strict_equality = true
 exclude = ["venv", ".venv", "alembic", "migrations"]
+namespace_packages = true
+explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = "uq_classification.config_schema"
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "torch.*",
+    "torchvision.*",
+    "transformers.*",
+    "sklearn.*",
+    "yaml.*",
+    "streamlit.*",
+    "plotly.*",
+    "PIL.*",
+    "cv2.*",
+    "pytest.*",
+]
+ignore_missing_imports = true
 
 [tool.setuptools.packages.find]
 where = ["src"]

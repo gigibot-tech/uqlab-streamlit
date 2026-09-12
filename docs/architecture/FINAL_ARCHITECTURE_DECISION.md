@@ -1,6 +1,6 @@
 # Final Architecture Decision
 
-> **Superseded (2026-06):** Entry point is now `uqlab.runner.execute.run_from_yaml`; core is `runner/experiment_core.py`. See [`docs/architecture/PACKAGE_REDESIGN.md`](docs/architecture/PACKAGE_REDESIGN.md).
+> **Superseded (2026-06):** Entry point is now `uqlab.runner.execute.run_from_yaml`; core is `runner/experiment_core.py`. See [`PACKAGE_REDESIGN.md`](PACKAGE_REDESIGN.md).
 
 **Date**: 2026-06-24  
 **Questions Addressed**:
@@ -43,7 +43,7 @@ Backend (FastAPI)
 
 **Your Question**: "at least now right in the core, that 'creates' an artifact or uses with the ExperimentConfig the dataset right and does Training and so on, that still needs to be clear"
 
-**Answer**: Entry point is [`pipeline.run()`](uqlab-streamlit/src/uqlab/runner/pipeline.py:48)
+**Answer**: Entry point is [`pipeline.run()`](../../src/uqlab/runner/pipeline.py:48)
 
 ### Complete Flow (Line Numbers)
 
