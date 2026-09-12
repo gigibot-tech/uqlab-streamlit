@@ -13,9 +13,7 @@
 - `.env`, `.env.example` - Environment configuration
 - `.env.production`, `.env.production.example` - Production config
 - `docker-compose.yml` - Docker setup
-- `pyproject.toml` - Python project config
-- `pytest.ini` - Test configuration
-- `mypy.ini` - Type checking config
+- `pyproject.toml` - Python project config (includes pytest and mypy settings)
 - `.gitignore` - Git ignore rules
 - `.bobignore` - Bob ignore rules
 
@@ -140,7 +138,7 @@ uqlab-streamlit/
 ├── .gitignore, .bobignore      # Git/Bob config
 ├── docker-compose.yml          # Docker
 ├── pyproject.toml              # Python project
-├── pytest.ini, mypy.ini        # Testing/typing
+├── pyproject.toml              # Project, testing, and typing config
 ├── README.md, AGENTS.md        # Main docs
 ├── run_fast.py                 # Main entry point
 ├── streamlit_app.py            # Streamlit entry
