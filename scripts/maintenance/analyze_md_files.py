@@ -1,8 +1,10 @@
 import os
 from collections import defaultdict
+from pathlib import Path
 
-# Get all .md files
-md_files = [f for f in os.listdir('.') if f.endswith('.md')]
+# Categorize markdown files at the repository root regardless of where this script runs.
+REPO_ROOT = Path(__file__).resolve().parents[2]
+md_files = [f for f in os.listdir(REPO_ROOT) if f.endswith('.md')]
 
 # Define categories based on keywords
 categories = {
