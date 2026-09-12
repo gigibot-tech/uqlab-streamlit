@@ -1,8 +1,13 @@
 import os
 from collections import defaultdict
+from pathlib import Path
 
-# Get all .md files
-md_files = [f for f in os.listdir('.') if f.endswith('.md')]
+# Resolve project root regardless of where the script is run from
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+OUTPUT_PATH = PROJECT_ROOT / "docs" / "validation" / "analysis_results.txt"
+
+# Get all .md files at the project root
+md_files = [f for f in os.listdir(PROJECT_ROOT) if f.endswith('.md')]
 
 # Define categories based on keywords
 categories = {
@@ -25,39 +30,48 @@ uncategorized = []
 for file in sorted(md_files):
     file_upper = file.upper()
     matched = False
-    
+
     for category, keywords in categories.items():
         if any(keyword in file_upper for keyword in keywords):
             categorized[category].append(file)
             matched = True
             break
-    
+
     if not matched:
         uncategorized.append(file)
 
-# Print results
-print(f"Total .md files: {len(md_files)}\n")
-print("=" * 80)
+# Build output text
+lines = []
+lines.append(f"Total .md files: {len(md_files)}\n")
+lines.append("=" * 80)
 
 for category in sorted(categories.keys()):
     files = categorized[category]
     if files:
-        print(f"\n{category} ({len(files)} files):")
-        print("-" * 80)
+        lines.append(f"\n{category} ({len(files)} files):")
+        lines.append("-" * 80)
         for f in files:
-            print(f"  • {f}")
+            lines.append(f"  • {f}")
 
 if uncategorized:
-    print(f"\nUncategorized ({len(uncategorized)} files):")
-    print("-" * 80)
+    lines.append(f"\nUncategorized ({len(uncategorized)} files):")
+    lines.append("-" * 80)
     for f in uncategorized:
-        print(f"  • {f}")
+        lines.append(f"  • {f}")
 
-print("\n" + "=" * 80)
-print(f"\nSummary:")
+lines.append("\n" + "=" * 80)
+lines.append("\nSummary:")
 for category in sorted(categories.keys()):
     count = len(categorized[category])
     if count > 0:
-        print(f"  {category}: {count}")
+        lines.append(f"  {category}: {count}")
 if uncategorized:
-    print(f"  Uncategorized: {len(uncategorized)}")
+    lines.append(f"  Uncategorized: {len(uncategorized)}")
+
+output = "\n".join(lines)
+
+# Write to file and print to stdout
+OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+OUTPUT_PATH.write_text(output)
+print(output)
+print(f"\nResults written to: {OUTPUT_PATH.relative_to(PROJECT_ROOT)}")

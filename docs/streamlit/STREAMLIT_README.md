@@ -42,7 +42,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 
 # Install dependencies
-pip install -r streamlit_requirements.txt
+pip install -r scripts/deployment/streamlit_requirements.txt
 
 # Run Streamlit
 streamlit run streamlit_app.py
