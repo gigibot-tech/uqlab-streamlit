@@ -12,6 +12,13 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+# Resolve project root regardless of where the script is run from
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+DOCKER_COMPOSE_FILE="$PROJECT_ROOT/docker-compose.yml"
+
+cd "$PROJECT_ROOT"
+
 echo -e "${GREEN}Starting uqlab-streamlit with MinIO storage backend${NC}"
 
 # Check if docker-compose is available
@@ -22,9 +29,9 @@ fi
 
 # Determine docker compose command
 if command -v docker-compose &> /dev/null; then
-    DOCKER_COMPOSE="docker-compose"
+    DOCKER_COMPOSE="docker-compose -f $DOCKER_COMPOSE_FILE"
 else
-    DOCKER_COMPOSE="docker compose"
+    DOCKER_COMPOSE="docker compose -f $DOCKER_COMPOSE_FILE"
 fi
 
 # Start MinIO
@@ -41,14 +48,14 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
         echo -e "${GREEN}MinIO is healthy!${NC}"
         break
     fi
-    
+
     RETRY_COUNT=$((RETRY_COUNT + 1))
     if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
         echo -e "${RED}Error: MinIO failed to become healthy after ${MAX_RETRIES} attempts${NC}"
         echo -e "${YELLOW}Check logs with: $DOCKER_COMPOSE logs minio${NC}"
         exit 1
     fi
-    
+
     echo -e "${YELLOW}Waiting... (attempt $RETRY_COUNT/$MAX_RETRIES)${NC}"
     sleep 2
 done
@@ -68,7 +75,7 @@ echo ""
 
 # Start uvicorn backend
 echo -e "${YELLOW}Starting uvicorn backend...${NC}"
-cd backend
+cd "$PROJECT_ROOT/backend"
 
 # Trap SIGINT and SIGTERM to gracefully shutdown
 trap 'echo -e "\n${YELLOW}Shutting down...${NC}"; kill $UVICORN_PID 2>/dev/null; exit 0' INT TERM
