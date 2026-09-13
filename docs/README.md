@@ -31,11 +31,14 @@ API documentation, endpoints, and schemas:
 
 ### 🚀 [Deployment](./deployment/)
 Deployment guides, CI/CD, and infrastructure:
-- *Coming soon*
+- [IBM Code Engine Deployment](./deployment/ce-deployment.md) - Serverless container deployment on IBM Cloud
+- [OpenShift Deployment](./deployment/oc-deployment.md) - OpenShift with PostgreSQL and OAuth2 proxy
 
 ### 💻 [Development](./development/)
 Development workflows and contributing guides:
-- *Coming soon*
+- [Local Development](./development/local-development.md) - FastAPI / Docker Compose development setup
+- [Branch Maintenance](./development/branch-maintenance.md) - Template branch update workflow
+- [Release Notes](./development/release-notes.md) - Template release notes
 
 ## 🔍 Quick Navigation
 
@@ -44,6 +47,8 @@ Development workflows and contributing guides:
 **Storage & Infrastructure**
 - [MinIO Setup](./setup/minio.md)
 - [MinIO Implementation](./architecture/minio-storage.md)
+- [IBM Code Engine Deployment](./deployment/ce-deployment.md)
+- [OpenShift Deployment](./deployment/oc-deployment.md)
 
 **Machine Learning**
 - [ResNet Feature Extractor Fix](./troubleshooting/resnet-feature-extractor.md)
@@ -55,16 +60,23 @@ Development workflows and contributing guides:
 
 **Development Tools**
 - [UV & Ruff Setup](./setup/uv-ruff.md)
+- [Local Development](./development/local-development.md)
+- [Branch Maintenance](./development/branch-maintenance.md)
 
 ### By Date (Most Recent First)
 
-1. [Startup Issues](./troubleshooting/startup-issues.md)
-2. [Progressive UI Fixes](./troubleshooting/progressive-ui.md)
-3. [Sweep Grouping](./features/sweep-grouping.md)
-4. [ResNet Feature Extractor Fix](./troubleshooting/resnet-feature-extractor.md)
-5. [MinIO Implementation](./architecture/minio-storage.md)
-6. [MinIO Setup](./setup/minio.md)
-7. [UV & Ruff Setup](./setup/uv-ruff.md)
+1. [IBM Code Engine Deployment](./deployment/ce-deployment.md)
+2. [OpenShift Deployment](./deployment/oc-deployment.md)
+3. [Local Development](./development/local-development.md)
+4. [Branch Maintenance](./development/branch-maintenance.md)
+5. [Release Notes](./development/release-notes.md)
+6. [Startup Issues](./troubleshooting/startup-issues.md)
+7. [Progressive UI Fixes](./troubleshooting/progressive-ui.md)
+8. [Sweep Grouping](./features/sweep-grouping.md)
+9. [ResNet Feature Extractor Fix](./troubleshooting/resnet-feature-extractor.md)
+10. [MinIO Implementation](./architecture/minio-storage.md)
+11. [MinIO Setup](./setup/minio.md)
+12. [UV & Ruff Setup](./setup/uv-ruff.md)
 
 ## 📝 Documentation Guidelines
 
