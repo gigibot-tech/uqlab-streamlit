@@ -31,11 +31,12 @@ API documentation, endpoints, and schemas:
 
 ### 🚀 [Deployment](./deployment/)
 Deployment guides, CI/CD, and infrastructure:
-- *Coming soon*
+- [OpenShift Deployment](./deployment/openshift.md) - Deploy to OpenShift with PostgreSQL and OAuth2
+- [IBM Code Engine Deployment](./deployment/code-engine.md) - Deploy to IBM Code Engine serverless containers
 
 ### 💻 [Development](./development/)
 Development workflows and contributing guides:
-- *Coming soon*
+- [Development Environment](./development/development-environment.md) - Local Docker Compose and development setup
 
 ## 🔍 Quick Navigation
 
@@ -53,8 +54,13 @@ Development workflows and contributing guides:
 - [Progressive UI Fixes](./troubleshooting/progressive-ui.md)
 - [Startup Issues](./troubleshooting/startup-issues.md)
 
+**Deployment & Infrastructure**
+- [OpenShift Deployment](./deployment/openshift.md)
+- [IBM Code Engine Deployment](./deployment/code-engine.md)
+
 **Development Tools**
 - [UV & Ruff Setup](./setup/uv-ruff.md)
+- [Development Environment](./development/development-environment.md)
 
 ### By Date (Most Recent First)
 
