@@ -275,8 +275,8 @@ This is a significant achievement in machine learning interpretability and relia
 
 ---
 
-**Analysis Tool:** `analyze_results.py`  
-**Full Results:** `analysis_results.txt`  
+**Analysis Tool:** `analyze_results.py`<br>
+**Full Results:** [`analysis_results.txt`](analysis_results.txt)<br>
 **Visualization:** Available in Streamlit dashboard with 3×3 signal heatmaps
 
 ---
