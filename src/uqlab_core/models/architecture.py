@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal, Tuple
+from typing import Literal
 
 CanonicalArchitecture = Literal["resnet18", "cnn_small", "dinov2_mlp", "pixel_mlp"]
 TrainingScope = Literal["full", "head_only", "feature_space"]
