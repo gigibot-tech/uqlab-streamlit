@@ -29,7 +29,7 @@ A lightweight Streamlit frontend that connects to the FastAPI backend to visuali
 docker-compose up backend
 
 # In a new terminal, run the Streamlit app
-./run_streamlit.sh
+scripts/deployment/run_streamlit.sh
 ```
 
 The dashboard will open automatically at http://localhost:8501
@@ -42,7 +42,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 
 # Install dependencies
-pip install -r streamlit_requirements.txt
+pip install -r scripts/deployment/streamlit_requirements.txt
 
 # Run Streamlit
 streamlit run streamlit_app.py
@@ -56,7 +56,7 @@ By default, the app connects to `http://localhost:8000`. To change this:
 
 ```bash
 export API_URL=http://your-backend-url:8000
-./run_streamlit.sh
+scripts/deployment/run_streamlit.sh
 ```
 
 ### Authentication (Optional)
@@ -65,7 +65,7 @@ If your backend requires authentication:
 
 ```bash
 export API_TOKEN=your_access_token
-./run_streamlit.sh
+scripts/deployment/run_streamlit.sh
 ```
 
 ## Usage

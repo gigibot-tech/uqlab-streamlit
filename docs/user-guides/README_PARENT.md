@@ -100,7 +100,7 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -e src/uqlab
 
 # Install Streamlit requirements
-pip install -r streamlit_requirements.txt
+pip install -r scripts/deployment/streamlit_requirements.txt
 
 # Install backend requirements (if running locally)
 pip install -r backend/requirements.txt
