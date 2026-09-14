@@ -5,9 +5,9 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-SRC = ROOT / "src"
 FLASK_PKG = Path(__file__).resolve().parent
+ROOT = FLASK_PKG.parent.parent
+SRC = ROOT / "src"
 for p in (str(SRC), str(ROOT), str(FLASK_PKG)):
     if p not in sys.path:
         sys.path.insert(0, p)
