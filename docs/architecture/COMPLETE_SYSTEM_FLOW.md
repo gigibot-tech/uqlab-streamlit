@@ -30,7 +30,7 @@ launch_benchmark_primary() (step3_uncertainty.py:500)
     ↓ Calls orchestrator
 ```
 
-**File**: [`src/uqlab/ui_components/workflow/step3_uncertainty.py`](src/uqlab/ui_components/workflow/step3_uncertainty.py:500)
+**File**: [`src/uqlab/ui_components/workflow/step3_uncertainty.py`](../../src/uqlab/ui_components/workflow/step3_uncertainty.py:500)
 
 ---
 
@@ -55,8 +55,8 @@ launch_workflow_experiments() (continued)
 ```
 
 **Files**:
-- [`src/uqlab_orchestrator/experiment_launcher.py`](src/uqlab_orchestrator/experiment_launcher.py:50)
-- [`src/uqlab_orchestrator/run_spec.py`](src/uqlab_orchestrator/run_spec.py:200)
+- [`src/uqlab_orchestrator/experiment_launcher.py`](../../src/uqlab_orchestrator/experiment_launcher.py:50)
+- [`src/uqlab_orchestrator/run_spec.py`](../../src/uqlab_orchestrator/run_spec.py:200)
 
 ---
 
@@ -75,8 +75,8 @@ DirectExecutor.execute() (direct_executor.py:50)
 ```
 
 **Files**:
-- [`backend/app/api/routes/experiments.py`](backend/app/api/routes/experiments.py:100)
-- [`backend/app/services/executors/direct_executor.py`](backend/app/services/executors/direct_executor.py:50)
+- [`backend/app/api/routes/experiments.py`](../../backend/app/api/routes/experiments.py:100)
+- [`backend/app/services/executors/direct_executor.py`](../../backend/app/services/executors/direct_executor.py:50)
 
 ---
 
@@ -90,7 +90,7 @@ run_fast_uncertainty_classification.py (CLI script)
     ↓ Calls run_from_yaml()
 ```
 
-**File**: [`scripts/runners/run_fast_uncertainty_classification.py`](scripts/runners/run_fast_uncertainty_classification.py:16)
+**File**: [`scripts/runners/run_fast_uncertainty_classification.py`](../../scripts/runners/run_fast_uncertainty_classification.py:16)
 
 **Code**:
 ```python
@@ -131,7 +131,7 @@ run_from_yaml() (execute.py)
         └─ Calls run_experiment_core() ← MAIN EXECUTION
 ```
 
-**File**: [`src/uqlab/runner/execute.py`](src/uqlab/runner/execute.py)
+**File**: [`src/uqlab/runner/execute.py`](../../src/uqlab/runner/execute.py)
 
 **Code**:
 ```python
@@ -208,7 +208,7 @@ run_experiment_core() (fast_pilot_core.py:200)
         └─ Return dict with all results
 ```
 
-**File**: [`src/uqlab/runner/fast_pilot_core.py`](src/uqlab/runner/fast_pilot_core.py:200)
+**File**: [`src/uqlab/runner/fast_pilot_core.py`](../../src/uqlab/runner/fast_pilot_core.py:200)
 
 **Key Point**: `run_experiment_core()` is a **monolithic function** that does:
 1. Data loading
@@ -223,7 +223,7 @@ run_experiment_core() (fast_pilot_core.py:200)
 
 #### Step 1: Signal Collection
 
-**File**: [`src/uqlab/evaluation/pipeline/fast_pilot_eval.py:46`](src/uqlab/evaluation/pipeline/fast_pilot_eval.py:46)
+**File**: [`src/uqlab/evaluation/pipeline/fast_pilot_eval.py:46`](../../src/uqlab/evaluation/pipeline/fast_pilot_eval.py:46)
 
 ```python
 def collect_uncertainty_signals(
@@ -264,7 +264,7 @@ def collect_uncertainty_signals(
 
 #### Step 2: Signal Scoring
 
-**File**: [`src/uqlab/evaluation/pipeline/fast_pilot_eval.py:314`](src/uqlab/evaluation/pipeline/fast_pilot_eval.py:314)
+**File**: [`src/uqlab/evaluation/pipeline/fast_pilot_eval.py:314`](../../src/uqlab/evaluation/pipeline/fast_pilot_eval.py:314)
 
 ```python
 def score_uncertainty_signals(
@@ -306,7 +306,7 @@ def score_uncertainty_signals(
 
 #### Step 3: Result Persistence
 
-**File**: [`src/uqlab/evaluation/evaluator.py:500`](src/uqlab/evaluation/evaluator.py:500)
+**File**: [`src/uqlab/evaluation/evaluator.py:500`](../../src/uqlab/evaluation/evaluator.py:500)
 
 ```python
 def persist_experiment_summaries(
@@ -344,7 +344,7 @@ DirectExecutor.execute() (continued)
 Database Updated
 ```
 
-**File**: [`backend/app/services/executors/direct_executor.py:150`](backend/app/services/executors/direct_executor.py:150)
+**File**: [`backend/app/services/executors/direct_executor.py:150`](../../backend/app/services/executors/direct_executor.py:150)
 
 ---
 
@@ -362,7 +362,7 @@ UI Auto-Refresh (every 5 seconds)
     │   └─ Download buttons
 ```
 
-**File**: [`src/uqlab/ui_components/results/experiment_results_panel.py`](src/uqlab/ui_components/results/experiment_results_panel.py:100)
+**File**: [`src/uqlab/ui_components/results/experiment_results_panel.py`](../../src/uqlab/ui_components/results/experiment_results_panel.py:100)
 
 ---
 
@@ -434,9 +434,9 @@ UI Auto-Refresh (every 5 seconds)
 
 ✅ **STILL USED** - It's the main execution function
 
-**Location**: [`src/uqlab/runner/fast_pilot_core.py:200`](src/uqlab/runner/fast_pilot_core.py:200)
+**Location**: [`src/uqlab/runner/fast_pilot_core.py:200`](../../src/uqlab/runner/fast_pilot_core.py:200)
 
-**Called by**: [`execute.py`](src/uqlab/runner/execute.py) in `_stage_execute()`
+**Called by**: [`execute.py`](../../src/uqlab/runner/execute.py) in `_stage_execute()`
 
 ```python
 # pipeline.py line 78
@@ -480,17 +480,17 @@ CLI script → run_from_yaml() → run_experiment_core()
 ## Related Documentation
 
 **Flow Analysis**:
-- [`STEP3_FLOW_ANALYSIS.md`](STEP3_FLOW_ANALYSIS.md) - UI to orchestrator flow
-- [`POST_EXECUTION_FLOW.md`](POST_EXECUTION_FLOW.md) - Post-execution flow
-- [`docs/architecture/evaluation-pipeline.md`](docs/architecture/evaluation-pipeline.md) - Evaluation pipeline structure
+- [`STEP3_FLOW_ANALYSIS.md`](../archive/STEP3_FLOW_ANALYSIS.md) - UI to orchestrator flow
+- [`POST_EXECUTION_FLOW.md`](../archive/POST_EXECUTION_FLOW.md) - Post-execution flow
+- [`docs/architecture/evaluation-pipeline.md`](evaluation-pipeline.md) - Evaluation pipeline structure
 
 **Complete Flows**:
-- [`backend/RUN_LABEL_NOISE_SWEEP_FLOW.md`](backend/RUN_LABEL_NOISE_SWEEP_FLOW.md) - Most comprehensive (912 lines)
-- [`docs/UQLAB_FLOW.md`](docs/UQLAB_FLOW.md) - System overview
+- [`backend/RUN_LABEL_NOISE_SWEEP_FLOW.md`](../../backend/RUN_LABEL_NOISE_SWEEP_FLOW.md) - Most comprehensive (912 lines)
+- [`docs/UQLAB_FLOW.md`](../UQLAB_FLOW.md) - System overview
 
 **Architecture**:
-- [`DUAL_FACADE_ARCHITECTURE.md`](DUAL_FACADE_ARCHITECTURE.md) - Proposed facade (not implemented)
-- [`COMPONENT_REUSE_ANALYSIS.md`](COMPONENT_REUSE_ANALYSIS.md) - Component analysis
+- [`DUAL_FACADE_ARCHITECTURE.md`](../archive/DUAL_FACADE_ARCHITECTURE.md) - Proposed facade (not implemented)
+- [`COMPONENT_REUSE_ANALYSIS.md`](../archive/COMPONENT_REUSE_ANALYSIS.md) - Component analysis
 
 ---
 
