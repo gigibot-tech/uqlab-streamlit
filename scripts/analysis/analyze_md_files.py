@@ -1,8 +1,10 @@
 import os
 from collections import defaultdict
+from pathlib import Path
 
-# Get all .md files
-md_files = [f for f in os.listdir('.') if f.endswith('.md')]
+# Scan the repository root for top-level .md files
+repo_root = Path(__file__).resolve().parents[2]
+md_files = [f for f in os.listdir(repo_root) if f.endswith('.md')]
 
 # Define categories based on keywords
 categories = {

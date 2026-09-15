@@ -212,7 +212,7 @@ src/
 4. ✅ Can create other UIs (Flask, CLI) easily
 5. ✅ Clear, absolute imports
 
-**Migration**: 2 hours (as detailed in PACKAGE_REORGANIZATION_PROPOSAL.md)
+**Migration**: 2 hours (as detailed in [PACKAGE_REORGANIZATION_PROPOSAL.md](../migration/PACKAGE_REORGANIZATION_PROPOSAL.md))
 
 ---
 
