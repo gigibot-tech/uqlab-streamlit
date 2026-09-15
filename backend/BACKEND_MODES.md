@@ -46,7 +46,7 @@ cd backend
 - Uses `uvicorn` with `--reload` flag
 - Monitors multiple directories with WatchFiles
 - Hot-reloads Python modules automatically
-- Runs via `run_dev.py`
+- Runs via `run_server.py`
 
 ---
 
@@ -79,7 +79,7 @@ cd backend
 - Uses `uvicorn` WITHOUT `--reload` flag
 - No file watching or monitoring
 - Stable process that runs until manually stopped
-- Runs via `run_prod.py`
+- Runs via `run_server.py --prod`
 
 ---
 
@@ -93,7 +93,7 @@ cd backend
 | **Code changes apply** | Immediately | After manual restart |
 | **Use for experiments** | ❌ NEVER | ✅ ALWAYS |
 | **Startup script** | `start_backend.sh` | `start_backend_prod.sh` |
-| **Python script** | `run_dev.py` | `run_prod.py` |
+| **Python script** | `run_server.py` | `run_server.py --prod` |
 
 ---
 
@@ -157,7 +157,7 @@ cd backend
 
 ## Technical Implementation
 
-### Development Mode (`run_dev.py`)
+### Development Mode (`run_server.py`)
 ```python
 uvicorn.run(
     "app.main:app",
@@ -168,7 +168,7 @@ uvicorn.run(
 )
 ```
 
-### Production Mode (`run_prod.py`)
+### Production Mode (`run_server.py --prod`)
 ```python
 uvicorn.run(
     "app.main:app",
