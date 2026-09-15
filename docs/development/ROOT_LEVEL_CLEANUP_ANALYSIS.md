@@ -1,5 +1,45 @@
 # Root Level Cleanup Analysis
 
+## 2026-09-15: Small root-file cleanup (< 300 LoC)
+
+Script: [`scripts/maintenance/cleanup_small_root_files.sh`](../../scripts/maintenance/cleanup_small_root_files.sh)
+
+### Moved files
+
+| File | Lines | Destination | Reason |
+|------|-------|-------------|--------|
+| `organize_root_scripts.sh` | 57 | `scripts/maintenance/` | Maintenance helper |
+| `analyze_md_files.py` | 63 | `scripts/maintenance/` | Maintenance helper |
+| `start.sh` | 61 | `scripts/deployment/` | Deployment entry point |
+| `start-with-minio.sh` | 88 | `scripts/deployment/` | Deployment entry point |
+| `ARCHITECTURE_CLARIFICATION.md` | 171 | `docs/architecture/` | Architecture doc |
+| `FINAL_ARCHITECTURE_DECISION.md` | 299 | `docs/architecture/` | Architecture doc |
+| `EXECUTION_FLOW_AND_CONFIG_GUIDE.md` | 229 | `docs/development/` | Developer guide |
+| `DEPENDENCY_ANALYSIS_AND_FINAL_RECOMMENDATION.md` | 234 | `docs/development/` | Developer analysis |
+| `PACKAGE_REORGANIZATION_PROPOSAL.md` | 295 | `docs/development/` | Proposal doc |
+| `TERMINOLOGY_CLARIFICATION.md` | 274 | `docs/` | General documentation |
+| `START_HERE.md` | 97 | `docs/` | General documentation |
+| `analysis_results.txt` | 132 | `archive/` | Generated output |
+| `streamlit_requirements.txt` | 10 | `archive/` | Deprecated requirements |
+
+### Deleted files
+
+- `.DS_Store` — macOS metadata, already gitignored
+- `package-lock.json` — orphaned lockfile (no `package.json`), already gitignored
+
+### Updated references
+
+- `README.md` — links to moved architecture/development docs
+- `docs/setup/minio.md` — `start-with-minio.sh` path
+- `docs/architecture/minio-storage.md` — `start-with-minio.sh` path
+- `COMPLETE_SYSTEM_FLOW.md` — link to `ARCHITECTURE_CLARIFICATION.md`
+- `docs/development/EXECUTION_FLOW_AND_CONFIG_GUIDE.md` — link to `ARCHITECTURE_CLARIFICATION.md`
+- `docs/features/workflow-config.md` — link to `START_HERE.md`
+- `docs/TERMINOLOGY_CLARIFICATION.md` — links to `PACKAGE_REDESIGN.md` and `FINAL_ARCHITECTURE_DECISION.md`
+- `streamlit_app_progressive.py` — comments referencing `START_HERE.md`
+
+---
+
 ## Files at Root Level of `uqlab-streamlit/`
 
 ### ✅ KEEP - Active/Important Files

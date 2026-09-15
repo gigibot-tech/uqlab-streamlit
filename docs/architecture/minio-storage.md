@@ -99,7 +99,7 @@ Complete guide covering:
 ### Quick Start (Recommended)
 ```bash
 cd uqlab-streamlit
-./start-with-minio.sh
+./scripts/deployment/start-with-minio.sh
 ```
 
 ### Manual Start
@@ -133,7 +133,7 @@ To verify the implementation works:
 - [ ] Start backend: `cd backend && uvicorn app.main:app --reload`
 - [ ] Check logs: Should see "Storage backend: s3 (local MinIO at http://localhost:9000)"
 - [ ] Test fallback: Stop MinIO, restart backend, should see "Storage backend: filesystem"
-- [ ] Test script: `./start-with-minio.sh` should start both services
+- [ ] Test script: `./scripts/deployment/start-with-minio.sh` should start both services
 
 ## Files Created/Modified
 
@@ -201,7 +201,7 @@ To start using the new setup:
 2. **Start MinIO and backend**:
    ```bash
    cd ..
-   ./start-with-minio.sh
+   ./scripts/deployment/start-with-minio.sh
    ```
 
 3. **Verify it works**:
