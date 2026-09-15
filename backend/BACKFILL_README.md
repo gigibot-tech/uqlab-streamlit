@@ -6,7 +6,7 @@ Your 87 existing experiments have all 7 uncertainty signals calculated and saved
 
 ## Solution
 
-The `backfill_signals.py` script reads the `summary.json` files from your results directory and populates the `best_signals_json` column in the database.
+The `scripts/migrations/backfill_best_signals.py` script reads the `summary.json` files from your results directory and populates the `best_signals_json` column in the database.
 
 ## How It Works
 
@@ -21,8 +21,8 @@ The `backfill_signals.py` script reads the `summary.json` files from your result
 ### Step 1: Run the Migration (if not done yet)
 
 ```bash
-cd uqlab-streamlit/backend
-python run_migration.py
+cd uqlab-streamlit
+python scripts/migrations/add_best_signals_column.py
 ```
 
 This adds the `best_signals_json` column to your database.
@@ -30,8 +30,8 @@ This adds the `best_signals_json` column to your database.
 ### Step 2: Run the Backfill Script
 
 ```bash
-cd uqlab-streamlit/backend
-python backfill_signals.py
+cd uqlab-streamlit
+python scripts/migrations/backfill_best_signals.py
 ```
 
 ### Expected Output
