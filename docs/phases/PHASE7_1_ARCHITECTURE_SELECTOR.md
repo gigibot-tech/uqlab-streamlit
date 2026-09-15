@@ -204,8 +204,8 @@ python3 validate_config_changes.py
 
 Created example YAML files demonstrating each architecture:
 
-1. `configs/example_cnn_mcdropout.yaml` - CNN MC Dropout configuration
-2. `configs/example_resnet18_mcdropout.yaml` - ResNet18 MC Dropout configuration
+1. `configs/experiment/example_cnn_mcdropout.yaml` - CNN MC Dropout configuration
+2. `configs/experiment/example_resnet18_mcdropout.yaml` - ResNet18 MC Dropout configuration
 
 ## Next Steps
 
@@ -226,8 +226,8 @@ This configuration update enables:
 - `uqlab-streamlit/uq_classification/config.py`: Main configuration file
 
 ### Files Created
-- `uqlab-streamlit/configs/example_cnn_mcdropout.yaml`: Example CNN config
-- `uqlab-streamlit/configs/example_resnet18_mcdropout.yaml`: Example ResNet18 config
+- `uqlab-streamlit/configs/experiment/example_cnn_mcdropout.yaml`: Example CNN config
+- `uqlab-streamlit/configs/experiment/example_resnet18_mcdropout.yaml`: Example ResNet18 config
 - `uqlab-streamlit/validate_config_changes.py`: Validation script
 - `uqlab-streamlit/PHASE7_1_ARCHITECTURE_SELECTOR.md`: This documentation
 
