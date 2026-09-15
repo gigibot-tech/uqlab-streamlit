@@ -1,8 +1,11 @@
 import os
 from collections import defaultdict
 
-# Get all .md files
-md_files = [f for f in os.listdir('.') if f.endswith('.md')]
+# Resolve project root from this script's location (scripts/analysis/ -> ../..)
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+
+# Get all .md files at the project root (as relative names for display)
+md_files = [f for f in os.listdir(PROJECT_ROOT) if f.endswith('.md')]
 
 # Define categories based on keywords
 categories = {
