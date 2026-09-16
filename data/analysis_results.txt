@@ -1,0 +1,132 @@
+🔍 Searching for experiments in: /tmp/walaris_experiments
+📊 Found 114 experiments
+
+================================================================================
+🔬 HYPOTHESIS VERIFICATION: Uncertainty Disentanglement
+================================================================================
+
+📈 EPISTEMIC UNCERTAINTY ANALYSIS
+   (Varying under-supported samples, fixed noise)
+--------------------------------------------------------------------------------
+
+🎯 Fixed Aleatoric Noise = 0%
+   Experiments: 111
+   • msp_uncertainty          : 0.3557 (range: 0.4484) ↗️ Increases
+   • predictive_entropy       : 0.3473 (range: 0.4575) ↗️ Increases
+   • mutual_info              : 0.4533 (range: 0.5754) ↗️ Increases
+   • inverse_coherence        : 0.1926 (range: 0.4694) ↗️ Increases
+   • dominance                : 0.6623 (range: 0.5727) ↗️ Increases ⭐
+   • inverse_mass             : 0.7135 (range: 0.8651) ↗️ Increases ⭐
+   • inverse_logit_magnitude  : 0.3361 (range: 0.4006) ↗️ Increases
+
+
+📉 ALEATORIC UNCERTAINTY ANALYSIS
+   (Varying noise percentage, fixed under-supported samples)
+--------------------------------------------------------------------------------
+
+🎯 Fixed Epistemic (under-supported) = 1 samples/class
+   Experiments: 2
+   • msp_uncertainty          : 0.2990 (range: 0.1529) → Flat
+   • predictive_entropy       : 0.2532 (range: 0.1025) → Flat
+   • mutual_info              : 0.3646 (range: 0.1555) → Flat
+   • inverse_coherence        : 0.4637 (range: 0.1581) → Flat ⭐
+   • dominance                : 0.5363 (range: 0.1581) → Flat
+   • inverse_mass             : 0.2352 (range: 0.0696) → Flat
+   • inverse_logit_magnitude  : 0.2541 (range: 0.0642) → Flat
+
+🎯 Fixed Epistemic (under-supported) = 50 samples/class
+   Experiments: 88
+   • msp_uncertainty          : 0.4230 (range: 0.4484) → Flat
+   • predictive_entropy       : 0.4146 (range: 0.4575) → Flat
+   • mutual_info              : 0.5419 (range: 0.5754) → Flat
+   • inverse_coherence        : 0.1979 (range: 0.2902) → Flat ⭐
+   • dominance                : 0.7072 (range: 0.5518) → Flat
+   • inverse_mass             : 0.8639 (range: 0.8445) → Flat
+   • inverse_logit_magnitude  : 0.3847 (range: 0.3668) → Flat
+
+🎯 Fixed Epistemic (under-supported) = 51 samples/class
+   Experiments: 2
+   • msp_uncertainty          : 0.0777 (range: 0.0274) → Flat
+   • predictive_entropy       : 0.0731 (range: 0.0247) → Flat
+   • mutual_info              : 0.0873 (range: 0.0289) → Flat
+   • inverse_coherence        : 0.1278 (range: 0.0527) → Flat ⭐
+   • dominance                : 0.5607 (range: 0.2009) → Flat
+   • inverse_mass             : 0.1227 (range: 0.0020) → Flat
+   • inverse_logit_magnitude  : 0.1356 (range: 0.0017) → Flat
+
+🎯 Fixed Epistemic (under-supported) = 101 samples/class
+   Experiments: 2
+   • msp_uncertainty          : 0.0592 (range: 0.0066) → Flat
+   • predictive_entropy       : 0.0553 (range: 0.0078) → Flat
+   • mutual_info              : 0.0675 (range: 0.0104) → Flat
+   • inverse_coherence        : 0.1196 (range: 0.0018) → Flat ⭐
+   • dominance                : 0.4718 (range: 0.0588) → Flat
+   • inverse_mass             : 0.1282 (range: 0.0240) → Flat
+   • inverse_logit_magnitude  : 0.1545 (range: 0.0145) → Flat
+
+🎯 Fixed Epistemic (under-supported) = 151 samples/class
+   Experiments: 2
+   • msp_uncertainty          : 0.0555 (range: 0.0107) → Flat
+   • predictive_entropy       : 0.0547 (range: 0.0106) → Flat
+   • mutual_info              : 0.0600 (range: 0.0107) → Flat
+   • inverse_coherence        : 0.1183 (range: 0.0306) → Flat ⭐
+   • dominance                : 0.4065 (range: 0.0795) → Flat
+   • inverse_mass             : 0.1252 (range: 0.0241) → Flat
+   • inverse_logit_magnitude  : 0.1246 (range: 0.0380) → Flat
+
+🎯 Fixed Epistemic (under-supported) = 201 samples/class
+   Experiments: 2
+   • msp_uncertainty          : 0.0548 (range: 0.0190) → Flat
+   • predictive_entropy       : 0.0542 (range: 0.0186) → Flat
+   • mutual_info              : 0.0572 (range: 0.0193) → Flat
+   • inverse_coherence        : 0.1146 (range: 0.0277) → Flat ⭐
+   • dominance                : 0.4418 (range: 0.0540) → Flat
+   • inverse_mass             : 0.1295 (range: 0.0103) → Flat
+   • inverse_logit_magnitude  : 0.1345 (range: 0.0373) → Flat
+
+🎯 Fixed Epistemic (under-supported) = 251 samples/class
+   Experiments: 2
+   • msp_uncertainty          : 0.0489 (range: 0.0048) → Flat
+   • predictive_entropy       : 0.0482 (range: 0.0046) → Flat
+   • mutual_info              : 0.0519 (range: 0.0011) → Flat
+   • inverse_coherence        : 0.1135 (range: 0.0003) → Flat ⭐
+   • dominance                : 0.4113 (range: 0.0403) → Flat
+   • inverse_mass             : 0.1226 (range: 0.0099) → Flat
+   • inverse_logit_magnitude  : 0.1209 (range: 0.0058) → Flat
+
+🎯 Fixed Epistemic (under-supported) = 301 samples/class
+   Experiments: 2
+   • msp_uncertainty          : 0.0510 (range: 0.0081) → Flat
+   • predictive_entropy       : 0.0505 (range: 0.0080) → Flat
+   • mutual_info              : 0.0517 (range: 0.0119) → Flat
+   • inverse_coherence        : 0.1097 (range: 0.0021) → Flat ⭐
+   • dominance                : 0.4204 (range: 0.2145) → Flat
+   • inverse_mass             : 0.1166 (range: 0.0042) → Flat
+   • inverse_logit_magnitude  : 0.1214 (range: 0.0074) → Flat
+
+
+================================================================================
+📊 SUMMARY & HYPOTHESIS VERIFICATION
+================================================================================
+
+✅ EXPECTED RESULTS (if disentanglement works):
+
+1. EPISTEMIC SIGNALS (inverse_mass ⭐, dominance ⭐):
+   - Should have HIGH AUROC when epistemic varies
+   - Should show INCREASING trend with more under-supported samples
+   - Should be STABLE when only aleatoric varies
+
+2. ALEATORIC SIGNALS (inverse_coherence ⭐):
+   - Should have HIGH AUROC when aleatoric varies  
+   - Should show INCREASING trend with more noise
+   - Should be STABLE when only epistemic varies
+
+3. MIXED SIGNALS (msp_uncertainty, predictive_entropy, mutual_info):
+   - May respond to both types of uncertainty
+   - Less specific for disentanglement
+
+💡 Look for:
+   - inverse_mass: Best for epistemic (should be ~0.90+ AUROC)
+   - dominance: Good for epistemic (should be ~0.75+ AUROC)
+   - inverse_coherence: Best for aleatoric (should be ~0.70+ AUROC)
+
