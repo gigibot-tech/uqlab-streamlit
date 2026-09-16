@@ -169,7 +169,7 @@ Test `streamlit_app_progressive.py` runs without errors.
 - Only issue: streamlit package needs to be installed
 
 **Acceptance Criteria:**
-- [ ] Install dependencies: `pip install -r streamlit_requirements.txt`
+- [ ] Install dependencies: `pip install -r scripts/deployment/streamlit_requirements.txt`
 - [ ] Run app: `streamlit run streamlit_app_progressive.py`
 - [ ] Verify app starts without errors
 - [ ] Test basic functionality (dataset selection, experiment creation)
