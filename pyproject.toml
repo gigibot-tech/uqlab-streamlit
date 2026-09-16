@@ -27,7 +27,6 @@ dev = [
 # UV Workspace Configuration (inspired by SPARK workflow)
 [tool.uv.workspace]
 members = [
-    "src/uqlab",
     "src/uqlab_core",
     "backend",
 ]
