@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 SRC = ROOT / "src"
 FLASK_PKG = Path(__file__).resolve().parent
 for p in (str(SRC), str(ROOT), str(FLASK_PKG)):
@@ -21,8 +21,8 @@ from uqlab_flask.routes.wizard import bp as wizard_bp
 def create_app() -> Flask:
     app = Flask(
         __name__,
-        template_folder=str(FLASK_PKG / "uqlab_flask" / "templates"),
-        static_folder=str(FLASK_PKG / "uqlab_flask" / "static"),
+        template_folder=str(FLASK_PKG / "templates"),
+        static_folder=str(FLASK_PKG / "static"),
     )
     app.secret_key = "uqlab-dev-change-in-production"
     app.config["PROJECT_ROOT"] = ROOT
