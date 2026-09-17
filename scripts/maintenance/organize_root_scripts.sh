@@ -3,6 +3,15 @@
 
 set -e
 
+# Ensure the script runs from the repository root so relative paths are correct.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+if [ ! -f "$PROJECT_ROOT/pyproject.toml" ]; then
+    echo "❌ Could not locate project root (pyproject.toml not found)."
+    exit 1
+fi
+cd "$PROJECT_ROOT"
+
 echo "🗂️  Organizing root-level scripts..."
 
 # Create scripts directory if it doesn't exist
