@@ -24,6 +24,7 @@ def candidate_repo_roots() -> list[Path]:
 
 
 def ensure_uqlab_path() -> Path:
+    """Ensure ``src/`` is on ``sys.path`` and return the repository root."""
     for base in candidate_repo_roots():
         src = base / "src"
         if (src / "uqlab").is_dir():
@@ -34,30 +35,3 @@ def ensure_uqlab_path() -> Path:
     raise ModuleNotFoundError(
         "Could not find src/uqlab. Open the repo in Jupyter (uqlab-streamlit or notebooks/)."
     )
-
-
-def find_bootstrap_file() -> Path:
-    here = Path(__file__).resolve()
-    for candidate in (
-        here,
-        here.parent / "bootstrap_uqlab.py",
-        *(
-            base / "notebooks" / "bootstrap_uqlab.py"
-            for base in candidate_repo_roots()
-        ),
-    ):
-        if candidate.is_file():
-            return candidate
-    raise ModuleNotFoundError("bootstrap_uqlab.py not found")
-
-
-def load_bootstrap_module():
-    import importlib.util
-
-    path = find_bootstrap_file()
-    spec = importlib.util.spec_from_file_location("bootstrap_uqlab", path)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"Cannot load bootstrap from {path}")
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
