@@ -1,0 +1,226 @@
+#!/usr/bin/env python3
+"""Find small files in a root folder and suggest relocation candidates.
+
+Run from the project root, e.g.:
+    uv run python scripts/maintenance/find_small_file_relocation_candidates.py
+
+Defaults scan the repository root (.) and flag files under 200/300 LoC.
+"""
+from __future__ import annotations
+
+import argparse
+import os
+from collections import defaultdict
+from pathlib import Path
+
+
+# Files that should normally stay at the repository root.
+ROOT_ANCHOR_PATTERNS: tuple[str, ...] = (
+    "README.md",
+    "LICENSE",
+    "Makefile",
+    ".gitignore",
+    ".gitattributes",
+    ".python-version",
+    ".bobignore",
+    "pyproject.toml",
+    "uv.lock",
+    "poetry.lock",
+    "requirements.txt",
+    "setup.py",
+    "setup.cfg",
+    "pytest.ini",
+    "mypy.ini",
+    ".ruffignore",
+    "ruff.toml",
+    ".pre-commit-config.yaml",
+    ".env.example",
+    ".env.production.example",
+    "docker-compose.yml",
+    "docker-compose.yaml",
+    "Dockerfile",
+    "package.json",
+    "package-lock.json",
+)
+
+# Hidden files that typically remain at root.
+ROOT_ANCHOR_PREFIXES: tuple[str, ...] = (".",)
+
+
+# Suggested target homes based on file type/name heuristics.
+def suggest_target(path: Path, repo_root: Path) -> str:
+    name = path.name
+    lower = name.lower()
+
+    if lower.endswith(".sh"):
+        if any(k in lower for k in ("deploy", "start", "entrypoint", "prod", "dev")):
+            return "scripts/deployment/"
+        if any(k in lower for k in ("clean", "organize", "fix", "reorganize", "maintenance")):
+            return "scripts/maintenance/"
+        if any(k in lower for k in ("test", "lint", "format")):
+            return "scripts/qa/ or scripts/maintenance/"
+        return "scripts/maintenance/ or scripts/deployment/"
+
+    if lower.endswith(".py"):
+        if any(k in lower for k in ("analyze", "benchmark", "plot", "validation")):
+            return "scripts/analysis/"
+        if any(k in lower for k in ("setup", "download", "report", "generate")):
+            return "scripts/setup/"
+        if any(k in lower for k in ("fix", "remove", "clean", "migrate")):
+            return "scripts/maintenance/"
+        if any(k in lower for k in ("run", "fast", "runner")):
+            return "scripts/runners/"
+        return "scripts/utils/ or appropriate scripts/ subdomain"
+
+    if lower.endswith(".md"):
+        if any(k in lower for k in ("architecture", "design", "decision", "adr")):
+            return "docs/architecture/"
+        if any(k in lower for k in ("setup", "install", "config")):
+            return "docs/setup/"
+        if any(k in lower for k in ("execution", "flow", "guide", "usage")):
+            return "docs/user-guides/"
+        if any(k in lower for k in ("dependency", "package", "reorganization")):
+            return "docs/development/"
+        if any(k in lower for k in ("terminology", "clarification")):
+            return "docs/development/ or docs/troubleshooting/"
+        return "docs/ (choose subfolder by topic)"
+
+    if lower.endswith((".yaml", ".yml")):
+        if "config" in lower or "example" in lower or "experiment" in lower:
+            return "configs/"
+        return "configs/"
+
+    if lower.endswith(".ini"):
+        return "stay at root (project config)"
+
+    if lower.endswith(".txt") and "result" in lower:
+        return "data/ or docs/validation/"
+
+    return "review manually"
+
+
+def is_anchor_file(path: Path) -> bool:
+    """Return True for files that conventionally belong at the repository root."""
+    if path.name in ROOT_ANCHOR_PATTERNS:
+        return True
+    if path.name.startswith(ROOT_ANCHOR_PREFIXES):
+        return True
+    return False
+
+
+def count_lines(path: Path) -> int:
+    try:
+        with path.open("r", encoding="utf-8", errors="ignore") as f:
+            return sum(1 for _ in f)
+    except OSError:
+        return -1
+
+
+def scan_folder(folder: Path, thresholds: list[int], repo_root: Path) -> dict[int, list[Path]]:
+    by_threshold: dict[int, list[Path]] = {t: [] for t in thresholds}
+    if not folder.is_dir():
+        return by_threshold
+
+    for item in sorted(folder.iterdir()):
+        if not item.is_file():
+            continue
+        if item.is_symlink():
+            continue
+        loc = count_lines(item)
+        if loc < 0:
+            continue
+        for threshold in thresholds:
+            if loc <= threshold:
+                by_threshold[threshold].append(item)
+    return by_threshold
+
+
+def build_report(folder: Path, thresholds: list[int], repo_root: Path) -> str:
+    by_threshold = scan_folder(folder, thresholds, repo_root)
+
+    lines: list[str] = []
+    lines.append("# Small-File Relocation Candidates\n")
+    lines.append(f"Scanned folder: `{folder.relative_to(repo_root) or '.'}`\n")
+    lines.append(f"Thresholds: {', '.join(f'{t} LoC' for t in thresholds)}\n")
+    lines.append("Generated by `scripts/maintenance/find_small_file_relocation_candidates.py`.\n")
+
+    all_files = {p for group in by_threshold.values() for p in group}
+    lines.append(f"\n## Summary\n")
+    lines.append(f"- Total small files found: {len(all_files)}\n")
+    for threshold in thresholds:
+        lines.append(f"- Files ≤ {threshold} LoC: {len(by_threshold[threshold])}\n")
+
+    # Group by relocation target.
+    target_map: dict[str, list[tuple[Path, int]]] = defaultdict(list)
+    for path in sorted(all_files):
+        loc = count_lines(path)
+        if is_anchor_file(path):
+            target_map["stay at root (anchor file)"].append((path, loc))
+        else:
+            target_map[suggest_target(path, repo_root)].append((path, loc))
+
+    lines.append("\n## Candidates by suggested target\n")
+    for target in sorted(target_map.keys()):
+        entries = sorted(target_map[target], key=lambda x: (x[1], x[0].name))
+        lines.append(f"\n### {target}\n")
+        for path, loc in entries:
+            rel = path.relative_to(repo_root)
+            anchor = " (anchor)" if is_anchor_file(path) else ""
+            lines.append(f"- `{rel}` — {loc} LoC{anchor}\n")
+
+    # Full flat list under strictest threshold.
+    strict = min(thresholds)
+    lines.append(f"\n## Flat list (≤ {strict} LoC)\n")
+    for path in sorted(by_threshold[strict], key=lambda p: (count_lines(p), p.name)):
+        rel = path.relative_to(repo_root)
+        loc = count_lines(path)
+        suggestion = "stay at root" if is_anchor_file(path) else suggest_target(path, repo_root)
+        lines.append(f"- `{rel}` — {loc} LoC → {suggestion}\n")
+
+    # Notes.
+    lines.append("\n## Notes\n")
+    lines.append("- Anchor files (e.g. `pyproject.toml`, `docker-compose.yml`, `README.md`, hidden files) are flagged as \"stay at root\" because tooling expects them at the repository root.\n")
+    lines.append("- Generated artifacts such as `analysis_results.txt` should ideally live under `data/` or the relevant `docs/` topic folder, but update any hard-coded references before moving them.\n")
+    lines.append("- Run this script again after moving files to refresh the report.\n")
+
+    return "".join(lines)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Find small files in a folder and suggest relocation targets."
+    )
+    parser.add_argument(
+        "--folder",
+        type=Path,
+        default=Path.cwd(),
+        help="Folder to scan (default: current working directory).",
+    )
+    parser.add_argument(
+        "--thresholds",
+        nargs="+",
+        type=int,
+        default=[200, 300],
+        help="Line-count thresholds to flag (default: 200 300).",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        help="Write markdown report to this path. Prints to stdout if omitted.",
+    )
+    args = parser.parse_args()
+
+    repo_root = Path.cwd()
+    folder = args.folder.resolve()
+    report = build_report(folder, sorted(args.thresholds), repo_root)
+
+    if args.output:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(report, encoding="utf-8")
+        print(f"Report written to {args.output}")
+    else:
+        print(report)
+
+
+if __name__ == "__main__":
+    main()
