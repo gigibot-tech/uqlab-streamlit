@@ -29,12 +29,14 @@ dev = [
 members = [
     "src/uqlab",
     "src/uqlab_core",
+    "src/uqlab_flask",
     "backend",
 ]
 
 [tool.uv.sources]
 uqlab = { workspace = true }
 uqlab-core = { workspace = true }
+uqlab-flask = { workspace = true }
 
 [dependency-groups]
 dev = [
