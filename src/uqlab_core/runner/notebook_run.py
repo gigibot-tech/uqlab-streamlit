@@ -16,6 +16,7 @@ from typing import Any
 
 from uqlab_core.data import build_run_data
 from uqlab_core.data.splits.four_region import DEFAULT_FOUR_REGION_PRESET
+from uqlab_core.runner.notebook_bootstrap import ensure_uqlab_path
 from uqlab_core.runner.train_eval import run_paper_experiment
 from uqlab_core.shared.config.classification import ExperimentConfig
 from uqlab_core.shared.utils.classification import auto_device, set_seed
@@ -106,22 +107,7 @@ class NotebookContext:
 
 
 def _bootstrap_uqlab_path() -> Path:
-    for base in (Path.cwd(), *Path.cwd().parents):
-        for path in (
-            base / "notebooks" / "bootstrap_uqlab.py",
-            base / "uqlab-streamlit" / "notebooks" / "bootstrap_uqlab.py",
-            base / "four-region-benchmark" / "notebooks" / "bootstrap_uqlab.py",
-        ):
-            if not path.is_file():
-                continue
-            spec = importlib.util.spec_from_file_location("_uqlab_bootstrap", path)
-            mod = importlib.util.module_from_spec(spec)
-            assert spec.loader is not None
-            spec.loader.exec_module(mod)
-            return mod.ensure_uqlab_path()
-    raise ModuleNotFoundError(
-        "bootstrap_uqlab.py not found — open uqlab-streamlit/notebooks/ in Jupyter"
-    )
+    return ensure_uqlab_path()
 
 
 def setup_notebook(
