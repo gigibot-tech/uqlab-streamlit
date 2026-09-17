@@ -1,8 +1,9 @@
-import os
 from collections import defaultdict
+from pathlib import Path
 
-# Get all .md files
-md_files = [f for f in os.listdir('.') if f.endswith('.md')]
+# Get all .md files from the project root
+ROOT = Path(__file__).resolve().parents[2]
+md_files = [f for f in ROOT.iterdir() if f.is_file() and f.suffix == '.md']
 
 # Define categories based on keywords
 categories = {
@@ -23,7 +24,7 @@ categorized = defaultdict(list)
 uncategorized = []
 
 for file in sorted(md_files):
-    file_upper = file.upper()
+    file_upper = file.name.upper()
     matched = False
     
     for category, keywords in categories.items():
@@ -45,13 +46,13 @@ for category in sorted(categories.keys()):
         print(f"\n{category} ({len(files)} files):")
         print("-" * 80)
         for f in files:
-            print(f"  • {f}")
+            print(f"  • {f.name}")
 
 if uncategorized:
     print(f"\nUncategorized ({len(uncategorized)} files):")
     print("-" * 80)
     for f in uncategorized:
-        print(f"  • {f}")
+        print(f"  • {f.name}")
 
 print("\n" + "=" * 80)
 print(f"\nSummary:")
