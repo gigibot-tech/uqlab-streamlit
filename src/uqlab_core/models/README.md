@@ -62,7 +62,7 @@ Entropy, mutual information, and SIRC scores are computed in [`evaluation/signal
 
 ## Training scope
 
-[`scope/training_scope.py`](scope/training_scope.py) and [`scope/architecture.py`](scope/architecture.py) map user-facing architecture strings to end-to-end vs feature-space training. The runner and UI pass these through `ModelConfig`.
+[`training_scope.py`](training_scope.py) and [`architecture.py`](architecture.py) map user-facing architecture strings to end-to-end vs feature-space training. The runner and UI pass these through `ModelConfig`.
 
 ## Related docs
 

@@ -18,8 +18,8 @@ from pathlib import Path
 from typing import Any, Callable, Generic, List, Optional, TypeVar
 
 from uqlab_core.shared.config.classification import ExperimentConfig
-from uqlab_core.models.scope.architecture import normalize_architecture, scope_to_training_mode
-from uqlab_core.models.scope.training_scope import validate_training_scope
+from uqlab_core.models.architecture import normalize_architecture, scope_to_training_mode
+from uqlab_core.models.training_scope import validate_training_scope
 from uqlab_core.runner.experiment_core import run_experiment_core
 from uqlab_core.shared.config.signals import normalize_evaluation_signals, validate_evaluation_signals
 from uqlab_core.runtime_paths import repository_root
@@ -196,7 +196,7 @@ def run_from_python_config(
 
 def validate_model_scope_after_build(model, *, architecture: str, training_scope: str):
     """Call after ``build_model`` to assert trainable params match config."""
-    from uqlab_core.models.scope.training_scope import resolve_training_scope
+    from uqlab_core.models.training_scope import resolve_training_scope
 
     resolved = resolve_training_scope(
         model, architecture=architecture, training_scope=training_scope  # type: ignore[arg-type]
