@@ -3,12 +3,16 @@
 
 set -e
 
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$REPO_ROOT"
+
 echo "🗂️  Organizing root-level scripts..."
 
 # Create scripts directory if it doesn't exist
 mkdir -p scripts/maintenance
 mkdir -p scripts/fixes
 mkdir -p scripts/diagnostics
+mkdir -p scripts/analysis
 
 # Move test scripts to tests/
 echo "📝 Moving test scripts to tests/..."
@@ -45,6 +49,10 @@ mv consolidate_uq_classification.py scripts/maintenance/ 2>/dev/null || true
 echo "🚀 Moving execution scripts to scripts/..."
 mv run_fast.py scripts/ 2>/dev/null || true
 
+# Move analysis scripts to scripts/analysis/
+echo "📊 Moving analysis scripts to scripts/analysis/..."
+mv analyze_md_files.py scripts/analysis/ 2>/dev/null || true
+
 echo "✅ Root-level script organization complete!"
 echo ""
 echo "📊 Summary:"
@@ -53,5 +61,6 @@ echo "  - Shell scripts → scripts/ and scripts/maintenance/"
 echo "  - Fix scripts → scripts/fixes/"
 echo "  - Diagnostic scripts → scripts/diagnostics/"
 echo "  - Maintenance scripts → scripts/maintenance/"
+echo "  - Analysis scripts → scripts/analysis/"
 
 # Made with Bob
