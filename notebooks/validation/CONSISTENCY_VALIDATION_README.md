@@ -90,7 +90,8 @@ The logical consistency validation ensures that:
 
 ### Supporting Scripts
 - **`build_consistency_notebook.py`**: Script to generate the notebook programmatically
-- **`generate_consistency_notebook.py`**: Alternative generation script (deprecated)
+- **`deprecated/generate_consistency_notebook.py`**: Alternative generation script (deprecated; moved to `deprecated/`)
+- **`deprecated/validation_functions.py`**: Legacy validation helpers (moved to `deprecated/`; current notebooks inline or import from `uqlab.notebook_support`)
 
 ### Input Data
 The notebook loads results from:
