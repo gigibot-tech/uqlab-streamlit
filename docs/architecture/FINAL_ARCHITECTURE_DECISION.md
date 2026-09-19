@@ -1,6 +1,6 @@
 # Final Architecture Decision
 
-> **Superseded (2026-06):** Entry point is now `uqlab.runner.execute.run_from_yaml`; core is `runner/experiment_core.py`. See [`docs/architecture/PACKAGE_REDESIGN.md`](docs/architecture/PACKAGE_REDESIGN.md).
+> **Superseded (2026-06):** Entry point is now `uqlab.runner.execute.run_from_yaml`; core is `runner/experiment_core.py`. See [`PACKAGE_REDESIGN.md`](PACKAGE_REDESIGN.md).
 
 **Date**: 2026-06-24  
 **Questions Addressed**:
