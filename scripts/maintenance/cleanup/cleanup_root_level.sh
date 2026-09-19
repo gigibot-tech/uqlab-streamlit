@@ -3,7 +3,7 @@
 # Organizes files according to ROOT_LEVEL_CLEANUP_ANALYSIS.md
 
 set -e
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/../../.."
 
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
@@ -37,11 +37,10 @@ echo -e "${GREEN}✓ Notebooks moved${NC}"
 
 # Phase 3: Move Utility Scripts
 echo -e "\n${BLUE}Phase 3: Moving utility scripts...${NC}"
-mkdir -p scripts/utils
-mv analyze_dependencies.py scripts/utils/ 2>/dev/null || true
-mv dependency_visualizer.py scripts/utils/ 2>/dev/null || true
-mv visualize_7x2_structure.py scripts/utils/ 2>/dev/null || true
-mv run_dependency_analysis.sh scripts/utils/ 2>/dev/null || true
+mkdir -p scripts/maintenance/tooling
+mv analyze_dependencies.py scripts/maintenance/tooling/ 2>/dev/null || true
+mv dependency_visualizer.py scripts/maintenance/tooling/ 2>/dev/null || true
+mv run_dependency_analysis.sh scripts/maintenance/tooling/ 2>/dev/null || true
 echo -e "${GREEN}✓ Utility scripts moved${NC}"
 
 # Phase 4: Delete Duplicates/Old Files

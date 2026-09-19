@@ -2,7 +2,7 @@
 # Pipeline unit tests (campaign PDF, sweep plot, timeline).
 # PYTEST_DISABLE_PLUGIN_AUTOLOAD avoids broken hydra/omegaconf pytest plugin in some venvs.
 set -euo pipefail
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 cd "$ROOT"
 export PYTHONPATH="${ROOT}/src${PYTHONPATH:+:$PYTHONPATH}"
 export PYTEST_DISABLE_PLUGIN_AUTOLOAD=1

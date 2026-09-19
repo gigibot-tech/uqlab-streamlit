@@ -44,17 +44,26 @@ scripts/
 - `run_streamlit_modular.sh` (from shell/)
 
 **maintenance/** (Maintenance & utilities):
-- `archive_dead_code.sh`
-- `fix_validation_system.sh`
-- `quick_test.sh`
-- `run_pipeline_tests.sh`
-- `dependency_visualizer.py` (from utils/)
-- `visualize_7x2_structure.py` (from utils/)
-- `analyze_dependencies.py` (from utils/)
-- `run_dependency_analysis.sh` (from utils/)
-- `diagnose_rerun.py` (from diagnostics/)
-- `diagnose_startup.py` (from diagnostics/)
-- Plus 5 existing maintenance scripts
+- `cleanup/` — cleanup scripts
+  - `archive_dead_code.sh`
+  - `cleanup.sh`
+  - `cleanup_root_level.sh`
+  - `remove_ui_debug.py`
+  - `remove_walaris_references.py`
+- `diagnostics/` — diagnostic & test scripts
+  - `diagnose_rerun.py` (from diagnostics/)
+  - `diagnose_startup.py` (from diagnostics/)
+  - `fix_validation_system.sh`
+  - `quick_test.sh`
+  - `run_pipeline_tests.sh`
+- `tooling/` — analysis & migration scripts
+  - `analyze_dependencies.py` (from utils/)
+  - `consolidate_uq_classification.py`
+  - `dependency_visualizer.py` (from utils/)
+  - `organize_root_scripts.sh`
+  - `rename_to_uqlab.sh`
+  - `reorganize_folders.sh`
+  - `run_dependency_analysis.sh` (from utils/)
 
 ### 3. Archived Old Folders
 
@@ -93,7 +102,10 @@ scripts/
 ├── runners/ (6 files - experiment execution)
 ├── setup/ (7 files - infrastructure)
 ├── deployment/ (6 files - DevOps)
-├── maintenance/ (13 files - maintenance & utilities)
+├── maintenance/
+│   ├── cleanup/ (5 files)
+│   ├── diagnostics/ (5 files)
+│   └── tooling/ (7 files)
 └── examples/ (6 files - example scripts)
 ```
 
@@ -113,8 +125,9 @@ scripts/
 - **Root level files**: 1 file (README.md only)
 - **Total folders**: 6 folders
 - **Small folders**: 0 folders
-- **Average files per folder**: 8.3 files (healthy size)
+- **Average files per folder**: ~8 files (healthy size)
 - **Archived**: 13 files moved to dead_code
+- **Maintenance subfolders**: 3 folders with 5–7 files each
 
 ### Improvement
 - **Root clutter**: 18 files → 1 file (94% reduction)
@@ -173,10 +186,10 @@ bash scripts/deployment/run_streamlit.sh
 ### Maintenance
 ```bash
 # Run tests
-bash scripts/maintenance/quick_test.sh
+bash scripts/maintenance/diagnostics/quick_test.sh
 
 # Analyze dependencies
-python scripts/maintenance/analyze_dependencies.py
+python scripts/maintenance/tooling/analyze_dependencies.py
 ```
 
 ## Notes

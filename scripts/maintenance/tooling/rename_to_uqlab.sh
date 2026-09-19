@@ -7,7 +7,7 @@ set -e  # Exit on error
 echo "🔄 Renaming walaris → uqlab (Uncertainty Quantification Lab)"
 echo "=============================================================="
 
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/../../.."
 
 # Colors
 GREEN='\033[0;32m'

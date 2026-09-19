@@ -10,7 +10,7 @@ echo ""
 # Check if dependencies.json exists
 if [ ! -f "dependencies.json" ]; then
     echo "📊 Running dependency analyzer..."
-    python3 analyze_dependencies.py --directory . --output dependencies.json
+    python3 scripts/maintenance/tooling/analyze_dependencies.py --directory . --output dependencies.json
     echo ""
 else
     echo "✓ Found existing dependencies.json"
@@ -19,7 +19,7 @@ else
     echo ""
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo "📊 Re-analyzing dependencies..."
-        python3 analyze_dependencies.py --directory . --output dependencies.json
+        python3 scripts/maintenance/tooling/analyze_dependencies.py --directory . --output dependencies.json
         echo ""
     fi
 fi
@@ -30,6 +30,6 @@ echo ""
 echo "Press Ctrl+C to stop the server"
 echo ""
 
-streamlit run dependency_visualizer.py
+streamlit run scripts/maintenance/tooling/dependency_visualizer.py
 
 # Made with Bob

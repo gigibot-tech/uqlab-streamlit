@@ -6,7 +6,7 @@ This script scans all Python files in a directory, parses imports using AST,
 maps import relationships, builds a dependency graph, and exports data to JSON.
 
 Usage:
-    python analyze_dependencies.py [--directory DIR] [--output FILE]
+    python scripts/maintenance/tooling/analyze_dependencies.py [--directory DIR] [--output FILE]
 """
 
 import ast
@@ -523,7 +523,7 @@ def main():
     analyzer.export_to_json(args.output)
     
     print(f"\n✓ Analysis complete! Results saved to {args.output}")
-    print(f"  Run the visualizer: streamlit run dependency_visualizer.py")
+    print(f"  Run the visualizer: streamlit run scripts/maintenance/tooling/dependency_visualizer.py")
 
 
 if __name__ == '__main__':
