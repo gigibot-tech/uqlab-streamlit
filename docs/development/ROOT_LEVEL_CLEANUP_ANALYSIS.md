@@ -40,11 +40,11 @@
 - `EXPERIMENT_TRACKER_INTEGRATION_PLAN.md`
 - `DEPENDENCY_ANALYSIS_README.md`
 
-#### Utility Scripts (MOVE TO scripts/utils/)
+#### Utility Scripts (MOVE TO scripts/maintenance/tooling/)
 - `analyze_dependencies.py`
 - `dependency_visualizer.py`
-- `visualize_7x2_structure.py`
 - `run_dependency_analysis.sh`
+- (`visualize_7x2_structure.py` is empty — remove)
 
 #### Old/Duplicate Files (DELETE or ARCHIVE)
 - `ui_components_old.py` - Old backup
@@ -101,11 +101,11 @@ mv watsonx_deployment_experiment.ipynb notebooks/
 
 ### Phase 3: Move Utility Scripts
 ```bash
-mkdir -p scripts/utils
-mv analyze_dependencies.py scripts/utils/
-mv dependency_visualizer.py scripts/utils/
-mv visualize_7x2_structure.py scripts/utils/
-mv run_dependency_analysis.sh scripts/utils/
+mkdir -p scripts/maintenance/tooling
+mv analyze_dependencies.py scripts/maintenance/tooling/
+mv dependency_visualizer.py scripts/maintenance/tooling/
+mv run_dependency_analysis.sh scripts/maintenance/tooling/
+rm -f visualize_7x2_structure.py
 ```
 
 ### Phase 4: Delete Duplicates/Old Files

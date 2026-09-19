@@ -42,7 +42,7 @@ docs: add PHASE 1-3 documentation and tooling
 
 - Add PHASE_3_BACKEND_FACADE_COMPLETE.md (318 lines)
 - Add COMPONENT_REUSE_ANALYSIS.md (378 lines, 147 classes analyzed)
-- Add archive_dead_code.sh script (213 lines)
+- Add scripts/maintenance/cleanup/archive_dead_code.sh script (213 lines)
 - Add component-reuse-checker Bob skill
 - Update .gitignore to exclude dead_code/
 ```
@@ -53,7 +53,7 @@ docs: add PHASE 1-3 documentation and tooling
 - `.bob/skills/code-readability-audit.md`
 - `COMPONENT_REUSE_ANALYSIS.md` (378 lines)
 - `PHASE_3_BACKEND_FACADE_COMPLETE.md` (318 lines)
-- `scripts/archive_dead_code.sh` (213 lines)
+- `scripts/maintenance/cleanup/archive_dead_code.sh` (213 lines)
 - `.gitignore` (added dead_code/ exclusion)
 
 **Total:** 7 files, 2,433 lines added/modified

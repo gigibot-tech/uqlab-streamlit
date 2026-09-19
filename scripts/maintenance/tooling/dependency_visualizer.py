@@ -5,7 +5,7 @@ Streamlit Dependency Visualization App for uqlab-streamlit project.
 This app provides interactive visualization and querying of Python dependencies.
 
 Usage:
-    streamlit run dependency_visualizer.py
+    streamlit run scripts/maintenance/tooling/dependency_visualizer.py
 """
 
 import streamlit as st
@@ -366,7 +366,7 @@ def main():
     
     if not viz.data:
         st.error("⚠️ No dependency data found!")
-        st.info("Run the analyzer first: `python analyze_dependencies.py`")
+        st.info("Run the analyzer first: `python scripts/maintenance/tooling/analyze_dependencies.py`")
         return
     
     # Sidebar

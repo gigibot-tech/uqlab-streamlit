@@ -150,7 +150,7 @@ If needed, you can rollback by:
     print(f"✅ Created README: {readme_path}")
 
 def main():
-    root = Path(__file__).parent
+    root = Path(__file__).resolve().parent.parent.parent.parent
     
     print("=" * 80)
     print("CONSOLIDATING uq_classification INTO uqlab.evaluation.classification")

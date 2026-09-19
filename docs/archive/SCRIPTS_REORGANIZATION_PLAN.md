@@ -55,10 +55,13 @@ These are the main entry points for running experiments:
 
 ### 5. **Maintenance Scripts**
 - `archive_dead_code.sh` (archiving)
+- `cleanup.sh` / `cleanup_root_level.sh` (cleanup)
 - `fix_validation_system.sh` (system fixes)
-- `quick_test.sh` (testing)
+- `quick_test.sh` / `run_pipeline_tests.sh` (testing)
+- `diagnose_startup.py` / `diagnose_rerun.py` (diagnostics)
+- `remove_ui_debug.py` / `remove_walaris_references.py` (cleanup helpers)
 
-**Recommendation**: Move to `maintenance/` folder
+**Recommendation**: Group into `maintenance/cleanup/`, `maintenance/diagnostics/`, and `maintenance/tooling/` subfolders
 
 ### 6. **Fix Scripts** (Currently in `fixes/` - 7 files)
 Migration and import fix scripts - likely one-time use
@@ -86,11 +89,11 @@ Old analysis scripts no longer used
 ### 8. **Utility Scripts** (Currently in `utils/` - 4 files)
 Analysis and visualization utilities
 - `dependency_visualizer.py`
-- `visualize_7x2_structure.py`
+- `visualize_7x2_structure.py` (empty — delete)
 - `analyze_dependencies.py`
 - `run_dependency_analysis.sh`
 
-**Recommendation**: Keep as `utils/` or merge into `maintenance/`
+**Recommendation**: Merge into `maintenance/tooling/` and remove the empty file
 
 ## Proposed New Structure
 
@@ -121,14 +124,27 @@ scripts/
 │   ├── run_streamlit.sh
 │   └── run_streamlit_modular.sh
 │
-├── maintenance/ (7 files - maintenance and utilities)
-│   ├── archive_dead_code.sh
-│   ├── fix_validation_system.sh
-│   ├── quick_test.sh
-│   ├── dependency_visualizer.py
-│   ├── visualize_7x2_structure.py
-│   ├── analyze_dependencies.py
-│   └── run_dependency_analysis.sh
+├── maintenance/
+│   ├── cleanup/ (5 files)
+│   │   ├── archive_dead_code.sh
+│   │   ├── cleanup.sh
+│   │   ├── cleanup_root_level.sh
+│   │   ├── remove_ui_debug.py
+│   │   └── remove_walaris_references.py
+│   ├── diagnostics/ (5 files)
+│   │   ├── diagnose_rerun.py
+│   │   ├── diagnose_startup.py
+│   │   ├── fix_validation_system.sh
+│   │   ├── quick_test.sh
+│   │   └── run_pipeline_tests.sh
+│   └── tooling/ (7 files)
+│       ├── analyze_dependencies.py
+│       ├── consolidate_uq_classification.py
+│       ├── dependency_visualizer.py
+│       ├── organize_root_scripts.sh
+│       ├── rename_to_uqlab.sh
+│       ├── reorganize_folders.sh
+│       └── run_dependency_analysis.sh
 │
 ├── diagnostics/ (keep if has 5+ files)
 ├── examples/ (keep if has 5+ files)
