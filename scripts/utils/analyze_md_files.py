@@ -1,7 +1,19 @@
 import os
+import subprocess
 from collections import defaultdict
 
-# Get all .md files
+# Resolve repository root so the script works regardless of cwd
+def get_repo_root() -> str:
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "--show-toplevel"], text=True
+        ).strip()
+    except Exception:
+        return "."
+
+os.chdir(get_repo_root())
+
+# Get all .md files in the repository root
 md_files = [f for f in os.listdir('.') if f.endswith('.md')]
 
 # Define categories based on keywords
