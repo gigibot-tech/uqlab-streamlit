@@ -4,6 +4,19 @@ This directory contains scripts for analyzing experiment results from the UQ cla
 
 ## Available Scripts
 
+| Script | Purpose |
+|--------|---------|
+| `analyze_my_run.py` | Analyze a single run directory and create AUROC visualizations. |
+| `calculate_ude_scores.py` | Calculate Uncertainty Disentanglement Error (UDE) scores from validation sweeps. |
+| `disentanglement_error.py` | Compute and visualize disentanglement metrics. |
+| `four_region_validation.py` | Validate the four-region split and reporting pipeline. |
+| `generate_campaign_config_timeline.py` | Export a compact config timeline figure for a sweep campaign. |
+| `generate_campaign_report.py` | Export a full campaign PDF report (timeline + sweep plots). |
+| `generate_thesis_diagram.py` | Generate a two-panel thesis schematic from an experiment config. |
+| `paper_benchmarks.py` | Compare results against paper Keras benchmarks. |
+| `plot_run_region_means.py` | Plot mean uncertainty signals by region for a run. |
+| `report_unified.py` | Load and summarize unified validation + paper metrics. |
+
 ### `analyze_my_run.py`
 
 Analyzes experiment results from a single run directory and creates visualizations of AUROC metrics.

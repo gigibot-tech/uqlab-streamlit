@@ -93,8 +93,8 @@ Per sweep campaign in the sweep analysis hub:
 **CLI:**
 
 ```bash
-PYTHONPATH=src python3 scripts/setup/generate_campaign_report.py --run-ids id1,id2,id3 -o report.pdf
-PYTHONPATH=src python3 scripts/setup/generate_campaign_report.py --run-ids id1,id2,id3 --layout by_metric -o report.pdf
+PYTHONPATH=src python3 scripts/analysis/generate_campaign_report.py --run-ids id1,id2,id3 -o report.pdf
+PYTHONPATH=src python3 scripts/analysis/generate_campaign_report.py --run-ids id1,id2,id3 --layout by_metric -o report.pdf
 ```
 
 Modules: `campaign_config_timeline.py`, `campaign_sections.py`, `campaign_report.py`.
