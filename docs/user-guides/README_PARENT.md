@@ -25,7 +25,6 @@ uqlab-streamlit/
 ├── streamlit_app.py              # Main Streamlit dashboard
 ├── streamlit_app_progressive.py  # Progressive/advanced UI
 ├── scripts/                      # Utility scripts
-├── configs/                      # Configuration files
 ├── notebooks/                    # Jupyter notebooks
 └── docker-compose.yml            # Docker orchestration
 ```

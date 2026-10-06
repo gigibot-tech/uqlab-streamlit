@@ -7,15 +7,15 @@ Interactive Streamlit dashboard for uncertainty quantification experiments using
 ```
 uqlab-streamlit/
 ├── src/
-│   └── uqlab/                    # Git submodule: Core ML framework
-│       ├── 1_data/               # Data loaders and preprocessing
-│       ├── 2_models/             # Model architectures (DINOv2, CNN, ResNet)
-│       ├── 3_training/           # Training utilities
-│       ├── 4_evaluation/         # Evaluation metrics and signals
-│       ├── 5_api/                # API integrations (watsonx.ai)
-│       ├── 7_orchestration/      # Experiment orchestration
-│       ├── ui_components/        # Reusable Streamlit components
-│       └── shared/               # Shared utilities and configs
+│   ├── uqlab/                    # Git submodule: Core ML framework (uninitialized)
+│   └── uqlab_core/               # Local core ML package
+│       ├── configs/              # Experiment YAML configurations
+│       ├── data/                 # Data loaders and preprocessing
+│       ├── evaluation/           # Evaluation metrics and signals
+│       ├── models/               # Model architectures (DINOv2, CNN, ResNet)
+│       ├── runner/               # Training and execution utilities
+│       ├── shared/               # Shared utilities and config schemas
+│       └── ...
 ├── backend/                      # FastAPI backend
 │   └── app/
 │       ├── api/                  # API routes
@@ -25,7 +25,6 @@ uqlab-streamlit/
 ├── streamlit_app_progressive.py  # Primary Streamlit UI (experiment builder + signal validation)
 ├── streamlit_app.py              # Deprecated legacy UI (archived)
 ├── scripts/                      # Utility scripts
-├── configs/                      # Experiment configurations
 ├── notebooks/                    # Jupyter notebooks
 ├── docker-compose.yml            # Docker orchestration
 └── README.md                     # This file
