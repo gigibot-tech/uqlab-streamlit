@@ -1,7 +1,13 @@
 #!/bin/bash
-# Script to organize root-level scripts into appropriate directories
+# One-time script to organize root-level scripts into appropriate directories.
+# Run from the project root: bash scripts/maintenance/organize_root_scripts.sh
 
 set -e
+
+if [ ! -f "pyproject.toml" ] || [ ! -d "scripts" ]; then
+    echo "❌ Please run this script from the project root." >&2
+    exit 1
+fi
 
 echo "🗂️  Organizing root-level scripts..."
 

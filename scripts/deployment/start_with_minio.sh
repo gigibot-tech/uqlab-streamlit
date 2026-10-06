@@ -6,6 +6,8 @@
 
 set -e
 
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
 # Colors for output
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -13,6 +15,8 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 echo -e "${GREEN}Starting uqlab-streamlit with MinIO storage backend${NC}"
+
+cd "$PROJECT_ROOT"
 
 # Check if docker-compose is available
 if ! command -v docker-compose &> /dev/null && ! command -v docker &> /dev/null; then
