@@ -3,7 +3,7 @@
 Runnable experiment configs for CLI, notebooks, and validation scripts.
 
 ```
-configs/
+src/uqlab_core/configs/
 ├── experiment/          # Primary experiment presets
 │   ├── default.yaml
 │   ├── fast_pilot.yaml
