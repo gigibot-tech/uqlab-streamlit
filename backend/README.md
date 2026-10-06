@@ -7,7 +7,7 @@
 
 ## Docker Compose
 
-Start the local development environment with Docker Compose following the guide in [../.docs/development.md](../.docs/development.md).
+Start the local development environment with Docker Compose following the guide in [../docs/development/FASTAPI_TEMPLATE_DEVELOPMENT.md](../docs/development/FASTAPI_TEMPLATE_DEVELOPMENT.md).
 
 ## Backend Development
 
