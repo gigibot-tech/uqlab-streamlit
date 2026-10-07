@@ -3,7 +3,7 @@
 **Date**: 2026-06-24
 **Purpose**: End-to-end flow from Streamlit UI through evaluation
 
-> **📖 Architecture Questions?** See [`ARCHITECTURE_CLARIFICATION.md`](ARCHITECTURE_CLARIFICATION.md) for package boundaries and responsibilities.
+> **📖 Architecture Questions?** See [`ARCHITECTURE_CLARIFICATION.md`](architecture/ARCHITECTURE_CLARIFICATION.md) for package boundaries and responsibilities.
 
 ---
 
@@ -75,8 +75,8 @@ DirectExecutor.execute() (direct_executor.py:50)
 ```
 
 **Files**:
-- [`backend/app/api/routes/experiments.py`](backend/app/api/routes/experiments.py:100)
-- [`backend/app/services/executors/direct_executor.py`](backend/app/services/executors/direct_executor.py:50)
+- [`backend/app/api/routes/experiments.py`](../backend/app/api/routes/experiments.py:100)
+- [`backend/app/services/executors/direct_executor.py`](../backend/app/services/executors/direct_executor.py:50)
 
 ---
 
@@ -90,7 +90,7 @@ run_fast_uncertainty_classification.py (CLI script)
     ↓ Calls run_from_yaml()
 ```
 
-**File**: [`scripts/runners/run_fast_uncertainty_classification.py`](scripts/runners/run_fast_uncertainty_classification.py:16)
+**File**: [`scripts/runners/run_fast_uncertainty_classification.py`](../scripts/runners/run_fast_uncertainty_classification.py:16)
 
 **Code**:
 ```python
@@ -344,7 +344,7 @@ DirectExecutor.execute() (continued)
 Database Updated
 ```
 
-**File**: [`backend/app/services/executors/direct_executor.py:150`](backend/app/services/executors/direct_executor.py:150)
+**File**: [`backend/app/services/executors/direct_executor.py:150`](../backend/app/services/executors/direct_executor.py:150)
 
 ---
 
@@ -480,17 +480,17 @@ CLI script → run_from_yaml() → run_experiment_core()
 ## Related Documentation
 
 **Flow Analysis**:
-- [`STEP3_FLOW_ANALYSIS.md`](STEP3_FLOW_ANALYSIS.md) - UI to orchestrator flow
-- [`POST_EXECUTION_FLOW.md`](POST_EXECUTION_FLOW.md) - Post-execution flow
-- [`docs/architecture/evaluation-pipeline.md`](docs/architecture/evaluation-pipeline.md) - Evaluation pipeline structure
+- [`STEP3_FLOW_ANALYSIS.md`](archive/STEP3_FLOW_ANALYSIS.md) - UI to orchestrator flow
+- [`POST_EXECUTION_FLOW.md`](archive/POST_EXECUTION_FLOW.md) - Post-execution flow
+- [`docs/architecture/evaluation-pipeline.md`](architecture/evaluation-pipeline.md) - Evaluation pipeline structure
 
 **Complete Flows**:
-- [`backend/RUN_LABEL_NOISE_SWEEP_FLOW.md`](backend/RUN_LABEL_NOISE_SWEEP_FLOW.md) - Most comprehensive (912 lines)
-- [`docs/UQLAB_FLOW.md`](docs/UQLAB_FLOW.md) - System overview
+- [`backend/RUN_LABEL_NOISE_SWEEP_FLOW.md`](../backend/RUN_LABEL_NOISE_SWEEP_FLOW.md) - Most comprehensive (912 lines)
+- [`docs/UQLAB_FLOW.md`](UQLAB_FLOW.md) - System overview
 
 **Architecture**:
-- [`DUAL_FACADE_ARCHITECTURE.md`](DUAL_FACADE_ARCHITECTURE.md) - Proposed facade (not implemented)
-- [`COMPONENT_REUSE_ANALYSIS.md`](COMPONENT_REUSE_ANALYSIS.md) - Component analysis
+- [`DUAL_FACADE_ARCHITECTURE.md`](archive/DUAL_FACADE_ARCHITECTURE.md) - Proposed facade (not implemented)
+- [`COMPONENT_REUSE_ANALYSIS.md`](archive/COMPONENT_REUSE_ANALYSIS.md) - Component analysis
 
 ---
 

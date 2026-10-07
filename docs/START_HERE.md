@@ -1,6 +1,6 @@
 # Start here
 
-Read **[`docs/UQLAB_FLOW.md`](docs/UQLAB_FLOW.md)** for experiments, `fit` / `predict_disentangling`, `signal_table`, and the paper benchmark. This page is run commands + folder map only.
+Read **[`docs/UQLAB_FLOW.md`](UQLAB_FLOW.md)** for experiments, `fit` / `predict_disentangling`, `signal_table`, and the paper benchmark. This page is run commands + folder map only.
 
 ## Run the app
 
@@ -11,17 +11,17 @@ make run-backend      # terminal 1 — API on :8000
 make run-frontend     # terminal 2 — progressive UI on :8501
 ```
 
-Primary UI: [`streamlit_app_progressive.py`](streamlit_app_progressive.py)  
+Primary UI: [`streamlit_app_progressive.py`](../streamlit_app_progressive.py)  
 Legacy UI: [`streamlit_app.py`](streamlit_app.py) (deprecated — use progressive)
 
-Local Flask wizard (no API): [`uqlab-flask/app.py`](uqlab-flask/app.py) on :5001
+Local Flask wizard (no API): [`uqlab-flask/app.py`](../uqlab-flask/app.py) on :5001
 
 ## The four boxes (MLgym map)
 
 | Box | Folder | What it does |
 |-----|--------|----------------|
-| **Config** | [`src/uqlab_orchestrator/`](src/uqlab_orchestrator/) | `workflow` dict → nested YAML via [`run_spec.py`](src/uqlab_orchestrator/run_spec.py) |
-| **ML core** | [`src/uqlab/`](src/uqlab/) | Data, model factory, train, eval |
+| **Config** | [`src/uqlab_orchestrator/`](../src/uqlab_orchestrator) | `workflow` dict → nested YAML via [`run_spec.py`](src/uqlab_orchestrator/run_spec.py) |
+| **ML core** | [`src/uqlab/`](../src/uqlab) | Data, model factory, train, eval |
 | **Job** | [`src/uqlab/runner/execute.py`](src/uqlab/runner/execute.py) | **uqlab-level** `run_from_yaml` — backend / CLI / bridge call this |
 | **UI** | [`src/uqlab/ui_components/`](src/uqlab/ui_components/) | Streamlit only — edits `workflow`, launches via API (`experiment_launcher`); does **not** run training in-process |
 
@@ -41,7 +41,7 @@ run_from_yaml(config_path, output_dir)   ← always this (Runner)
 results/summary.json + results.pt
 ```
 
-Wizard → YAML field mapping: [`docs/features/workflow-config.md`](docs/features/workflow-config.md)
+Wizard → YAML field mapping: [`docs/features/workflow-config.md`](features/workflow-config.md)
 
 ## Run one experiment (no UI)
 
@@ -86,7 +86,7 @@ scripts/analysis/disentanglement_error.py   # post-hoc paper metric
 ## Results and plots
 
 - API experiments: **Results** section below Step 5 (toggle in sidebar **UI debug**).
-- Hiding UI blocks → sidebar **UI debug**; see [`.cursor/skills/ui-debug/`](.cursor/skills/ui-debug/SKILL.md) and [`docs/features/ui-debug.md`](docs/features/ui-debug.md).
+- Hiding UI blocks → sidebar **UI debug**; see [`.cursor/skills/ui-debug/`](../.cursor/skills/ui-debug/SKILL.md) and [`docs/features/ui-debug.md`](features/ui-debug.md).
 - Paper sweeps = **two separate 1D campaigns** (Fig 3 under-train + Fig 4 label noise), not a 2D grid. Launch from Step 5 or sidebar **Quick launch**.
 - 3-line sweep plot: signal pool means + accuracy (not AUROC) — needs `results.pt` on disk.
 - Sweep grouping: [`uqlab_orchestrator/sweep_groups.py`](src/uqlab_orchestrator/sweep_groups.py)

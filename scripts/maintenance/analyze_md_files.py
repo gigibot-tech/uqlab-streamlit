@@ -1,5 +1,11 @@
 import os
 from collections import defaultdict
+from pathlib import Path
+
+# Run from project root
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent.parent
+os.chdir(PROJECT_ROOT)
 
 # Get all .md files
 md_files = [f for f in os.listdir('.') if f.endswith('.md')]
