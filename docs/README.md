@@ -8,6 +8,7 @@ Welcome to the UQLab Streamlit documentation. This directory contains comprehens
 Installation, configuration, and environment setup guides:
 - [MinIO Setup](./setup/minio.md) - MinIO object storage configuration
 - [UV & Ruff Setup](./setup/uv-ruff.md) - Modern Python tooling setup
+- [Development Environment](./setup/development.md) - Local development with Docker Compose
 
 ### 🏗️ [Architecture](./architecture/)
 System design, patterns, and technical decisions:
@@ -31,11 +32,13 @@ API documentation, endpoints, and schemas:
 
 ### 🚀 [Deployment](./deployment/)
 Deployment guides, CI/CD, and infrastructure:
-- *Coming soon*
+- [OpenShift Deployment](./deployment/oc-deployment.md) - Deploy to OpenShift with automated scripts
+- [IBM Code Engine Deployment](./deployment/ce-deployment.md) - Deploy to IBM Code Engine serverless containers
 
 ### 💻 [Development](./development/)
 Development workflows and contributing guides:
-- *Coming soon*
+- [Template Maintenance](./development/maintenance.md) - Maintaining the project template across branches
+- [Release Notes](./development/release-notes.md) - Version history and release notes
 
 ## 🔍 Quick Navigation
 
@@ -55,16 +58,27 @@ Development workflows and contributing guides:
 
 **Development Tools**
 - [UV & Ruff Setup](./setup/uv-ruff.md)
+- [Development Environment](./setup/development.md)
+- [Template Maintenance](./development/maintenance.md)
+
+**Deployment & Infrastructure**
+- [OpenShift Deployment](./deployment/oc-deployment.md)
+- [IBM Code Engine Deployment](./deployment/ce-deployment.md)
 
 ### By Date (Most Recent First)
 
-1. [Startup Issues](./troubleshooting/startup-issues.md)
-2. [Progressive UI Fixes](./troubleshooting/progressive-ui.md)
-3. [Sweep Grouping](./features/sweep-grouping.md)
-4. [ResNet Feature Extractor Fix](./troubleshooting/resnet-feature-extractor.md)
-5. [MinIO Implementation](./architecture/minio-storage.md)
-6. [MinIO Setup](./setup/minio.md)
-7. [UV & Ruff Setup](./setup/uv-ruff.md)
+1. [OpenShift Deployment](./deployment/oc-deployment.md)
+2. [IBM Code Engine Deployment](./deployment/ce-deployment.md)
+3. [Template Maintenance](./development/maintenance.md)
+4. [Release Notes](./development/release-notes.md)
+5. [Development Environment](./setup/development.md)
+6. [Startup Issues](./troubleshooting/startup-issues.md)
+7. [Progressive UI Fixes](./troubleshooting/progressive-ui.md)
+8. [Sweep Grouping](./features/sweep-grouping.md)
+9. [ResNet Feature Extractor Fix](./troubleshooting/resnet-feature-extractor.md)
+10. [MinIO Implementation](./architecture/minio-storage.md)
+11. [MinIO Setup](./setup/minio.md)
+12. [UV & Ruff Setup](./setup/uv-ruff.md)
 
 ## 📝 Documentation Guidelines
 
@@ -122,4 +136,4 @@ If you can't find what you're looking for:
 
 ---
 
-*Last updated: 2026-06-18*
+*Last updated: 2026-10-07*
