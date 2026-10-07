@@ -14,15 +14,15 @@ for p in (str(SRC), str(ROOT), str(FLASK_PKG)):
 
 from flask import Flask
 
-from uqlab_flask.routes.runs import bp as runs_bp
-from uqlab_flask.routes.wizard import bp as wizard_bp
+from flask_ui.routes.runs import bp as runs_bp
+from flask_ui.routes.wizard import bp as wizard_bp
 
 
 def create_app() -> Flask:
     app = Flask(
         __name__,
-        template_folder=str(FLASK_PKG / "uqlab_flask" / "templates"),
-        static_folder=str(FLASK_PKG / "uqlab_flask" / "static"),
+        template_folder=str(FLASK_PKG / "flask_ui" / "templates"),
+        static_folder=str(FLASK_PKG / "flask_ui" / "static"),
     )
     app.secret_key = "uqlab-dev-change-in-production"
     app.config["PROJECT_ROOT"] = ROOT
