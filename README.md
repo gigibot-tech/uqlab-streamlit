@@ -25,7 +25,7 @@ uqlab-streamlit/
 ├── streamlit_app_progressive.py  # Primary Streamlit UI (experiment builder + signal validation)
 ├── streamlit_app.py              # Deprecated legacy UI (archived)
 ├── scripts/                      # Utility scripts
-├── configs/                      # Experiment configurations
+├── src/uqlab_core/configs/       # Experiment configurations (shipped with the package)
 ├── notebooks/                    # Jupyter notebooks
 ├── docker-compose.yml            # Docker orchestration
 └── README.md                     # This file
