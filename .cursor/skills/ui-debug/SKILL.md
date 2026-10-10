@@ -69,4 +69,4 @@ Call `sync_results_auto_refresh()` when results toggles change. JS rerun only ru
 
 ## Human docs
 
-Mirror registry for non-agents: [`docs/features/ui-debug.md`](../../docs/features/ui-debug.md).
+Mirror registry for non-agents: [`docs/streamlit/ui-debug.md`](../../docs/streamlit/ui-debug.md).

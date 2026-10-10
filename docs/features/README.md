@@ -1,23 +1,29 @@
-# Feature docs
+# Feature docs relocated
 
-| Doc | Topic |
-|-----|--------|
-| [workflow-config.md](workflow-config.md) | Wizard → YAML field mapping |
-| [signal-registry.md](signal-registry.md) | EK-FAK signals pipeline |
-| [registries.md](registries.md) | All registries (METRICS, perspectives, models) |
-| [disentanglement-benchmark.md](disentanglement-benchmark.md) | Paper metric + campaign plots |
-| [evaluation-protocol.md](evaluation-protocol.md) | Train/eval/scoring today vs 4-region partition |
-| [sweep-grouping.md](sweep-grouping.md) | Post-run campaign grouping |
-| [checkpoint-arsenal.md](checkpoint-arsenal.md) | Step 2.5 checkpoint review |
-| [dataset-plugin.md](dataset-plugin.md) | Dataset plugin contract |
-| [data-pipeline.md](data-pipeline.md) | **Start here for data** — `build_run_data` |
-| [four-region-partition.md](four-region-partition.md) | **Four-region split/noise** — data layer → `group` column |
-| [evaluation-pipeline.md](evaluation-pipeline.md) | **Start here for eval** — collect vs score |
-| [validation-sweeps.md](validation-sweeps.md) | Legacy + four-region sweep grids → metrics |
-| [four-region-notebook.md](four-region-notebook.md) | Six-step benchmark notebook (`uqlab_core`) |
-| [ui-debug.md](ui-debug.md) | Streamlit debug surfaces |
-| [run-recovery.md](run-recovery.md) | Finalize failed runs from disk (`zwischen/`) |
+The small topic docs that used to live here have been moved into the main documentation categories:
 
-**Module READMEs:** [`src/uqlab_core/data/README.md`](../../src/uqlab_core/data/README.md) · [`src/uqlab_core/evaluation/README.md`](../../src/uqlab_core/evaluation/README.md)
+| Old file | New location |
+|----------|--------------|
+| `signal-registry.md` | [`docs/signals/signal-registry.md`](../signals/signal-registry.md) |
+| `registries.md` | [`docs/signals/registries.md`](../signals/registries.md) |
+| `ATTRIBUTION_ARTIFACTS.md` | [`docs/signals/ATTRIBUTION_ARTIFACTS.md`](../signals/ATTRIBUTION_ARTIFACTS.md) |
+| `evaluation-pipeline.md` | [`docs/validation/evaluation-pipeline.md`](../validation/evaluation-pipeline.md) |
+| `evaluation-protocol.md` | [`docs/validation/evaluation-protocol.md`](../validation/evaluation-protocol.md) |
+| `validation-sweeps.md` | [`docs/validation/validation-sweeps.md`](../validation/validation-sweeps.md) |
+| `disentanglement-benchmark.md` | [`docs/validation/disentanglement-benchmark.md`](../validation/disentanglement-benchmark.md) |
+| `four-region-partition.md` | [`docs/validation/four-region-partition.md`](../validation/four-region-partition.md) |
+| `four-region-notebook.md` | [`docs/validation/four-region-notebook.md`](../validation/four-region-notebook.md) |
+| `sweep-grouping.md` | [`docs/validation/sweep-grouping.md`](../validation/sweep-grouping.md) |
+| `data-pipeline.md` | [`docs/user-guides/data-pipeline.md`](../user-guides/data-pipeline.md) |
+| `dataset-plugin.md` | [`docs/user-guides/dataset-plugin.md`](../user-guides/dataset-plugin.md) |
+| `workflow-config.md` | [`docs/user-guides/workflow-config.md`](../user-guides/workflow-config.md) |
+| `ui-debug.md` | [`docs/streamlit/ui-debug.md`](../streamlit/ui-debug.md) |
+| `checkpoint-arsenal.md` | [`docs/streamlit/checkpoint-arsenal.md`](../streamlit/checkpoint-arsenal.md) |
+| `run-recovery.md` | [`docs/troubleshooting/run-recovery.md`](../troubleshooting/run-recovery.md) |
+| `PAPER_FLOW.md` | [`docs/architecture/PAPER_FLOW.md`](../architecture/PAPER_FLOW.md) |
 
-**Architecture (start here):** [UQLAB_FLOW.md](../UQLAB_FLOW.md)
+See [`docs/README.md`](../README.md) for the full categorized index.
+
+---
+
+*This file is kept so old links and the "check features first" habit still lead somewhere useful.*
