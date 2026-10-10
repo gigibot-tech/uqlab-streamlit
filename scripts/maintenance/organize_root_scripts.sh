@@ -3,6 +3,9 @@
 
 set -e
 
+# Always run from the repository root
+cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../.."
+
 echo "🗂️  Organizing root-level scripts..."
 
 # Create scripts directory if it doesn't exist
