@@ -1,8 +1,9 @@
 import os
 from collections import defaultdict
 
-# Get all .md files
-md_files = [f for f in os.listdir('.') if f.endswith('.md')]
+# Analyze markdown files in the repository root
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+md_files = [f for f in os.listdir(REPO_ROOT) if f.endswith('.md')]
 
 # Define categories based on keywords
 categories = {
