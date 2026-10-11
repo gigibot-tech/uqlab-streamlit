@@ -2,7 +2,7 @@
 
 ## Overview
 
-The [`validate_per_class_campaign.py`](scripts/validate_per_class_campaign.py) script validates that per-class configuration campaigns produce expected uncertainty quantification patterns and exports detailed results showing which metrics correlate correctly with the configuration.
+The [`validate_per_class_campaign.py`](scripts/analysis/validate_per_class_campaign.py) script validates that per-class configuration campaigns produce expected uncertainty quantification patterns and exports detailed results showing which metrics correlate correctly with the configuration.
 
 ## Purpose
 
@@ -55,7 +55,7 @@ The script validates four distinct uncertainty patterns:
 
 ```bash
 cd uqlab-streamlit
-PYTHONPATH=src python3 scripts/validate_per_class_campaign.py \
+PYTHONPATH=src python3 scripts/analysis/validate_per_class_campaign.py \
     --run-ids uuid1,uuid2,uuid3 \
     --output validation_report.json
 ```
@@ -63,7 +63,7 @@ PYTHONPATH=src python3 scripts/validate_per_class_campaign.py \
 ### Custom Thresholds
 
 ```bash
-PYTHONPATH=src python3 scripts/validate_per_class_campaign.py \
+PYTHONPATH=src python3 scripts/analysis/validate_per_class_campaign.py \
     --run-ids uuid1,uuid2,uuid3 \
     --ood-threshold 0.85 \
     --sparse-threshold 0.65 \
@@ -78,7 +78,7 @@ PYTHONPATH=src python3 scripts/validate_per_class_campaign.py \
 
 ```bash
 # After running experiments with Four-Region Default preset
-PYTHONPATH=src python3 scripts/validate_per_class_campaign.py \
+PYTHONPATH=src python3 scripts/analysis/validate_per_class_campaign.py \
     --run-ids $(cat experiment_ids.txt | tr '\n' ',') \
     --output four_region_validation.json
 ```
@@ -207,7 +207,7 @@ The validation script complements the campaign PDF report:
 
 2. **Validate Campaign** (quantitative validation):
    ```bash
-   PYTHONPATH=src python3 scripts/validate_per_class_campaign.py \
+   PYTHONPATH=src python3 scripts/analysis/validate_per_class_campaign.py \
        --run-ids uuid1,uuid2,uuid3 \
        --output validation_report.json
    ```
@@ -235,7 +235,7 @@ The validation script complements the campaign PDF report:
 export RUN_IDS="uuid1,uuid2,uuid3,uuid4,uuid5"
 
 # Validate campaign
-PYTHONPATH=src python3 scripts/validate_per_class_campaign.py \
+PYTHONPATH=src python3 scripts/analysis/validate_per_class_campaign.py \
     --run-ids $RUN_IDS \
     --output validation_report.json
 
@@ -284,7 +284,7 @@ for metric in report['failed_metrics']:
 **Solutions**:
 ```bash
 # Try with relaxed thresholds
-PYTHONPATH=src python3 scripts/validate_per_class_campaign.py \
+PYTHONPATH=src python3 scripts/analysis/validate_per_class_campaign.py \
     --run-ids $RUN_IDS \
     --ood-threshold 0.7 \
     --sparse-threshold 0.5 \
@@ -376,4 +376,4 @@ satisfied = aleatoric_corr >= 0.7
 
 **Created**: 2026-06-23  
 **Status**: ✅ Complete  
-**Script**: [`scripts/validate_per_class_campaign.py`](scripts/validate_per_class_campaign.py)
+**Script**: [`scripts/analysis/validate_per_class_campaign.py`](scripts/analysis/validate_per_class_campaign.py)
