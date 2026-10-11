@@ -7,9 +7,9 @@ After codebase consolidation, here's the current state of configs and imports in
 ## 1. Configuration Files
 
 ### Old YAML Configs (Still Valid)
-Located in [`configs/`](configs:1):
+Located in [`src/uqlab_core/configs/`](src/uqlab_core/configs:1):
 ```
-configs/
+src/uqlab_core/configs/
 ├── example_cnn_mcdropout.yaml
 ├── example_resnet18_mcdropout.yaml
 ├── experiment/
@@ -94,28 +94,30 @@ from uqlab.run_artifacts import save_zwischen_result
 
 ```
 uqlab-streamlit/
-├── configs/                    # ✅ YAML configs (still used)
-│   ├── experiment/
-│   └── test/
 ├── src/
+│   ├── uqlab_core/             # ✅ Core ML package
+│   │   ├── configs/            # ✅ YAML configs (still used)
+│   │   │   ├── experiment/
+│   │   │   └── test/
+│   │   └── shared/             # Config datamodels + utilities
+│   ├── uqlab/                  # ✅ NEW MLOps structure
+│   │   ├── 1_data/
+│   │   ├── 2_models/
+│   │   ├── 3_training/
+│   │   ├── 4_evaluation/
+│   │   ├── 5_api/
+│   │   ├── 6_ui/
+│   │   ├── 7_orchestration/
+│   │   ├── shared/
+│   │   ├── classification/     # Backward compat + data_loader.py
+│   │   ├── benchmarks/         # Backward compat only
+│   │   └── notebook_support/   # Backward compat only
 │   ├── data/                   # ✅ RESTORED from archive
 │   ├── metrics/                # ✅ RESTORED from archive
 │   ├── triage/                 # ✅ RESTORED from archive
 │   ├── models/                 # ✅ RESTORED from archive
 │   ├── experiments/            # ✅ RESTORED from archive
-│   ├── utils/                  # ✅ RESTORED from archive
-│   └── uqlab/                # ✅ NEW MLOps structure
-│       ├── 1_data/
-│       ├── 2_models/
-│       ├── 3_training/
-│       ├── 4_evaluation/
-│       ├── 5_api/
-│       ├── 6_ui/
-│       ├── 7_orchestration/
-│       ├── shared/
-│       ├── classification/     # Backward compat + data_loader.py
-│       ├── benchmarks/         # Backward compat only
-│       └── notebook_support/   # Backward compat only
+│   └── utils/                  # ✅ RESTORED from archive
 ├── archive/
 │   ├── legacy_src/             # Original archived location
 │   └── research/
@@ -137,7 +139,7 @@ Located in [`src/uqlab/shared/config/`](src/uqlab/shared/config:1):
 - **Pydantic Schemas** - [`schemas.py`](src/uqlab/shared/config/schemas.py:1)
 
 ### Legacy Configs (Still Used)
-- **YAML files** in [`configs/`](configs:1) - Used by `run_fast.py` and scripts
+- **YAML files** in [`src/uqlab_core/configs/`](src/uqlab_core/configs:1) - Used by `run_fast.py` and scripts
 
 ## 5. Action Items
 
@@ -178,7 +180,7 @@ from src.data.cifar10n_loader import CIFAR10NDataset
 ```
 
 ### Config Strategy
-- **Short term**: Keep using YAML configs in `configs/`
+- **Short term**: Keep using YAML configs in `src/uqlab_core/configs/`
 - **Long term**: Migrate to Python configs in `src/uqlab/shared/config/`
 
 ## 7. Summary
