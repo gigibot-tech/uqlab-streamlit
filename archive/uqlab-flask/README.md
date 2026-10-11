@@ -1,4 +1,6 @@
-# UQLab Flask UI
+# UQLab Flask UI (archived)
+
+> **Archived:** moved from `uqlab-flask/` to `archive/uqlab-flask/`. The code still references the legacy `uqlab.*` package, which no longer exists in this workspace (`src/uqlab` is empty; the canonical ML core is now `src/uqlab_core`). Revive it by updating imports from `uqlab.*` to `uqlab_core.*` before running.
 
 Lean Flask shell over the existing uqlab runner (`uqlab.runner.execute.run_from_yaml`).
 
