@@ -275,7 +275,7 @@ PYTHONPATH=src python3 scripts/run_fast_uncertainty_classification.py \
 **Locations:**
 - **Sweep Generation:** [`src/uqlab_orchestrator/per_class_sweep.py`](src/uqlab_orchestrator/per_class_sweep.py:29-85)
 - **Sweep Launcher:** [`src/uqlab_orchestrator/per_class_launcher.py`](src/uqlab_orchestrator/per_class_launcher.py)
-- **Validation Script:** [`scripts/validate_per_class_campaign.py`](scripts/validate_per_class_campaign.py)
+- **Validation Script:** [`scripts/analysis/validate_per_class_campaign.py`](scripts/analysis/validate_per_class_campaign.py)
 
 **Sweep Presets:**
 
@@ -311,7 +311,7 @@ PYTHONPATH=src python3 scripts/run_fast_uncertainty_classification.py \
 # Run sweep experiments first
 # Then validate with correlation analysis
 
-PYTHONPATH=src python3 scripts/validate_per_class_campaign.py \
+PYTHONPATH=src python3 scripts/analysis/validate_per_class_campaign.py \
     --run-ids uuid1,uuid2,uuid3,uuid4,uuid5 \
     --output validation_report.json
 
@@ -338,7 +338,7 @@ PYTHONPATH=src python3 scripts/validate_per_class_campaign.py \
 #    - Note experiment IDs
 
 # 3. Validate results
-PYTHONPATH=src python3 scripts/validate_per_class_campaign.py \
+PYTHONPATH=src python3 scripts/analysis/validate_per_class_campaign.py \
     --run-ids $(cat experiment_ids.txt | tr '\n' ',') \
     --output sweep_validation.json
 
@@ -373,7 +373,7 @@ streamlit run streamlit_app_progressive.py
 export RUN_IDS="uuid1,uuid2,uuid3,uuid4,uuid5,uuid6"
 
 # Step 4: Validate Campaign
-PYTHONPATH=src python3 scripts/validate_per_class_campaign.py \
+PYTHONPATH=src python3 scripts/analysis/validate_per_class_campaign.py \
     --run-ids $RUN_IDS \
     --output validation_report.json
 
@@ -444,7 +444,7 @@ cat validation_report.json | jq '{
 ### Sweeps & Validation
 - [`src/uqlab_orchestrator/per_class_sweep.py`](src/uqlab_orchestrator/per_class_sweep.py) - Sweep generation
 - [`src/uqlab_orchestrator/per_class_launcher.py`](src/uqlab_orchestrator/per_class_launcher.py) - Sweep launcher
-- [`scripts/validate_per_class_campaign.py`](scripts/validate_per_class_campaign.py) - Validation script
+- [`scripts/analysis/validate_per_class_campaign.py`](scripts/analysis/validate_per_class_campaign.py) - Validation script
 
 ### Visualization
 - [`src/uqlab/evaluation/classification/pipeline/sweep_line_plot.py`](src/uqlab/evaluation/classification/pipeline/sweep_line_plot.py) - Three-line plot
@@ -471,4 +471,4 @@ The `uqlab-streamlit` codebase contains a complete implementation of the researc
 
 **Created:** 2026-06-23  
 **Status:** ✅ Complete Implementation Verified  
-**Validation Script:** [`scripts/validate_per_class_campaign.py`](scripts/validate_per_class_campaign.py)
+**Validation Script:** [`scripts/analysis/validate_per_class_campaign.py`](scripts/analysis/validate_per_class_campaign.py)
