@@ -2,7 +2,7 @@
 
 Automated deployment script for deploying full-stack applications to OpenShift with PostgreSQL database, OAuth2 authentication, and GitHub webhook integration.
 
-> **Looking to deploy?** See the [Deployment Guide](../.docs/oc-deployment.md) for quickstart instructions.
+> **Looking to deploy?** See the [Deployment Guide](../backend/docs/oc-deployment.md) for quickstart instructions.
 
 This document covers detailed configuration, architecture, and how to extend the script.
 
@@ -134,7 +134,7 @@ The following table lists all environment variables that can be configured in `.
 
 #### Creating a GitHub Token
 
-See the [Deployment Guide](../.docs/oc-deployment.md#4-create-github-token-recommended) for step-by-step instructions on creating a GitHub Personal Access Token.
+See the [Deployment Guide](../backend/docs/oc-deployment.md#4-create-github-token-recommended) for step-by-step instructions on creating a GitHub Personal Access Token.
 
 Required scopes: `repo` and `admin:repo_hook`
 
