@@ -7,14 +7,17 @@ Complete uncertainty quantification platform with Streamlit UI, FastAPI backend,
 ```
 uqlab-streamlit/
 ├── src/
-│   └── uqlab/                    # Core UQ framework (Git submodule)
-│       ├── 1_data/               # Data loaders and preprocessing
-│       ├── 2_models/             # Model architectures
-│       ├── 3_training/           # Training utilities
-│       ├── 4_evaluation/         # Evaluation and metrics
-│       ├── 5_api/                # API integrations
-│       ├── 7_orchestration/      # Experiment orchestration
-│       ├── ui_components/        # Reusable UI components
+│   ├── uqlab/                    # Core UQ framework (Git submodule)
+│   │   ├── 1_data/               # Data loaders and preprocessing
+│   │   ├── 2_models/             # Model architectures
+│   │   ├── 3_training/           # Training utilities
+│   │   ├── 4_evaluation/         # Evaluation and metrics
+│   │   ├── 5_api/                # API integrations
+│   │   ├── 7_orchestration/      # Experiment orchestration
+│   │   ├── ui_components/        # Reusable UI components
+│   │   └── ...
+│   └── uqlab_core/               # Core ML package (local)
+│       ├── configs/              # Experiment YAML configurations
 │       └── ...
 ├── backend/                      # FastAPI backend
 │   └── app/
@@ -25,7 +28,6 @@ uqlab-streamlit/
 ├── streamlit_app.py              # Main Streamlit dashboard
 ├── streamlit_app_progressive.py  # Progressive/advanced UI
 ├── scripts/                      # Utility scripts
-├── configs/                      # Configuration files
 ├── notebooks/                    # Jupyter notebooks
 └── docker-compose.yml            # Docker orchestration
 ```
@@ -158,7 +160,7 @@ cp backend/.env.example backend/.env
 ### Key Configuration Files
 - `.env`: Main environment variables
 - `backend/.env`: Backend-specific settings
-- `configs/`: Experiment configurations
+- `src/uqlab_core/configs/`: Experiment configurations
 - `docker-compose.yml`: Docker services
 
 ## 🧪 Running Experiments
