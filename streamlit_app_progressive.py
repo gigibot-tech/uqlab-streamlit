@@ -1,8 +1,8 @@
 """
 Progressive Disclosure Streamlit App for Uncertainty Quantification.
 
-Thin shell: workflow steps + orchestrator launch + results panel.
-See START_HERE.md for architecture.
+Classification wizard (Steps 1–5). Preference-pair summarization is a separate
+app: ``streamlit_app_prefsum.py`` (PrefSum).
 """
 
 from __future__ import annotations
@@ -19,45 +19,12 @@ for _path in (_SRC, _PROJECT_ROOT):
     if _entry not in sys.path:
         sys.path.insert(0, _entry)
 
-import requests
 import streamlit as st
 
-from uqlab.data.datasets.registry import get_dataset_spec
-from uqlab_orchestrator import (
-    launch_benchmark_both,
-    launch_benchmark_primary,
-)
-from uqlab_orchestrator.launch_preflight import assess_launch_readiness
-from uqlab_orchestrator.config import (
-    CIFAR10N_NOISE_LABELS,
-    DATASET_CATALOG,
-    fallback_dataset_stats,
-)
-from uqlab.ui_components.progressive.launch_results import render_launch_result
-from uqlab.ui_components.progressive.results_section import render_progressive_results_section
-from uqlab.ui_components.progressive.sweep_launch_cards import SweepLaunchCallbacks
-from uqlab.ui_components.progressive.api_client import fetch_experiments
-from uqlab.ui_components.results.experiment_results_panel import render_experiment_stats_footer
-from uqlab.ui_components.selectors.paper_sweep_launch import render_sidebar_paper_launch
-from uqlab.ui_components.selectors.sidebar_controls import render_sidebar_footer_debug
-from uqlab.ui_components.selectors.smart_experiment_selector import render_sidebar_experiment_selector
 from uqlab.ui_components.ui_debug import ui_on
-from uqlab.ui_components.workflow import (
-    ensure_workflow_initialized,
-    render_step2_training,
-    render_step3_collapsed,
-    render_step3_uncertainty,
-    render_step4_evaluation,
-    render_step5_review,
-)
-from uqlab.ui_components.workflow.step1_dataset import render_step1_dataset
 
 API_BASE_URL = os.getenv("API_URL", "http://localhost:8000")
 API_TOKEN = os.getenv("API_TOKEN", "")
-
-
-def _set_highlight_experiment(exp_id: str) -> None:
-    st.session_state.highlight_experiment_id = exp_id
 
 
 def get_headers() -> dict:
@@ -65,35 +32,6 @@ def get_headers() -> dict:
     if API_TOKEN:
         headers["Authorization"] = f"Bearer {API_TOKEN}"
     return headers
-
-
-def fetch_dataset_stats(
-    dataset_name: str,
-    noise_type: str,
-    *,
-    quiet: bool = False,
-) -> dict:
-    try:
-        url = f"{API_BASE_URL}/api/v1/datasets/{dataset_name}/stats"
-        response = requests.get(
-            url,
-            params={"noise_type": noise_type},
-            headers=get_headers(),
-            timeout=10,
-        )
-        if response.status_code == 400:
-            raise requests.exceptions.HTTPError("unsupported dataset on backend")
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.RequestException:
-        try:
-            from uqlab_orchestrator.config import compute_dataset_stats
-
-            return compute_dataset_stats(dataset_name, noise_type, download=False)
-        except Exception:
-            if not quiet:
-                st.warning("Backend unavailable — using offline dataset stats.")
-            return fallback_dataset_stats(dataset_name, noise_type)
 
 
 st.set_page_config(
@@ -125,57 +63,98 @@ st.markdown(
 )
 
 
-def _make_launch_callbacks(workflow: Dict[str, Any]) -> SweepLaunchCallbacks:
-    return SweepLaunchCallbacks(
-        on_launch_primary=lambda auto: launch_benchmark_primary(
-            workflow,
-            auto_start=auto,
-            highlight_callback=_set_highlight_experiment,
-        ),
-        on_launch_both=lambda auto, mirror_mode: launch_benchmark_both(
-            workflow,
-            auto_start=auto,
-            mirror_mode=mirror_mode,  # type: ignore[arg-type]
-            highlight_callback=_set_highlight_experiment,
-        ),
+def _run_classification_builder() -> None:
+    """Lazy-import the image-classification wizard (needs full orchestrator)."""
+    import requests
+
+    from uqlab.data.datasets.registry import get_dataset_spec
+    from uqlab_orchestrator import (
+        launch_benchmark_both,
+        launch_benchmark_primary,
     )
-
-
-def _apply_launch_workflow(workflow: Dict[str, Any], auto: bool) -> None:
-    st.session_state.launch_result = launch_benchmark_primary(
-        workflow,
-        auto_start=auto,
-        highlight_callback=_set_highlight_experiment,
+    from uqlab_orchestrator.config import (
+        CIFAR10N_NOISE_LABELS,
+        DATASET_CATALOG,
+        fallback_dataset_stats,
     )
-    st.session_state["scroll_to_results"] = True
+    from uqlab_orchestrator.launch_preflight import assess_launch_readiness
+    from uqlab.ui_components.progressive.api_client import fetch_experiments
+    from uqlab.ui_components.progressive.launch_results import render_launch_result
+    from uqlab.ui_components.progressive.results_section import (
+        render_progressive_results_section,
+    )
+    from uqlab.ui_components.progressive.sweep_launch_cards import SweepLaunchCallbacks
+    from uqlab.ui_components.results.experiment_results_panel import (
+        render_experiment_stats_footer,
+    )
+    from uqlab.ui_components.selectors.paper_sweep_launch import render_sidebar_paper_launch
+    from uqlab.ui_components.selectors.sidebar_controls import render_sidebar_footer_debug
+    from uqlab.ui_components.selectors.smart_experiment_selector import (
+        render_sidebar_experiment_selector,
+    )
+    from uqlab.ui_components.workflow import (
+        ensure_workflow_initialized,
+        render_step2_training,
+        render_step3_collapsed,
+        render_step3_uncertainty,
+        render_step4_evaluation,
+        render_step5_review,
+    )
+    from uqlab.ui_components.workflow.step1_dataset import render_step1_dataset
 
+    def _set_highlight_experiment(exp_id: str) -> None:
+        st.session_state.highlight_experiment_id = exp_id
 
-def main() -> None:
-    if ui_on("page_title"):
-        st.title("🔬 Uncertainty Quantification Experiment Builder")
-        st.caption(
-            "Configure Steps 1–4, **launch in Step 5** (or sidebar quick launch), "
-            "then scroll to **Results** below. See **START_HERE.md**."
-        )
-
-    app_mode = "Experiment builder"
-    if ui_on("signal_validation"):
-        with st.sidebar:
-            app_mode = st.radio(
-                "App mode",
-                ["Experiment builder", "Signal validation"],
-                key="app_mode",
-                horizontal=False,
+    def fetch_dataset_stats(
+        dataset_name: str,
+        noise_type: str,
+        *,
+        quiet: bool = False,
+    ) -> dict:
+        try:
+            url = f"{API_BASE_URL}/api/v1/datasets/{dataset_name}/stats"
+            response = requests.get(
+                url,
+                params={"noise_type": noise_type},
+                headers=get_headers(),
+                timeout=10,
             )
+            if response.status_code == 400:
+                raise requests.exceptions.HTTPError("unsupported dataset on backend")
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException:
+            try:
+                from uqlab_orchestrator.config import compute_dataset_stats
 
-    if app_mode == "Signal validation" and ui_on("signal_validation"):
-        from uqlab.ui_components.visualization.validation.signal_validation_tab import (
-            render_signal_validation_tab,
+                return compute_dataset_stats(dataset_name, noise_type, download=False)
+            except Exception:
+                if not quiet:
+                    st.warning("Backend unavailable — using offline dataset stats.")
+                return fallback_dataset_stats(dataset_name, noise_type)
+
+    def _make_launch_callbacks(workflow: Dict[str, Any]) -> SweepLaunchCallbacks:
+        return SweepLaunchCallbacks(
+            on_launch_primary=lambda auto: launch_benchmark_primary(
+                workflow,
+                auto_start=auto,
+                highlight_callback=_set_highlight_experiment,
+            ),
+            on_launch_both=lambda auto, mirror_mode: launch_benchmark_both(
+                workflow,
+                auto_start=auto,
+                mirror_mode=mirror_mode,  # type: ignore[arg-type]
+                highlight_callback=_set_highlight_experiment,
+            ),
         )
 
-        render_signal_validation_tab()
-        render_experiment_stats_footer(API_BASE_URL, get_headers)
-        return
+    def _apply_launch_workflow(workflow: Dict[str, Any], auto: bool) -> None:
+        st.session_state.launch_result = launch_benchmark_primary(
+            workflow,
+            auto_start=auto,
+            highlight_callback=_set_highlight_experiment,
+        )
+        st.session_state["scroll_to_results"] = True
 
     ensure_workflow_initialized()
     workflow = st.session_state.workflow
@@ -225,7 +204,7 @@ def main() -> None:
                 spec = get_dataset_spec(dataset_name)
             except ValueError:
                 spec = None
-            if spec and spec.supports_human_noise:
+            if spec and getattr(spec, "supports_human_noise", False):
                 noise_label = CIFAR10N_NOISE_LABELS.get(noise_type, noise_type)
                 st.markdown(f"**✅ Step 1: Dataset** — {ds_label} · {noise_label}")
             else:
@@ -317,12 +296,7 @@ def main() -> None:
         st.markdown('<div class="step-complete">', unsafe_allow_html=True)
         col1, col2 = st.columns([4, 1])
         with col1:
-            eval_per_group = workflow["evaluation_config"]["eval_per_group"]
-            mc_passes = workflow["evaluation_config"]["mc_passes"]
-            st.markdown(
-                f"**✅ Step 4: Evaluation** - {eval_per_group} samples/group, "
-                f"{mc_passes} MC passes"
-            )
+            render_step4_evaluation(workflow, collapsed=True)
         with col2:
             if st.button("Edit", key="edit_step4"):
                 workflow["step4_complete"] = False
@@ -330,39 +304,67 @@ def main() -> None:
         st.markdown("</div>", unsafe_allow_html=True)
     else:
         st.markdown('<div class="step-active">', unsafe_allow_html=True)
-        st.markdown("### 📊 Step 4: Evaluation Setup")
         render_step4_evaluation(workflow)
         st.markdown("</div>", unsafe_allow_html=True)
         st.stop()
 
     if ui_on("step5_launch"):
-        if st.session_state.pop("scroll_to_step5", False):
-            st.info("Workflow updated from plot probe — review Step 5 and launch when ready.")
         st.markdown('<div class="step-active">', unsafe_allow_html=True)
         render_step5_review(
             workflow,
             readiness=readiness,
-            launch_callbacks=launch_callbacks,
-            on_apply_launch=_apply_launch_workflow,
+            on_launch_primary=launch_callbacks.on_launch_primary,
+            on_launch_both=launch_callbacks.on_launch_both,
         )
         st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown('<div id="results-section"></div>', unsafe_allow_html=True)
-    render_progressive_results_section(
-        API_BASE_URL,
-        get_headers,
-        on_apply_launch=_apply_launch_workflow,
-    )
-
+    if ui_on("results_section"):
+        render_progressive_results_section(
+            API_BASE_URL,
+            get_headers,
+            workflow=workflow,
+        )
     render_experiment_stats_footer(API_BASE_URL, get_headers)
 
-    if ui_on("footer"):
-        st.markdown("---")
-        st.markdown(
-            "<div style='text-align: center; color: gray;'>"
-            "<small>Uncertainty Quantification Experiment Builder | Progressive Disclosure UI</small>"
-            "</div>",
-            unsafe_allow_html=True,
+
+def main() -> None:
+    if ui_on("page_title"):
+        st.title("🔬 Uncertainty Quantification Experiment Builder")
+        st.caption(
+            "Classification Steps 1–5. For preference-pair summarization, run "
+            "``streamlit run streamlit_app_prefsum.py`` (PrefSum)."
+        )
+
+    with st.sidebar:
+        app_mode = st.radio(
+            "App mode",
+            ["Experiment builder", "Signal validation"],
+            key="app_mode",
+            horizontal=False,
+        )
+
+    if app_mode == "Signal validation" and ui_on("signal_validation"):
+        try:
+            from uqlab.ui_components.visualization.validation.signal_validation_tab import (
+                render_signal_validation_tab,
+            )
+            from uqlab.ui_components.results.experiment_results_panel import (
+                render_experiment_stats_footer,
+            )
+
+            render_signal_validation_tab()
+            render_experiment_stats_footer(API_BASE_URL, get_headers)
+        except Exception as exc:
+            st.error(f"Signal validation unavailable: {exc}")
+        return
+
+    try:
+        _run_classification_builder()
+    except ModuleNotFoundError as exc:
+        st.error(
+            "Classification Experiment builder needs the full `uqlab_orchestrator` "
+            f"package ({exc}). Preference pairs live in PrefSum: "
+            "`streamlit run streamlit_app_prefsum.py`."
         )
 
 

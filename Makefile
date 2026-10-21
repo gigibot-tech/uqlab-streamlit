@@ -24,6 +24,7 @@ help:
 	@echo "Running Services:"
 	@echo "  make run-backend  - Start FastAPI backend (port 8000)"
 	@echo "  make run-frontend - Start Streamlit frontend (port 8501)"
+	@echo "  make run-prefsum  - Start PrefSum summarization app (port 8502)"
 	@echo "  make run-all      - Start both backend and frontend"
 	@echo ""
 	@echo "Cleanup:"
@@ -80,6 +81,10 @@ run-backend:
 run-frontend:
 	@echo "🚀 Starting Streamlit frontend on http://localhost:8501..."
 	uv run streamlit run streamlit_app_progressive.py
+
+run-prefsum:
+	@echo "🚀 Starting PrefSum on http://localhost:8502..."
+	PYTHONPATH=src uv run streamlit run streamlit_app_prefsum.py --server.port 8502
 
 run-all:
 	@echo "🚀 Starting both backend and frontend..."
