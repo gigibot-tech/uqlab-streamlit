@@ -5,7 +5,7 @@ This script reads summary.json files from the results directory and populates
 the best_signals_json column in the database for experiments that don't have it yet.
 
 Usage:
-    python backend/backfill_signals.py
+    python backend/scripts/backfill_signals.py
 """
 
 import sys
@@ -14,7 +14,7 @@ from pathlib import Path
 from sqlmodel import Session, select
 
 # Add backend to path
-backend_dir = Path(__file__).parent
+backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_dir))
 
 from app.core.db import engine

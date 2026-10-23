@@ -44,7 +44,7 @@ if curl -s http://localhost:8000/health > /dev/null 2>&1; then
     echo "✅ Backend is running and healthy"
 else
     echo "❌ Backend is NOT running or not responding"
-    echo "   Run: ./start_backend.sh"
+    echo "   Run: ./backend/scripts/start_backend.sh"
 fi
 echo ""
 
@@ -68,7 +68,7 @@ echo "2. If Test 2 showed execution count > 5:"
 echo "   → There IS an infinite loop - check terminal output"
 echo ""
 echo "3. If backend check failed:"
-echo "   → Start backend first: ./start_backend.sh"
+echo "   → Start backend first: ./backend/scripts/start_backend.sh"
 echo ""
 echo "4. Now try the main app:"
 echo "   streamlit run streamlit_app_progressive.py"

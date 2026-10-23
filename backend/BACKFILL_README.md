@@ -22,7 +22,7 @@ The `backfill_signals.py` script reads the `summary.json` files from your result
 
 ```bash
 cd uqlab-streamlit/backend
-python run_migration.py
+python scripts/run_migration.py
 ```
 
 This adds the `best_signals_json` column to your database.
@@ -31,7 +31,7 @@ This adds the `best_signals_json` column to your database.
 
 ```bash
 cd uqlab-streamlit/backend
-python backfill_signals.py
+python scripts/backfill_signals.py
 ```
 
 ### Expected Output

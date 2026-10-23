@@ -2,7 +2,7 @@
 # Resolve a Python interpreter for backend start scripts (sourced, not executed).
 set -euo pipefail
 
-_BACKEND_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_BACKEND_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 _ROOT="$(cd "${_BACKEND_DIR}/.." && pwd)"
 _OLD_PILOTS_ROOT="$(cd "${_ROOT}/.." && pwd)"
 

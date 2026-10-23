@@ -1,9 +1,9 @@
 #!/bin/bash
 # Start the FastAPI backend server in DEVELOPMENT MODE (with auto-reload)
 #
-# Usage: ./start_backend.sh
+# Usage: ./backend/scripts/start_backend.sh (from repo root)
 #
-# See BACKEND_MODES.md — use ./start_backend_prod.sh while experiments are running.
+# See BACKEND_MODES.md — use ./backend/scripts/start_backend_prod.sh while experiments are running.
 
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -12,7 +12,7 @@ source ./_python.sh
 
 echo "Starting FastAPI backend from $(pwd)..."
 echo "Python: ${PYTHON}"
-echo "PYTHONPATH includes: $(cd .. && pwd)/src"
+echo "PYTHONPATH includes: $(cd ../.. && pwd)/src"
 echo "Backend will be available at http://0.0.0.0:8000"
 echo ""
 

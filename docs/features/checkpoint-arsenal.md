@@ -52,7 +52,7 @@ Use production mode so training is not killed by auto-reload:
 
 ```bash
 cd backend
-./start_backend_prod.sh
+./scripts/start_backend_prod.sh
 ```
 
 See [BACKEND_MODES.md](../../backend/BACKEND_MODES.md). Step 5 review also reminds you to use prod mode for sweeps.

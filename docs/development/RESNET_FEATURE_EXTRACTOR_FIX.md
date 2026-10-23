@@ -149,7 +149,7 @@ To verify the fix works in production:
 ```bash
 # 1. Start the backend
 cd uqlab-streamlit/backend
-./start_backend.sh
+./scripts/start_backend.sh
 
 # 2. In another terminal, start Streamlit
 cd uqlab-streamlit

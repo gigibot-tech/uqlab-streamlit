@@ -37,7 +37,7 @@ When you run it from `uqlab-streamlit/backend/`, Python looks for:
 
 ```bash
 cd uqlab-streamlit/backend
-./start_backend.sh
+./scripts/start_backend.sh
 ```
 
 ### Manual Fix
@@ -51,7 +51,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ## Files Created
 
-1. **`backend/start_backend.sh`** - Convenient startup script
+1. **`backend/scripts/start_backend.sh`** - Convenient startup script
    - Automatically changes to correct directory
    - Starts uvicorn with proper settings
    - Made executable with `chmod +x`
@@ -82,7 +82,7 @@ Then access:
 **Terminal 1 - Backend:**
 ```bash
 cd uqlab-streamlit/backend
-./start_backend.sh
+./scripts/start_backend.sh
 ```
 
 **Terminal 2 - Frontend:**

@@ -26,7 +26,7 @@ If the backend API isn't responding, the app may retry connections.
 **Check**:
 ```bash
 cd uqlab-streamlit
-./start_backend.sh
+./backend/scripts/start_backend.sh
 ```
 
 **Verify**: Visit http://localhost:8000/docs - should show FastAPI docs
@@ -89,7 +89,7 @@ streamlit run diagnose_startup.py
 
 ### Step 3: Check Backend
 ```bash
-./start_backend.sh
+./backend/scripts/start_backend.sh
 # In another terminal:
 curl http://localhost:8000/health
 ```
