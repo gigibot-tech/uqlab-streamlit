@@ -18,14 +18,21 @@ jsonl. MLflow records that same file with ``log_input`` on the training run.
 | Image specs (unchanged) | `uqlab.data.dataset_registry` |
 | Import path | `uqlab.data.datasets.registry` |
 | Checkpoints and pair files | `annotated-news-summaries/outputs/` |
-| UI | **PrefSum** — `streamlit_app_prefsum.py` (`make run-prefsum`, port 8502) |
+| UI | **PrefSum** — `streamlit_app_prefsum.py` (`make run-prefsum`, port 8502); section embedding + DI: [`prefsum/README.md`](../../src/uqlab/ui_components/workflow/prefsum/README.md) |
 
-Pair construction and DPO training stay in `annotated-news-summaries/features/`.
-PrefSum only reads them.
+§0 split + pair rebuild lives in `annotated_pair_data._ArticleSplit`.
+DPO training still runs against the annotated-news project venv / checkpoints.
+
+**§0 drop-in:** put Konvens annotation jsonl under `annotated-news-summaries/data/`
+(`item_id` + `article`/`preferred`/`d6`/`d7`). PrefSum lists matching files; **Apply &
+freeze split** writes `outputs/dpo_splits/article_split.json` then pair folders under
+`outputs/dpo_pairs/`. Details: [`prefsum/README.md`](../../src/uqlab/ui_components/workflow/prefsum/README.md).
 
 ## PrefSum
 
-One screen: choose a checkpoint, read the set table (name, pair count, jsonl path), open one chosen/rejected pair from that file, and show saved test scores when a means file exists.
+One screen: pick a preference-file folder (pair counts + MLflow register per set), start or continue a checkpoint (**continue trains every adapter** on its own pair file, then evaluates), show all-adapter score tables, and compare two checkpoints on one test article. For **LLM coverage**, PrefSum can extract article key facts (FeedSum) and show per-summary covered / missing facts plus a short rationale.
+
+**Train/test leak check:** PrefSum compares each checkpoint’s training-pair article ids to ``article_split.json``’s test set. Held-out full / size-matched should show **0%** overlap. All-data training typically overlaps **~83%** of the test articles; those rows are marked **LEAK**, sorted after clean runs, and individual articles used in training are flagged when comparing two checkpoints.
 
 ```bash
 cd uqlab-streamlit

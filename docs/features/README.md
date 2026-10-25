@@ -11,6 +11,8 @@
 | [checkpoint-arsenal.md](checkpoint-arsenal.md) | Step 2.5 checkpoint review |
 | [dataset-plugin.md](dataset-plugin.md) | Dataset plugin contract |
 | [text-summarization-registry.md](text-summarization-registry.md) | Annotated-news pairs + MSumBench under `data/experiments/` |
+| [PrefSum package README](../../src/uqlab/ui_components/workflow/prefsum/README.md) | PrefSum §0–§4 embedding + DI (`DataPreprocessingSection`, Apply & freeze) |
+| [experiment-facets.md](experiment-facets.md) | **Facets** — four-region ↔ PrefSum preference sets + DI ports |
 | [data-pipeline.md](data-pipeline.md) | **Start here for data** — `build_run_data` |
 | [four-region-partition.md](four-region-partition.md) | **Four-region split/noise** — data layer → `group` column |
 | [evaluation-pipeline.md](evaluation-pipeline.md) | **Start here for eval** — collect vs score |

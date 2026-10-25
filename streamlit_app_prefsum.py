@@ -1,6 +1,7 @@
-"""PrefSum — open a DPO checkpoint and the preference file it trained on.
+"""PrefSum Streamlit entry — composition root only.
 
-Separate from the classification wizard (``streamlit_app_progressive.py``).
+Domain: ``annotated_pair_data`` + ``annotated_news_eval`` + ``annotated_news_training``.
+UI: ``uqlab.ui_components.workflow.prefsum`` (Facets + ExperimentPorts).
 """
 
 from __future__ import annotations
@@ -17,7 +18,11 @@ for _path in (_SRC, _PROJECT_ROOT):
 
 import streamlit as st
 
-from uqlab.ui_components.workflow.summarization_runs import render_summarization_runs
+from uqlab.summarization import annotated_pair_data as prefsum_data
+from uqlab.summarization import annotated_news_eval as prefsum_eval
+from uqlab.summarization import annotated_news_training as prefsum_training
+from uqlab.summarization.annotated_news_paths import annotated_news_root
+from uqlab.ui_components.workflow.prefsum import PrefSumContracts, PrefSumPage
 
 st.set_page_config(
     page_title="PrefSum",
@@ -26,8 +31,27 @@ st.set_page_config(
 )
 
 
+def build_contracts() -> PrefSumContracts:
+    """Wire news root + Data / Training / Eval ports into PrefSumContracts.
+
+    Data and eval are separate modules (same surface the Protocols require).
+    """
+    root = annotated_news_root()
+    return PrefSumContracts.create(
+        root=root,
+        data=prefsum_data,
+        training=prefsum_training,
+        evaluation=prefsum_eval,
+    )
+
+
 def main() -> None:
-    render_summarization_runs()
+    try:
+        contracts = build_contracts()
+    except FileNotFoundError as exc:
+        st.error(str(exc))
+        return
+    PrefSumPage(contracts=contracts).render()
 
 
 if __name__ == "__main__":
