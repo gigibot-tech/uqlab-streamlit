@@ -35,3 +35,6 @@ ek_fak = ["kronfluence>=0.1.0"]
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["uqlab_core*"]
+
+[tool.setuptools.package-data]
+uqlab_core = ["configs/**/*.yaml"]
