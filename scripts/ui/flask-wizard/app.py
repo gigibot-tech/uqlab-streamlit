@@ -5,9 +5,17 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-SRC = ROOT / "src"
+
+def _find_project_root(start: Path) -> Path:
+    for parent in start.parents:
+        if (parent / "pyproject.toml").is_file():
+            return parent
+    return start.parent
+
+
 FLASK_PKG = Path(__file__).resolve().parent
+ROOT = _find_project_root(FLASK_PKG)
+SRC = ROOT / "src"
 for p in (str(SRC), str(ROOT), str(FLASK_PKG)):
     if p not in sys.path:
         sys.path.insert(0, p)
