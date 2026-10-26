@@ -6,22 +6,23 @@ After codebase consolidation, here's the current state of configs and imports in
 
 ## 1. Configuration Files
 
-### Old YAML Configs (Still Valid)
-Located in [`configs/`](configs:1):
+### YAML Configs
+Located in [`src/uqlab_core/configs/`](../../src/uqlab_core/configs:1). A compatibility symlink at the repository root (`configs/`) still resolves old paths.
 ```
-configs/
+src/uqlab_core/configs/
 ├── example_cnn_mcdropout.yaml
 ├── example_resnet18_mcdropout.yaml
 ├── experiment/
 │   ├── default.yaml
-│   └── fast_pilot.yaml
+│   ├── fast_pilot.yaml
+│   └── four_region.yaml
 └── test/
     ├── test_cnn_mcdropout.yaml
     ├── test_dinov2_mlp.yaml
     └── test_resnet18_mcdropout.yaml
 ```
 
-**Status**: ✅ **Still valid and used by [`run_fast.py`](run_fast.py:1)**
+**Status**: ✅ **Still valid and used by the CLI runner and notebooks**
 
 ### New Python Configs (Post-Consolidation)
 Located in [`src/uqlab/shared/config/`](src/uqlab/shared/config:1):
@@ -137,7 +138,7 @@ Located in [`src/uqlab/shared/config/`](src/uqlab/shared/config:1):
 - **Pydantic Schemas** - [`schemas.py`](src/uqlab/shared/config/schemas.py:1)
 
 ### Legacy Configs (Still Used)
-- **YAML files** in [`configs/`](configs:1) - Used by `run_fast.py` and scripts
+- **YAML files** in [`src/uqlab_core/configs/`](../../src/uqlab_core/configs:1) - Used by the CLI runner and notebooks
 
 ## 5. Action Items
 
@@ -178,8 +179,8 @@ from src.data.cifar10n_loader import CIFAR10NDataset
 ```
 
 ### Config Strategy
-- **Short term**: Keep using YAML configs in `configs/`
-- **Long term**: Migrate to Python configs in `src/uqlab/shared/config/`
+- **Short term**: Keep using YAML configs in `src/uqlab_core/configs/`
+- **Long term**: Migrate to Python configs in `src/uqlab_core/shared/config/`
 
 ## 7. Summary
 
