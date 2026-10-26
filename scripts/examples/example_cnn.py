@@ -76,7 +76,7 @@ evaluation:
     
     cmd = [
         "python",
-        "scripts/run_fast_uncertainty_classification.py",
+        "scripts/runners/run_fast_uncertainty_classification.py",
         str(config_path),
         str(output_dir)
     ]
