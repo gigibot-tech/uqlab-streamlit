@@ -1,5 +1,4 @@
-"""
-Uncertainty perspective registry — single source of truth for N sweep types.
+"""Uncertainty perspective registry — single source of truth for N sweep types.
 
 Add a perspective to ``UNCERTAINTY_PERSPECTIVES``; Step 3, launch preview, Run both,
 and Results iterate this list (mirror = all other N−1 profiles).
@@ -121,3 +120,19 @@ def all_profile_keys() -> tuple[str, ...]:
 def run_both_fig_labels() -> str:
     """Button suffix listing all figures, e.g. ``Fig. 3 + Fig. 4``."""
     return " + ".join(p.fig_label for p in UNCERTAINTY_PERSPECTIVES)
+
+
+__all__ = [
+    "SINGLE_SWEEP_TARGET",
+    "SWEEP_BOTH_TARGET",
+    "UNCERTAINTY_PERSPECTIVES",
+    "UncertaintyPerspective",
+    "all_profile_keys",
+    "iter_perspectives",
+    "mirror_perspectives",
+    "perspective_by_id",
+    "perspective_by_profile",
+    "perspective_by_sweep_target",
+    "perspective_count",
+    "run_both_fig_labels",
+]
