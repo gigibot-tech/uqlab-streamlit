@@ -156,7 +156,6 @@ Rule: workflow steps import **`uqlab_orchestrator.*`** and **`uqlab.ui_component
 | **Runner (canonical)** | [`uqlab/runner/`](../src/uqlab/runner/) | **Defines** `run` / `run_config` |
 | **Backend** | `backend/.../direct_executor.py` | Yes — in-process worker for API jobs |
 | **CLI / scripts** | `scripts/run_fast_uncertainty_classification.py` (CLI → `run_from_yaml`) | Yes |
-| **Flask wizard** | `uqlab-flask/executor.py` | Yes (local, no API) |
 | **Orchestrator** | `uqlab_orchestrator/experiment_launcher.py` | **No** — HTTP create/start only |
 | **Streamlit UI** | `uqlab/ui_components/` | **No** (except `read_experiment_log` for failed-run debug) |
 
@@ -170,7 +169,7 @@ Streamlit  →  experiment_launcher  →  POST /api/v1/experiments  →  Trainin
 
 **Do** document the runner in [`uqlab/runner/README.md`](../src/uqlab/runner/README.md) and this file; Streamlit docs only need: “launch via orchestrator → API → runner on backend.”
 
-Optional local dev without API: run `run_from_yaml` from CLI or Flask — still `uqlab.runner`, not Streamlit.
+Optional local dev without API: run `run_from_yaml` from the CLI — still `uqlab.runner`, not Streamlit.
 
 ---
 
