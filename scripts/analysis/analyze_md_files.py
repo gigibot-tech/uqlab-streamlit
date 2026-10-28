@@ -1,8 +1,12 @@
 import os
 from collections import defaultdict
+from pathlib import Path
 
-# Get all .md files
-md_files = [f for f in os.listdir('.') if f.endswith('.md')]
+# Get repository root (this script lives in scripts/analysis/)
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+
+# Get all .md files at the repository root
+md_files = [f for f in os.listdir(REPO_ROOT) if f.endswith('.md')]
 
 # Define categories based on keywords
 categories = {
@@ -25,13 +29,13 @@ uncategorized = []
 for file in sorted(md_files):
     file_upper = file.upper()
     matched = False
-    
+
     for category, keywords in categories.items():
         if any(keyword in file_upper for keyword in keywords):
             categorized[category].append(file)
             matched = True
             break
-    
+
     if not matched:
         uncategorized.append(file)
 

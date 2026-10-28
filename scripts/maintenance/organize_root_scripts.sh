@@ -3,6 +3,12 @@
 
 set -e
 
+# Resolve repository root regardless of where this script is invoked from
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+cd "$REPO_ROOT"
+
 echo "🗂️  Organizing root-level scripts..."
 
 # Create scripts directory if it doesn't exist
@@ -53,5 +59,3 @@ echo "  - Shell scripts → scripts/ and scripts/maintenance/"
 echo "  - Fix scripts → scripts/fixes/"
 echo "  - Diagnostic scripts → scripts/diagnostics/"
 echo "  - Maintenance scripts → scripts/maintenance/"
-
-# Made with Bob
