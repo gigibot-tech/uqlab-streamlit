@@ -71,9 +71,8 @@ checkpoints/
 *.pkl
 *.pickle
 
-# Data (keep structure, ignore content)
-data/*
-!data/.gitkeep
+# Data (runtime output directory; created dynamically by uqlab_core.runtime_paths)
+data/
 datasets/
 *.csv
 *.json
