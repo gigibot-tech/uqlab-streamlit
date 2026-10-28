@@ -19,8 +19,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Subset
 
-from uqlab_core.shared.config.classification import ModelConfig
 from uqlab_core.data.splits.experiment_loader import EmbeddingOrganizer, SplitSpec
+from uqlab_core.shared.config.classification import ModelConfig
 
 
 class FeatureExtractor(ABC):
@@ -446,7 +446,7 @@ def create_feature_extractor(
         ...     model=cnn_model,
         ... )
     """
-    from uqlab_core.models.scope.architecture import normalize_architecture, normalize_dinov2_model
+    from uqlab_core.models.architecture import normalize_architecture, normalize_dinov2_model
 
     arch = normalize_architecture(config.architecture)
     if arch == "dinov2_mlp":

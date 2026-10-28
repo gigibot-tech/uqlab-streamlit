@@ -19,12 +19,12 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
-
 from uqlab_core.data.datasets.registry import (
     dataset_clean_labels,
     get_dataset_spec,
     load_classification_dataset,
 )
+
 from uqlab_core.data.splits.experiment_loader import (
     SplitSpec,
     expects_aleatoric_eval,
@@ -32,9 +32,9 @@ from uqlab_core.data.splits.experiment_loader import (
     sample_indices_for_experiment,
 )
 from uqlab_core.data.splits.four_region import normalize_class_regions
+from uqlab_core.models.architecture import normalize_architecture
 from uqlab_core.models.factory.classification_models import EmbeddingDataset
 from uqlab_core.models.features.feature_extractors import DINOv2FeatureExtractor, create_feature_extractor
-from uqlab_core.models.scope.architecture import normalize_architecture
 from uqlab_core.run_artifacts import GROUP_ALEATORIC, GROUP_CLEAN, GROUP_EPISTEMIC, GROUP_OOD
 from uqlab_core.shared.config.classification import ExperimentConfig, TrainingConfig
 from uqlab_core.shared.utils.classification import dino_transform
