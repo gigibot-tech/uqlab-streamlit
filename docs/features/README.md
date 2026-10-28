@@ -2,6 +2,7 @@
 
 | Doc | Topic |
 |-----|--------|
+| [model-scope-consolidation.md](model-scope-consolidation.md) | Flattened `uqlab_core.models.scope/` into `models/` |
 | [workflow-config.md](workflow-config.md) | Wizard → YAML field mapping |
 | [signal-registry.md](signal-registry.md) | EK-FAK signals pipeline |
 | [registries.md](registries.md) | All registries (METRICS, perspectives, models) |
