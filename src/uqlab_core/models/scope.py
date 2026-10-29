@@ -1,11 +1,19 @@
-"""Canonical model architecture names and legacy aliases."""
+"""Architecture names, training-scope literals, and scope resolution."""
 
 from __future__ import annotations
 
-from typing import Literal, Tuple
+from dataclasses import dataclass
+from typing import Literal
+
+import torch.nn as nn
+
+from uqlab_core.models.backbones.dinov2_names import normalize_dinov2_model_name
+from uqlab_core.evaluation.signals.dualxda_tracer import infer_classifier_layer_name
+
 
 CanonicalArchitecture = Literal["resnet18", "cnn_small", "dinov2_mlp", "pixel_mlp"]
 TrainingScope = Literal["full", "head_only", "feature_space"]
+DataMode = Literal["images", "embeddings"]
 
 _ALIASES = {
     "resnet18": "resnet18",
@@ -31,8 +39,6 @@ def normalize_architecture(name: str) -> CanonicalArchitecture:
 
 def normalize_dinov2_model(model_name: str) -> str:
     """Map torch.hub / legacy names to DINOv2 backbone keys (``small``, ``base``, …)."""
-    from uqlab_core.models.backbones.dinov2_names import normalize_dinov2_model_name
-
     return normalize_dinov2_model_name(model_name)
 
 
@@ -76,3 +82,66 @@ def legacy_architecture_name(canonical: CanonicalArchitecture) -> str:
         "dinov2_mlp": "dinov2_mlp",
         "pixel_mlp": "pixel_mlp",
     }[canonical]
+
+
+@dataclass(frozen=True)
+class ResolvedTrainingScope:
+    scope: TrainingScope
+    architecture: CanonicalArchitecture
+    classifier_layer: str
+    data_mode: DataMode
+    training_mode: str  # legacy: feature_space | end_to_end
+
+
+def _trainable_prefixes(model: nn.Module) -> tuple[str, ...]:
+    return tuple(name for name, p in model.named_parameters() if p.requires_grad)
+
+
+def resolve_training_scope(
+    model: nn.Module,
+    *,
+    architecture: str,
+    training_scope: TrainingScope,
+) -> ResolvedTrainingScope:
+    canonical = normalize_architecture(architecture)
+    classifier_layer = infer_classifier_layer_name(model)
+
+    if canonical == "dinov2_mlp":
+        data_mode: DataMode = "embeddings"
+        training_mode = "feature_space"
+    else:
+        data_mode = "images"
+        training_mode = "end_to_end" if training_scope == "full" else "feature_space"
+
+    return ResolvedTrainingScope(
+        scope=training_scope,
+        architecture=canonical,
+        classifier_layer=classifier_layer,
+        data_mode=data_mode,
+        training_mode=training_mode,
+    )
+
+
+def validate_training_scope(model: nn.Module, resolved: ResolvedTrainingScope) -> None:
+    """Ensure frozen/trainable params match declared scope."""
+    trainable = _trainable_prefixes(model)
+    if not trainable:
+        raise ValueError("Model has no trainable parameters")
+
+    layer = resolved.classifier_layer
+    head_prefix = layer.split(".")[0]
+
+    if resolved.scope == "full":
+        frozen = [n for n, p in model.named_parameters() if not p.requires_grad]
+        if frozen and resolved.architecture != "dinov2_mlp":
+            raise ValueError(
+                f"training_scope=full but parameters are frozen: {frozen[:5]}"
+            )
+        return
+
+    if resolved.scope in ("head_only", "feature_space"):
+        non_head = [n for n in trainable if not n.startswith(head_prefix) and head_prefix not in n]
+        if resolved.architecture == "resnet18" and non_head:
+            raise ValueError(
+                f"training_scope={resolved.scope} but non-head params trainable: {non_head[:5]}"
+            )
