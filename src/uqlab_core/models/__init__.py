@@ -16,9 +16,9 @@ _LAZY = {
     "scope_to_training_mode": ("scope.architecture", "scope_to_training_mode"),
     "validate_training_scope": ("scope.training_scope", "validate_training_scope"),
     "resolve_training_scope": ("scope.training_scope", "resolve_training_scope"),
-    "create_feature_extractor": ("features.feature_extractors", "create_feature_extractor"),
+    "create_feature_extractor": ("feature_extractors", "create_feature_extractor"),
     "EmbeddingDataset": ("factory.classification_models", "EmbeddingDataset"),
-    "DINOv2FeatureExtractor": ("features.feature_extractors", "DINOv2FeatureExtractor"),
+    "DINOv2FeatureExtractor": ("feature_extractors", "DINOv2FeatureExtractor"),
 }
 
 __all__ = list(_LAZY.keys())

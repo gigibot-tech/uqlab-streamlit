@@ -11,7 +11,7 @@ import torch.nn as nn
 from torch.utils.data import Dataset
 
 from uqlab_core.models.factory.factory import build_model
-from uqlab_core.models.features.feature_extractors import create_feature_extractor
+from uqlab_core.models.feature_extractors import create_feature_extractor
 from uqlab_core.shared.config.classification import ExperimentConfig, TrainingConfig
 
 logger = logging.getLogger(__name__)
