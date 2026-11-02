@@ -1,11 +1,17 @@
 #!/bin/bash
-# Script to organize root-level scripts into appropriate directories
+# Script to organize root-level scripts into appropriate directories.
+# Safe to re-run: missing source files are ignored.
 
 set -e
 
-echo "🗂️  Organizing root-level scripts..."
+# Resolve repo root from this script's location (scripts/maintenance/)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+cd "$REPO_ROOT"
 
-# Create scripts directory if it doesn't exist
+echo "🗂️  Organizing root-level scripts in $REPO_ROOT ..."
+
+# Create target directories if they don't exist
 mkdir -p scripts/maintenance
 mkdir -p scripts/fixes
 mkdir -p scripts/diagnostics
