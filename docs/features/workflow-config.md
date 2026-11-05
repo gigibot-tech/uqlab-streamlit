@@ -114,14 +114,14 @@ Paper reproduction = **one 1D sweep per registered perspective** under one campa
 
 ### Extensibility
 
-Perspectives are defined in [`uncertainty/registry.py`](../../src/uqlab_orchestrator/uncertainty/registry.py).  
+Perspectives are defined in [`uncertainty_perspectives.py`](../../src/uqlab_core/shared/config/uncertainty_perspectives.py).  
 Mirroring is automatic: for primary P, **Run all** launches sweeps for all other **N−1** types via a for-loop over the registry.
 
 **Adding a 3rd perspective:** append one `UncertaintyPerspective` to `UNCERTAINTY_PERSPECTIVES`, add sweep grids in `validation_config.py` if needed, and extend `arm_builder.build_arm_workflow` — Step 3 options, launch resolver, and Results arm tabs pick it up via `iter_perspectives()`.
 
-Launch actions are resolved in [`launch_resolver.resolve_launch_actions`](../../src/uqlab_orchestrator/uncertainty/launch_resolver.py); UI renders buttons from that list (never hardcoded Fig 3/4 branches in `sweep_launch_cards.py`).
+Launch actions are resolved in `launch_resolver.resolve_launch_actions`; UI renders buttons from that list (never hardcoded Fig 3/4 branches in `sweep_launch_cards.py`).
 
-Arm workflows: [`arm_builder.py`](../../src/uqlab_orchestrator/uncertainty/arm_builder.py) (replaces inline profile `if` chains in the sidebar wrapper).
+Arm workflows: `arm_builder.py` (replaces inline profile `if` chains in the sidebar wrapper).
 
 ## Sweep grouping (results)
 
