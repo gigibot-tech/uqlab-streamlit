@@ -1,5 +1,10 @@
 import os
 from collections import defaultdict
+from pathlib import Path
+
+# Run from the repository root regardless of where this script is invoked.
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+os.chdir(_PROJECT_ROOT)
 
 # Get all .md files
 md_files = [f for f in os.listdir('.') if f.endswith('.md')]
