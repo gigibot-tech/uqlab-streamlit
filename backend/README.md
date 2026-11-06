@@ -7,7 +7,7 @@
 
 ## Docker Compose
 
-Start the local development environment with Docker Compose following the guide in [../.docs/development.md](../.docs/development.md).
+Start the local development environment with Docker Compose following the guide in [../docs/setup/DEVELOPMENT.md](../docs/setup/DEVELOPMENT.md).
 
 ## Backend Development
 
